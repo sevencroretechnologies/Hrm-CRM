@@ -47,7 +47,7 @@ class CrmNoteController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $note = CrmNote::create($request->all());
+        $note = CrmNote::create($request->except(['org_id', 'created_by']));
 
         return $this->created($note->load('creator'), 'Note created successfully');
     }

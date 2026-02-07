@@ -70,7 +70,7 @@ class OpportunityController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $opportunity = Opportunity::create($request->all());
+        $opportunity = Opportunity::create($request->except(['org_id', 'created_by']));
 
         return $this->created(
             $opportunity->load(['assignee', 'lead', 'prospect', 'salesStage', 'campaign', 'creator']),
@@ -113,7 +113,7 @@ class OpportunityController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $opportunity->update($request->all());
+        $opportunity->update($request->except(['org_id', 'created_by']));
 
         return $this->success(
             $opportunity->load(['assignee', 'lead', 'prospect', 'salesStage', 'campaign', 'creator']),

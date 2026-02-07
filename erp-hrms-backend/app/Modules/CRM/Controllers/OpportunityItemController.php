@@ -40,7 +40,7 @@ class OpportunityItemController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $data = $request->all();
+        $data = $request->except(['org_id', 'created_by']);
         $data['opportunity_id'] = $opportunity->id;
         $discount = $data['discount'] ?? 0;
         $data['total'] = ($data['quantity'] * $data['unit_price']) - $discount;
@@ -68,7 +68,7 @@ class OpportunityItemController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $data = $request->all();
+        $data = $request->except(['org_id', 'created_by']);
         $quantity = $data['quantity'] ?? $item->quantity;
         $unitPrice = $data['unit_price'] ?? $item->unit_price;
         $discount = $data['discount'] ?? $item->discount;

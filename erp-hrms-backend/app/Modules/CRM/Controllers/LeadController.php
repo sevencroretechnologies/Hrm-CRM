@@ -71,7 +71,7 @@ class LeadController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $lead = Lead::create($request->all());
+        $lead = Lead::create($request->except(['org_id', 'created_by']));
 
         return $this->created($lead->load(['assignee', 'campaign', 'creator']), 'Lead created successfully');
     }
@@ -110,7 +110,7 @@ class LeadController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $lead->update($request->all());
+        $lead->update($request->except(['org_id', 'created_by']));
 
         return $this->success($lead->load(['assignee', 'campaign', 'creator']), 'Lead updated successfully');
     }

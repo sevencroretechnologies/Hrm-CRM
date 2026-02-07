@@ -55,7 +55,7 @@ class CampaignController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $campaign = Campaign::create($request->all());
+        $campaign = Campaign::create($request->except(['org_id', 'created_by']));
 
         return $this->created($campaign->load('creator'), 'Campaign created successfully');
     }
@@ -91,7 +91,7 @@ class CampaignController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $campaign->update($request->all());
+        $campaign->update($request->except(['org_id', 'created_by']));
 
         return $this->success($campaign->load('creator'), 'Campaign updated successfully');
     }

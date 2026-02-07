@@ -12,12 +12,10 @@ abstract class CrmBaseModel extends Model
         static::creating(function (Model $model) {
             $user = Auth::user();
             if ($user) {
-                if (empty($model->org_id) && !is_null($user->org_id)) {
+                if (!is_null($user->org_id)) {
                     $model->org_id = $user->org_id;
                 }
-                if (empty($model->created_by)) {
-                    $model->created_by = $user->id;
-                }
+                $model->created_by = $user->id;
             }
         });
     }

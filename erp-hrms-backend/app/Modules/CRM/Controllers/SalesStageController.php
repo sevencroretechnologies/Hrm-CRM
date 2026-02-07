@@ -36,7 +36,7 @@ class SalesStageController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $stage = SalesStage::create($request->all());
+        $stage = SalesStage::create($request->except(['org_id', 'created_by']));
 
         return $this->created($stage, 'Sales stage created successfully');
     }
@@ -67,7 +67,7 @@ class SalesStageController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $salesStage->update($request->all());
+        $salesStage->update($request->except(['org_id', 'created_by']));
 
         return $this->success($salesStage, 'Sales stage updated successfully');
     }

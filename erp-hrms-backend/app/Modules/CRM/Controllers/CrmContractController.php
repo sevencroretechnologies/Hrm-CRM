@@ -64,7 +64,7 @@ class CrmContractController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $data = $request->all();
+        $data = $request->except(['org_id', 'created_by']);
         $data['reference_number'] = 'CRM-CTR-' . strtoupper(Str::random(8));
 
         $contract = CrmContract::create($data);
@@ -106,7 +106,7 @@ class CrmContractController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $crmContract->update($request->all());
+        $crmContract->update($request->except(['org_id', 'created_by']));
 
         return $this->success(
             $crmContract->load(['opportunity', 'prospect', 'creator']),

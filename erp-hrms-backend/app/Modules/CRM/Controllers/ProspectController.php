@@ -65,7 +65,7 @@ class ProspectController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $prospect = Prospect::create($request->all());
+        $prospect = Prospect::create($request->except(['org_id', 'created_by']));
 
         return $this->created($prospect->load(['assignee', 'creator']), 'Prospect created successfully');
     }
@@ -102,7 +102,7 @@ class ProspectController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $prospect->update($request->all());
+        $prospect->update($request->except(['org_id', 'created_by']));
 
         return $this->success($prospect->load(['assignee', 'creator']), 'Prospect updated successfully');
     }
@@ -132,7 +132,17 @@ class ProspectController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $prospect->leads()->syncWithoutDetaching([$request->lead_id]);
+        $lead = \App\Modules\CRM\Models\Lead::where('id', $request->lead_id)
+            ->where('org_id', auth()->user()->org_id)
+            ->first();
+
+        if (!$lead) {
+            return $this->notFound('Lead not found in your organization');
+        }
+
+        $prospect->leads()->syncWithoutDetaching([
+            $lead->id => ['org_id' => auth()->user()->org_id],
+        ]);
 
         return $this->success($prospect->load('leads'), 'Lead attached to prospect');
     }

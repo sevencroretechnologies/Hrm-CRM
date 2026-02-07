@@ -70,7 +70,7 @@ class AppointmentController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $appointment = Appointment::create($request->all());
+        $appointment = Appointment::create($request->except(['org_id', 'created_by']));
 
         return $this->created(
             $appointment->load(['assignee', 'lead', 'prospect', 'opportunity', 'creator']),
@@ -113,7 +113,7 @@ class AppointmentController extends Controller
             return $this->validationError($validator->errors());
         }
 
-        $appointment->update($request->all());
+        $appointment->update($request->except(['org_id', 'created_by']));
 
         return $this->success(
             $appointment->load(['assignee', 'lead', 'prospect', 'opportunity', 'creator']),
