@@ -1,0 +1,94 @@
+import { useEffect, useState } from "react";
+import { dashboardApi } from "@/services/api";
+import type { DashboardStats } from "@/types";
+import { Users, Target, CalendarClock, FileText } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+
+const COLORS = ["#0d6efd", "#198754", "#ffc107", "#dc3545", "#6f42c1", "#d63384"];
+
+export default function Dashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    dashboardApi.getStats().then(setStats).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="text-center py-5 text-muted">Loading...</div>;
+  if (!stats) return <div className="alert alert-danger">Failed to load dashboard</div>;
+
+  const kpis = [
+    { label: "Total Leads", value: stats.leads.total, sub: `${stats.leads.new_last_30_days} new (30d)`, icon: Users, color: "primary" },
+    { label: "Open Opportunities", value: stats.opportunities.open, sub: `$${(stats.opportunities.total_value / 1000).toFixed(0)}k value`, icon: Target, color: "success" },
+    { label: "Upcoming Appointments", value: stats.appointments.upcoming, sub: `${stats.appointments.total} total`, icon: CalendarClock, color: "warning" },
+    { label: "Active Contracts", value: stats.contracts.active, sub: `${stats.contracts.unsigned} unsigned`, icon: FileText, color: "info" },
+  ];
+
+  return (
+    <div>
+      <h2 className="mb-4">Dashboard</h2>
+      <div className="row g-3 mb-4">
+        {kpis.map((kpi) => (
+          <div className="col-md-6 col-lg-3" key={kpi.label}>
+            <div className="card stats-card h-100">
+              <div className="card-body d-flex align-items-center gap-3">
+                <div className={`bg-${kpi.color} bg-opacity-10 p-2 rounded`}>
+                  <kpi.icon size={24} className={`text-${kpi.color}`} />
+                </div>
+                <div>
+                  <h3 className="mb-0 fw-bold">{kpi.value}</h3>
+                  <small className="text-muted">{kpi.label}</small>
+                  <br />
+                  <small className="text-muted" style={{ fontSize: "0.75rem" }}>{kpi.sub}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="row g-3">
+        <div className="col-lg-6">
+          <div className="card">
+            <div className="card-header bg-white fw-semibold">Leads by Status</div>
+            <div className="card-body">
+              {stats.leads.by_status.length > 0 ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie data={stats.leads.by_status} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={80} label={({ status, count }: { status: string; count: number }) => `${status} (${count})`}>
+                      {stats.leads.by_status.map((_: unknown, i: number) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-muted text-center py-5">No lead data yet</p>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="col-lg-6">
+          <div className="card">
+            <div className="card-header bg-white fw-semibold">Opportunity Pipeline</div>
+            <div className="card-body">
+              {stats.opportunities.by_stage.length > 0 ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={stats.opportunities.by_stage}>
+                    <XAxis dataKey="stage" tick={{ fontSize: 12 }} />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#0d6efd" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-muted text-center py-5">No pipeline data yet</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
