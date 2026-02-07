@@ -503,6 +503,22 @@ const navigation: NavItem[] = [
     ],
   },
   {
+    name: "CRM",
+    href: "/crm",
+    icon: Target,
+    children: [
+      { name: "Dashboard", href: "/crm/dashboard" },
+      { name: "Leads", href: "/crm/leads" },
+      { name: "Opportunities", href: "/crm/opportunities" },
+      { name: "Campaigns", href: "/crm/campaigns" },
+      { name: "Appointments", href: "/crm/appointments" },
+      { name: "Prospects", href: "/crm/prospects" },
+      { name: "Contracts", href: "/crm/contracts" },
+      { name: "Sales Stages", href: "/crm/sales-stages" },
+      { name: "Settings", href: "/crm/settings" },
+    ],
+  },
+  {
     name: "Admin",
     href: "/admin",
     icon: Shield,

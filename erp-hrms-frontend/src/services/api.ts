@@ -810,3 +810,70 @@ export const onboardingTemplateService = {
   delete: (id: number) => api.delete(`/onboarding-templates/${id}`),
   addTask: (id: number, data: Record<string, unknown>) => api.post(`/onboarding-templates/${id}/tasks`, data),
 };
+
+export const crmLeadService = {
+  getAll: (params?: Record<string, unknown>) => api.get('/crm/leads', { params }),
+  getById: (id: number) => api.get(`/crm/leads/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/crm/leads', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/crm/leads/${id}`, data),
+  delete: (id: number) => api.delete(`/crm/leads/${id}`),
+};
+
+export const crmOpportunityService = {
+  getAll: (params?: Record<string, unknown>) => api.get('/crm/opportunities', { params }),
+  getById: (id: number) => api.get(`/crm/opportunities/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/crm/opportunities', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/crm/opportunities/${id}`, data),
+  delete: (id: number) => api.delete(`/crm/opportunities/${id}`),
+};
+
+export const crmProspectService = {
+  getAll: (params?: Record<string, unknown>) => api.get('/crm/prospects', { params }),
+  getById: (id: number) => api.get(`/crm/prospects/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/crm/prospects', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/crm/prospects/${id}`, data),
+  delete: (id: number) => api.delete(`/crm/prospects/${id}`),
+};
+
+export const crmCampaignService = {
+  getAll: (params?: Record<string, unknown>) => api.get('/crm/campaigns', { params }),
+  getById: (id: number) => api.get(`/crm/campaigns/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/crm/campaigns', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/crm/campaigns/${id}`, data),
+  delete: (id: number) => api.delete(`/crm/campaigns/${id}`),
+};
+
+export const crmAppointmentService = {
+  getAll: (params?: Record<string, unknown>) => api.get('/crm/appointments', { params }),
+  getById: (id: number) => api.get(`/crm/appointments/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/crm/appointments', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/crm/appointments/${id}`, data),
+  delete: (id: number) => api.delete(`/crm/appointments/${id}`),
+};
+
+export const crmContractService = {
+  getAll: (params?: Record<string, unknown>) => api.get('/crm/contracts', { params }),
+  getById: (id: number) => api.get(`/crm/contracts/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/crm/contracts', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/crm/contracts/${id}`, data),
+  delete: (id: number) => api.delete(`/crm/contracts/${id}`),
+};
+
+export const crmSalesStageService = {
+  getAll: (params?: Record<string, unknown>) => api.get('/crm/sales-stages', { params }),
+  getById: (id: number) => api.get(`/crm/sales-stages/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/crm/sales-stages', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/crm/sales-stages/${id}`, data),
+  delete: (id: number) => api.delete(`/crm/sales-stages/${id}`),
+};
+
+export const crmNoteService = {
+  getAll: (params?: Record<string, unknown>) => api.get('/crm/notes', { params }),
+  create: (data: Record<string, unknown>) => api.post('/crm/notes', data),
+  delete: (id: number) => api.delete(`/crm/notes/${id}`),
+};
+
+export const crmSettingService = {
+  get: () => api.get('/crm/settings'),
+  update: (data: Record<string, unknown>) => api.put('/crm/settings', data),
+};
