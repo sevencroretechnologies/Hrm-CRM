@@ -2,28 +2,25 @@
 
 namespace App\Models;
 
+use App\Traits\HasOrgAndCompany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Company extends Model
 {
-    use HasFactory;
+    use HasFactory, HasOrgAndCompany, SoftDeletes;
 
-    protected $fillable = ['name', 'org_id', 'email', 'phone', 'address', 'is_active'];
+    protected $fillable = ['org_id', 'company_name', 'address'];
 
-    protected $casts = [
-        'is_active' => 'boolean',
-    ];
-
-    public function organization(): BelongsTo
+    public function organization()
     {
         return $this->belongsTo(Organization::class, 'org_id');
     }
 
-    public function users(): HasMany
+    // A helper to get the "owner" representation for the Document system
+    public function getDocumentOwnerTypeAttribute()
     {
-        return $this->hasMany(User::class, 'company_id');
+        return \App\Enums\DocumentOwnerType::Company;
     }
 }

@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -12,11 +13,62 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // \App\Models\User::factory(10)->create();
+        // Seed roles and permissions first
+        $this->call(AccessSeeder::class);
 
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+        // Create Super Admin user
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@hrms.local'],
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+            ]
+        );
+        $admin->assignRole('admin');
+
+        // Create HR Manager user
+        $hrManager = User::firstOrCreate(
+            ['email' => 'hr@hrms.local'],
+            [
+                'name' => 'Sarah Johnson',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+            ]
+        );
+        $hrManager->assignRole('hr');
+
+        // Create Department Head / Manager user
+        $manager = User::firstOrCreate(
+            ['email' => 'manager@hrms.local'],
+            [
+                'name' => 'Michael Chen',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+            ]
+        );
+        $manager->assignRole('company');
+
+        // Create Accountant user
+        $accountant = User::firstOrCreate(
+            ['email' => 'accountant@hrms.local'],
+            [
+                'name' => 'Emily Davis',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+            ]
+        );
+        $accountant->assignRole('user');
+
+        // Create Employee user
+        $employee = User::firstOrCreate(
+            ['email' => 'employee@hrms.local'],
+            [
+                'name' => 'John Smith',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+            ]
+        );
+        $employee->assignRole('user');
     }
 }
