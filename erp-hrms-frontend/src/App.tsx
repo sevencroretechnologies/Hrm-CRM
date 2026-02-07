@@ -130,6 +130,17 @@ import JobStages from './pages/recruitment/JobStages';
 import JobApplications from './pages/recruitment/JobApplications';
 import OnboardingChecklist from './pages/recruitment/OnboardingChecklist';
 
+// CRM Module
+import CrmDashboard from './modules/crm/dashboard/CrmDashboard';
+import LeadsList from './modules/crm/leads/LeadsList';
+import OpportunitiesList from './modules/crm/opportunities/OpportunitiesList';
+import CampaignsList from './modules/crm/campaigns/CampaignsList';
+import AppointmentsList from './modules/crm/appointments/AppointmentsList';
+import ProspectsList from './modules/crm/prospects/ProspectsList';
+import ContractsList from './modules/crm/contracts/ContractsList';
+import SalesStagesList from './modules/crm/sales-stages/SalesStagesList';
+import CrmSettings from './modules/crm/settings/CrmSettings';
+
 // Error Pages
 import Unauthorized from './pages/Unauthorized';
 import CompanyNotices from './pages/settings/CompanyNotices';
@@ -389,6 +400,18 @@ function App() {
             <Route path="/settings/company-notices" element={<CompanyNotices />} />
             <Route path="/settings/file-categories" element={<FileCategories />} />
             <Route path="/settings/document-config" element={<DocumentConfiguration />} />
+
+            {/* CRM */}
+            <Route path="/crm" element={<CrmDashboard />} />
+            <Route path="/crm/dashboard" element={<CrmDashboard />} />
+            <Route path="/crm/leads" element={<LeadsList />} />
+            <Route path="/crm/opportunities" element={<OpportunitiesList />} />
+            <Route path="/crm/campaigns" element={<CampaignsList />} />
+            <Route path="/crm/appointments" element={<AppointmentsList />} />
+            <Route path="/crm/prospects" element={<ProspectsList />} />
+            <Route path="/crm/contracts" element={<ContractsList />} />
+            <Route path="/crm/sales-stages" element={<SalesStagesList />} />
+            <Route path="/crm/settings" element={<CrmSettings />} />
 
             {/* Admin */}
             <Route path="/admin" element={<Users />} />
