@@ -120,7 +120,11 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
+use App\Http\Controllers\AuthController;
+
 // Public routes
+Route::post('/login', [AuthController::class, 'login']);
+
 Route::prefix('auth')->group(function () {
     Route::post('/sign-up', [AccessController::class, 'signUp']);
     Route::post('/sign-in', [AccessController::class, 'signIn']);
@@ -130,6 +134,11 @@ Route::prefix('auth')->group(function () {
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+    Route::post('/logout', [AuthController::class, 'logout']);
 
     // Authentication
     Route::prefix('auth')->group(function () {
