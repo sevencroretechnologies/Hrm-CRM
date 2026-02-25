@@ -55,6 +55,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // });
     // Users
     // Route::get('users', [UserController::class, 'index']);
+    Route::get('users', [UsersController::class, 'index']);
 
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('dashboard/lead-conversion-funnel', [DashboardController::class, 'leadConversionFunnel']);
