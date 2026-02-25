@@ -35,25 +35,26 @@ use App\Http\Controllers\Api\ProductCategoryController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\OpportunityProductController;
 use App\Http\Controllers\Api\AccessController;
+use App\Http\Controllers\Api\Admin\UsersController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('auth')->group(function () {
-    Route::post('/sign-up', [AccessController::class, 'signUp']);
-    Route::post('/sign-in', [AccessController::class, 'signIn']);
-    Route::post('/forgot-password', [AccessController::class, 'forgotPassword']);
-    Route::post('/reset-password', [AccessController::class, 'resetPassword']);
-});
+// Route::prefix('auth')->group(function () {
+//     Route::post('/sign-up', [AccessController::class, 'signUp']);
+//     Route::post('/sign-in', [AccessController::class, 'signIn']);
+//     Route::post('/forgot-password', [AccessController::class, 'forgotPassword']);
+//     Route::post('/reset-password', [AccessController::class, 'resetPassword']);
+// });
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
 
     // Authentication
-    Route::prefix('auth')->group(function () {
-        Route::post('/sign-out', [AccessController::class, 'signOut']);
-        Route::get('/profile', [AccessController::class, 'profile']);
-    });
+    // Route::prefix('auth')->group(function () {
+    //     Route::post('/sign-out', [AccessController::class, 'signOut']);
+    //     Route::get('/profile', [AccessController::class, 'profile']);
+    // });
     // Users
-    Route::get('users', [UserController::class, 'index']);
+    // Route::get('users', [UserController::class, 'index']);
 
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('dashboard/lead-conversion-funnel', [DashboardController::class, 'leadConversionFunnel']);
@@ -102,8 +103,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Master Data
     Route::apiResource('customers', CustomerController::class);
     Route::apiResource('customer-groups', CustomerGroupController::class);
-    Route::apiResource('payment-terms', PaymentTermController::class);
-    Route::apiResource('price-lists', PriceListController::class);
+    // Route::apiResource('payment-terms', PaymentTermController::class);
+    // Route::apiResource('price-lists', PriceListController::class);
     Route::apiResource('product-categories', ProductCategoryController::class);
     Route::apiResource('products', ProductController::class);
     Route::apiResource('opportunity-products', OpportunityProductController::class);
