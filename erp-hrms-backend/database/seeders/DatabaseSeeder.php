@@ -14,7 +14,25 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Seed roles and permissions first
-        $this->call(AccessSeeder::class);
+        // $this->call(AccessSeeder::class);
+        $this->call([
+            AccessSeeder::class,
+            SourceSeeder::class,
+            CampaignSeeder::class,
+        ]);
+
+        $this->call([
+            StatusSeeder::class,
+            RequestTypeSeeder::class,
+            IndustryTypeSeeder::class,
+            MasterDataSeeder::class,
+            OpportunityStageSeeder::class,
+            OpportunityTypeSeeder::class,
+            TaskSourceSeeder::class,
+            TaskTypeSeeder::class,
+        ]);
+
+
 
         // Create Super Admin user
         $admin = User::firstOrCreate(
