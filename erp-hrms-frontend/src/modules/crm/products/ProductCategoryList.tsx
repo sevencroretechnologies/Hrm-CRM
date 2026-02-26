@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '../../../components/ui/dialog';
 import DataTable, { TableColumn } from 'react-data-table-component';
-import { Plus, Search, MoreHorizontal, Edit, Trash2, LayoutGrid } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Edit, Trash2, LayoutGrid, Eye } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +40,7 @@ export default function ProductCategoryList() {
   
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -57,14 +58,15 @@ export default function ProductCategoryList() {
         search,
       });
       const responseData = response.data;
-      if (responseData?.data && Array.isArray(responseData.data)) {
-        setItems(responseData.data);
-        setTotalRows(responseData.total || responseData.data.length);
-      } else if (Array.isArray(responseData)) {
-        setItems(responseData);
-        setTotalRows(responseData.length);
+      // Handle Laravel pagination: response.data.data.data
+      const arrayData = responseData?.data?.data || responseData?.data || [];
+      
+      if (Array.isArray(arrayData)) {
+        setItems(arrayData);
+        setTotalRows(responseData?.data?.total || responseData?.pagination?.total_items || arrayData.length);
       } else {
         setItems([]);
+        setTotalRows(0);
       }
     } catch (error) {
       console.error('Failed to fetch categories:', error);
@@ -145,19 +147,30 @@ export default function ProductCategoryList() {
       setIsSubmitting(false);
     }
   };
+  const handleView = (category: ProductCategory) => {
+    setSelectedCategory(category);
+    setIsViewOpen(true);
+  };
 
   const columns: TableColumn<ProductCategory>[] = [
     {
       name: 'Name',
       selector: (row) => row.name,
       sortable: true,
-      cell: (row) => <span className="font-medium">{row.name}</span>,
+      cell: (row) => (
+        <span 
+          className="font-medium cursor-pointer hover:text-solarized-blue transition-colors"
+          onClick={() => handleView(row)}
+        >
+          {row.name}
+        </span>
+      ),
     },
     {
       name: 'Description',
       selector: (row) => row.description || '',
       sortable: true,
-      cell: (row) => <span className="text-muted-foreground">{row.description || '—'}</span>,
+      cell: (row) => <span className="text-muted-foreground line-clamp-1">{row.description || '—'}</span>,
     },
     {
       name: 'Created At',
@@ -175,6 +188,9 @@ export default function ProductCategoryList() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleView(row)}>
+              <Eye className="mr-2 h-4 w-4" /> View Details
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleEdit(row)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
             </DropdownMenuItem>
@@ -315,6 +331,46 @@ export default function ProductCategoryList() {
             <DialogDescription>Update category information</DialogDescription>
           </DialogHeader>
           {renderForm(handleUpdate)}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Category Dialog */}
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LayoutGrid className="h-5 w-5 text-solarized-blue" />
+              Category Details
+            </DialogTitle>
+            <DialogDescription>
+              Details for product categorization
+            </DialogDescription>
+          </DialogHeader>
+          {selectedCategory && (
+            <div className="space-y-6 py-4">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Category Name</Label>
+                <p className="text-lg font-semibold">{selectedCategory.name}</p>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Description</Label>
+                <div className="p-4 bg-slate-50 border rounded-lg text-sm text-slate-700 min-h-[100px]">
+                  {selectedCategory.description || 'No description provided.'}
+                </div>
+              </div>
+
+
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewOpen(false)}>
+              Close
+            </Button>
+            <Button onClick={() => { setIsViewOpen(false); handleEdit(selectedCategory!); }} className="bg-solarized-blue hover:bg-solarized-blue/90">
+              <Edit className="mr-2 h-4 w-4" /> Edit Category
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

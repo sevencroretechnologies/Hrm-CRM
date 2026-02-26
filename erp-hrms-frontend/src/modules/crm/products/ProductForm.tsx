@@ -51,8 +51,9 @@ export default function ProductForm() {
   const fetchCategories = async () => {
     try {
       const response = await crmProductCategoryService.getAll();
-      const data = response.data;
-      setCategories(Array.isArray(data) ? data : (data?.data || []));
+      const responseData = response.data;
+      const arrayData = responseData?.data?.data || responseData?.data || [];
+      setCategories(Array.isArray(arrayData) ? arrayData : []);
     } catch (error) {
       console.error('Failed to fetch categories:', error);
     }

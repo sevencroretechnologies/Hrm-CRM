@@ -18,8 +18,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../../components/ui/dialog';
+import { Label } from '../../../components/ui/label';
+import { Badge } from '../../../components/ui/badge';
 import DataTable, { TableColumn } from 'react-data-table-component';
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, Package } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, Package, Tag, IndianRupee, Info } from 'lucide-react';
 
 interface ProductCategory {
   id: number;
@@ -52,8 +62,9 @@ export default function ProductList() {
   const fetchCategories = async () => {
     try {
       const response = await crmProductCategoryService.getAll();
-      const data = response.data;
-      setCategories(Array.isArray(data) ? data : (data?.data || []));
+      const responseData = response.data;
+      const arrayData = responseData?.data?.data || responseData?.data || [];
+      setCategories(Array.isArray(arrayData) ? arrayData : []);
     } catch (error) {
       console.error('Failed to fetch categories:', error);
     }
@@ -73,13 +84,12 @@ export default function ProductList() {
 
       const response = await crmProductService.getAll(params);
       const responseData = response.data;
+      // Handle Laravel pagination: response.data.data.data
+      const arrayData = responseData?.data?.data || responseData?.data || [];
       
-      if (responseData?.data && Array.isArray(responseData.data)) {
-        setItems(responseData.data);
-        setTotalRows(responseData.total || responseData.data.length);
-      } else if (Array.isArray(responseData)) {
-        setItems(responseData);
-        setTotalRows(responseData.length);
+      if (Array.isArray(arrayData)) {
+        setItems(arrayData);
+        setTotalRows(responseData?.data?.total || responseData?.pagination?.total_items || arrayData.length);
       } else {
         setItems([]);
       }
@@ -117,13 +127,22 @@ export default function ProductList() {
     }
   };
 
+  // View dialog state
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
+
+  const handleView = (product: Product) => {
+    setViewingProduct(product);
+    setIsViewDialogOpen(true);
+  };
+
   const columns: TableColumn<Product>[] = [
     {
       name: 'Product Name',
       selector: (row) => row.name,
       sortable: true,
       cell: (row) => (
-        <div className="flex flex-col py-2">
+        <div className="flex flex-col py-2 cursor-pointer hover:text-solarized-blue transition-colors" onClick={() => handleView(row)}>
           <span className="font-medium">{row.name}</span>
           {row.code && <span className="text-xs text-muted-foreground">{row.code}</span>}
         </div>
@@ -166,6 +185,9 @@ export default function ProductList() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleView(row)}>
+              <Eye className="mr-2 h-4 w-4" /> View Details
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to={`/crm/products/${row.id}/edit`}>
                 <Edit className="mr-2 h-4 w-4" /> Edit
@@ -278,6 +300,95 @@ export default function ProductList() {
           )}
         </CardContent>
       </Card>
+
+      {/* View Product Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-solarized-blue" />
+              Product Details
+            </DialogTitle>
+            <DialogDescription>
+              Detailed information about your product/service
+            </DialogDescription>
+          </DialogHeader>
+          {viewingProduct && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Product Name</Label>
+                  <p className="text-lg font-semibold">{viewingProduct.name}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Code / SKU</Label>
+                  <p className="text-lg font-medium font-mono">{viewingProduct.code || '—'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <Tag className="h-3 w-3" /> Category
+                  </Label>
+                  <div>
+                    {viewingProduct.category ? (
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 border-none">
+                        {viewingProduct.category.name}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">Uncategorized</span>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <IndianRupee className="h-3 w-3" /> Price / Amount
+                  </Label>
+                  <p className="text-lg font-bold text-solarized-blue">
+                    ₹{Number(viewingProduct.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Stock Level</Label>
+                  <p className="text-base">{viewingProduct.stock} units</p>
+                </div>
+              </div>
+
+              {viewingProduct.description && (
+                <div className="space-y-1 p-3 bg-slate-50 rounded-lg border">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <Info className="h-3 w-3" /> Short Description
+                  </Label>
+                  <p className="text-sm leading-relaxed">{viewingProduct.description}</p>
+                </div>
+              )}
+
+              {viewingProduct.long_description && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Technical Specifications</Label>
+                  <div className="text-sm p-4 bg-white border rounded-lg whitespace-pre-wrap max-h-40 overflow-y-auto">
+                    {viewingProduct.long_description}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              Close
+            </Button>
+            <Button asChild className="bg-solarized-blue hover:bg-solarized-blue/90">
+              <Link to={`/crm/products/${viewingProduct?.id}/edit`}>
+                <Edit className="mr-2 h-4 w-4" /> Edit Product
+              </Link>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
