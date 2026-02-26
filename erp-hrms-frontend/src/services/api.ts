@@ -749,6 +749,7 @@ export const adminService = {
   getUsers: (params?: { page?: number; per_page?: number; search?: string; role?: string }) => api.get('/users', { params }),
   getUsersByOrg: (params?: { page?: number; per_page?: number; search?: string }) => api.get('/users-by-org', { params }),
   getUsersByCompany: (params?: { page?: number; per_page?: number; search?: string }) => api.get('/users-by-company', { params }),
+  dropdown: () => api.get('/users-dropdown'),
   getUser: (id: number) => api.get(`/users/${id}`),
   createUser: (data: Record<string, unknown>) => api.post('/users', data),
   updateUser: (id: number, data: Record<string, unknown>) => api.put(`/users/${id}`, data),
@@ -931,6 +932,14 @@ export const crmSourceService = {
   create: (data: Record<string, unknown>) => api.post('/sources', data),
   update: (id: number, data: Record<string, unknown>) => api.put(`/sources/${id}`, data),
   delete: (id: number) => api.delete(`/sources/${id}`),
+};
+
+export const crmTerritoryService = {
+  getAll: (params?: Record<string, unknown>) => api.get('/territories', { params }),
+  getById: (id: number) => api.get(`/territories/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/territories', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/territories/${id}`, data),
+  delete: (id: number) => api.delete(`/territories/${id}`),
 };
 
 export const crmSettingService = {

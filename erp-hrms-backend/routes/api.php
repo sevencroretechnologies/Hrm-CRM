@@ -54,8 +54,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/profile', [AuthController::class, 'profile']);
     });
     // Users
-    // Route::get('users', [UserController::class, 'index']);
-    Route::get('users', [UsersController::class, 'index']);
+    Route::get('users', [UsersController::class, 'getUsersByOrgId']); // Temporary fix for 'index' call
+    Route::get('users-by-org', [UsersController::class, 'getUsersByOrgId']);
+    Route::get('users-by-company', [UsersController::class, 'getUsersByCompanyId']);
+    Route::get('users-dropdown', [UsersController::class, 'dropdown']);
 
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('dashboard/lead-conversion-funnel', [DashboardController::class, 'leadConversionFunnel']);
