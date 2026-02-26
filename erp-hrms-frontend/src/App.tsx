@@ -141,6 +141,9 @@ import ContractsList from './modules/crm/contracts/ContractsList';
 import SalesStagesList from './modules/crm/sales-stages/SalesStagesList';
 import SourceList from './modules/crm/sources/SourceList';
 import TerritoryList from './modules/crm/territories/TerritoryList';
+import ProductList from './modules/crm/products/ProductList';
+import ProductForm from './modules/crm/products/ProductForm';
+import ProductCategoryList from './modules/crm/products/ProductCategoryList';
 import CrmSettings from './modules/crm/settings/CrmSettings';
 
 // Error Pages
@@ -411,6 +414,10 @@ function App() {
             <Route path="/crm/campaigns" element={<CampaignsList />} />
             <Route path="/crm/sources" element={<SourceList />} />
             <Route path="/crm/territories" element={<TerritoryList />} />
+            <Route path="/crm/products" element={<ProductList />} />
+            <Route path="/crm/products/new" element={<ProductForm />} />
+            <Route path="/crm/products/:id/edit" element={<ProductForm />} />
+            <Route path="/crm/product-categories" element={<ProductCategoryList />} />
             <Route path="/crm/appointments" element={<AppointmentsList />} />
             <Route path="/crm/prospects" element={<ProspectsList />} />
             <Route path="/crm/contracts" element={<ContractsList />} />
