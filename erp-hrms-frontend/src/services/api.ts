@@ -90,7 +90,13 @@ export const industryTypeApi = {
 };
 
 export const leadApi = {
-  list: (params?: Record<string, any>) => api.get('/leads', { params }).then(res => res.data.data),
+  list: (params?: Record<string, any>) => api.get('/leads', { params }).then(res => {
+    const data = res.data;
+    if (Array.isArray(data)) return data;
+    if (data.data && Array.isArray(data.data)) return data.data; // Standard wrapped
+    if (data.data && data.data.data && Array.isArray(data.data.data)) return data.data.data; // Paginated wrapped
+    return data.data || data;
+  }),
   get: (id: number) => api.get(`/leads/${id}`).then(res => res.data.data || res.data),
   create: (data: any) => api.post('/leads', data).then(res => res.data),
   update: (id: number, data: any) => api.put(`/leads/${id}`, data).then(res => res.data),
@@ -99,7 +105,11 @@ export const leadApi = {
 
 export const opportunityApi = {
   list: (params?: Record<string, string | number>) =>
-    api.get<WrappedPaginatedResponse<Opportunity>>("/opportunities", { params }).then((r) => r.data.data),
+    api.get("/opportunities", { params }).then((res) => {
+      const data = res.data;
+      if (Array.isArray(data)) return data;
+      return data.data || data;
+    }),
   get: (id: number) => api.get<Opportunity>(`/opportunities/${id}`).then((r) => r.data),
   create: (data: Partial<Opportunity>) =>
     api.post<Opportunity>("/opportunities", data).then((r) => r.data),
