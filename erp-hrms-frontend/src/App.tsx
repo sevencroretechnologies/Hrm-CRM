@@ -134,6 +134,7 @@ import OnboardingChecklist from './pages/recruitment/OnboardingChecklist';
 import CrmDashboard from './modules/crm/dashboard/CrmDashboard';
 import LeadsList from './modules/crm/leads/LeadsList';
 import OpportunitiesList from './modules/crm/opportunities/OpportunitiesList';
+import OpportunityForm from './modules/crm/opportunities/OpportunityForm';
 import CampaignsList from './modules/crm/campaigns/CampaignsList';
 import AppointmentsList from './modules/crm/appointments/AppointmentsList';
 import ProspectsList from './modules/crm/prospects/ProspectsList';
@@ -407,6 +408,8 @@ function App() {
             <Route path="/crm/dashboard" element={<CrmDashboard />} />
             <Route path="/crm/leads" element={<LeadsList />} />
             <Route path="/crm/opportunities" element={<OpportunitiesList />} />
+            <Route path="/crm/opportunities/create" element={<OpportunityForm />} />
+            <Route path="/crm/opportunities/:id/edit" element={<OpportunityForm />} />
             <Route path="/crm/campaigns" element={<CampaignsList />} />
             <Route path="/crm/sources" element={<SourceList />} />
             <Route path="/crm/appointments" element={<AppointmentsList />} />

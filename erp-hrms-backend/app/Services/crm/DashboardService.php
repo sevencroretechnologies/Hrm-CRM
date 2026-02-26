@@ -82,7 +82,9 @@ class DashboardService
         $contractsUnsigned = 0;
         if (Schema::hasTable('contracts')) {
             $contractsActive = DB::table('contracts')->where('status', 'Active')->count();
-            $contractsUnsigned = DB::table('contracts')->where('is_signed', false)->count();
+            if (Schema::hasColumn('contracts', 'is_signed')) {
+                $contractsUnsigned = DB::table('contracts')->where('is_signed', false)->count();
+            }
         }
 
         return [

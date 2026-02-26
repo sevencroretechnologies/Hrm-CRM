@@ -1,174 +1,199 @@
-import { useState, useEffect, useCallback } from 'react';
-import { crmOpportunityService, crmSalesStageService } from '../../../services/api';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { crmOpportunityService, crmStatusService } from '../../../services/api';
 import { showAlert, showConfirmDialog, getErrorMessage } from '../../../lib/sweetalert';
 import { Card, CardContent, CardHeader } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
-import { StatusBadge } from '../../../components/ui/status-badge';
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '../../../components/ui/dialog';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../../../components/ui/select';
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from '../../../components/ui/dialog';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '../../../components/ui/dropdown-menu';
 import DataTable, { TableColumn } from 'react-data-table-component';
 import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Target } from 'lucide-react';
 
-const STATUS_OPTIONS = ['Open', 'Quotation', 'Converted', 'Lost', 'Replied', 'Closed'];
-
-interface SalesStage { id: number; stage_name: string; }
-
+// ── Types ──────────────────────────────────────────────────────────────────────
+interface OppStatus { id: number; status_name: string; }
+interface OppStage { id: number; stage_name: string; }
 interface Opportunity {
   id: number;
-  customer_name: string | null;
-  opportunity_from: string;
-  status: string;
-  sales_stage_id: number | null;
-  sales_stage: SalesStage | null;
+  naming_series?: string;
+  party_name: string | null;
+  opportunity_from: string | null;
   opportunity_amount: number | null;
   expected_closing: string | null;
+  probability: number | null;
+  currency: string | null;
+  contact_person: string | null;
+  contact_email: string | null;
+  contact_mobile: string | null;
+  company_name: string | null;
+  to_discuss: string | null;
+  status_id: number | null;
+  status: OppStatus | null;
+  opportunity_stage_id: number | null;
+  opportunityStage: OppStage | null;
   created_at: string;
 }
 
+// ── Status badge — same colour logic as crm-frontend statusVariant ─────────────
+const statusBadge = (name = '') => {
+  const n = name.toLowerCase();
+  let cls = 'bg-blue-100 text-blue-800';
+  if (n === 'converted') cls = 'bg-green-100 text-green-800';
+  else if (n === 'lost') cls = 'bg-red-100 text-red-800';
+  else if (n === 'open') cls = 'bg-yellow-100 text-yellow-800';
+  else if (n === 'closed') cls = 'bg-gray-100 text-gray-700';
+  return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{name}</span>;
+};
+
+// ── Safely extract array from paginated or flat API response ───────────────────
+function extractList<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (raw && typeof raw === 'object') {
+    const r = raw as Record<string, unknown>;
+    if (Array.isArray(r.data)) return r.data as T[];
+    // Laravel pagination: { data: { data: [...], total: n } }
+    const inner = r.data;
+    if (inner && typeof inner === 'object') {
+      const i = inner as Record<string, unknown>;
+      if (Array.isArray(i.data)) return i.data as T[];
+    }
+  }
+  return [];
+}
+function extractTotal(raw: unknown): number {
+  if (raw && typeof raw === 'object') {
+    const r = raw as Record<string, unknown>;
+    const inner = r.data;
+    if (inner && typeof inner === 'object') {
+      const i = inner as Record<string, unknown>;
+      if (typeof i.total === 'number') return i.total;
+    }
+    if (typeof r.total === 'number') return r.total;
+  }
+  return 0;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 export default function OpportunitiesList() {
+  const navigate = useNavigate();
+
   const [items, setItems] = useState<Opportunity[]>([]);
-  const [stages, setStages] = useState<SalesStage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [statuses, setStatuses] = useState<OppStatus[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState(''); // status_id
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
-  const [totalRows, setTotalRows] = useState(0);
+  const [total, setTotal] = useState(0);
 
-  const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
   const [selected, setSelected] = useState<Opportunity | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState({
-    customer_name: '', opportunity_from: 'Lead', status: 'Open',
-    sales_stage_id: '', opportunity_amount: '', expected_closing: '',
-    currency: 'USD', probability: '',
-  });
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchItems = useCallback(async (currentPage: number = 1) => {
-    setIsLoading(true);
+  // Load status dropdown once
+  useEffect(() => {
+    crmStatusService.getAll({ per_page: 100 })
+      .then((r) => setStatuses(extractList<OppStatus>(r.data)))
+      .catch(() => setStatuses([]));
+  }, []);
+
+  // Main data fetch – mirrors crm-frontend fetchData()
+  const fetchData = useCallback(async (pg = 1) => {
+    setLoading(true);
     try {
-      const response = await crmOpportunityService.getAll({ page: currentPage, per_page: perPage, search });
-      const { data, meta } = response.data;
-      setItems(Array.isArray(data) ? data : []);
-      setTotalRows(meta?.total ?? 0);
-    } catch (error) {
-      console.error('Failed to fetch opportunities:', error);
-      setItems([]);
-      setTotalRows(0);
+      const params: Record<string, unknown> = { page: pg, per_page: perPage };
+      if (search) params.search = search;
+      if (statusFilter) params.status_id = statusFilter;
+      const r = await crmOpportunityService.getAll(params);
+      setItems(extractList<Opportunity>(r.data));
+      setTotal(extractTotal(r.data));
+    } catch {
+      setItems([]); setTotal(0);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [perPage, search]);
+  }, [perPage, search, statusFilter]);
 
-  const fetchStages = async () => {
-    try {
-      const response = await crmSalesStageService.getAll({ per_page: 100 });
-      const data = response.data?.data;
-      setStages(Array.isArray(data) ? data : []);
-    } catch { setStages([]); }
-  };
+  // Debounce search + filter (400 ms) — same as crm-frontend useCallback / useEffect
+  useEffect(() => {
+    if (debounce.current) clearTimeout(debounce.current);
+    debounce.current = setTimeout(() => { setPage(1); fetchData(1); }, 400);
+    return () => { if (debounce.current) clearTimeout(debounce.current); };
+  }, [search, statusFilter]); // eslint-disable-line
 
-  useEffect(() => { fetchItems(page); }, [page, fetchItems]);
-  useEffect(() => { fetchStages(); }, []);
-
-  const handleSearchSubmit = (e: React.FormEvent) => { e.preventDefault(); setPage(1); };
-
-  const resetForm = () => setFormData({
-    customer_name: '', opportunity_from: 'Lead', status: 'Open',
-    sales_stage_id: '', opportunity_amount: '', expected_closing: '',
-    currency: 'USD', probability: '',
-  });
-
-  const handleAddClick = () => { resetForm(); setIsAddOpen(true); };
-
-  const handleView = (item: Opportunity) => { setSelected(item); setIsViewOpen(true); };
-
-  const handleEdit = (item: Opportunity) => {
-    setSelected(item);
-    setFormData({
-      customer_name: item.customer_name || '', opportunity_from: item.opportunity_from || 'Lead',
-      status: item.status || 'Open', sales_stage_id: item.sales_stage_id?.toString() || '',
-      opportunity_amount: item.opportunity_amount?.toString() || '',
-      expected_closing: item.expected_closing ? item.expected_closing.split('T')[0] : '',
-      currency: 'USD', probability: '',
-    });
-    setIsEditOpen(true);
-  };
+  useEffect(() => { fetchData(page); }, [page]); // eslint-disable-line
 
   const handleDelete = async (id: number) => {
-    const result = await showConfirmDialog('Delete Opportunity', 'Are you sure you want to delete this opportunity?');
-    if (!result.isConfirmed) return;
+    const res = await showConfirmDialog('Delete Opportunity', 'Delete this opportunity?');
+    if (!res.isConfirmed) return;
     try {
       await crmOpportunityService.delete(id);
-      showAlert('success', 'Deleted!', 'Opportunity deleted successfully', 2000);
-      fetchItems(page);
-    } catch (error) {
-      showAlert('error', 'Error', getErrorMessage(error, 'Failed to delete opportunity'));
+      showAlert('success', 'Deleted!', 'Opportunity deleted.', 2000);
+      fetchData(page);
+    } catch (e) {
+      showAlert('error', 'Error', getErrorMessage(e, 'Failed to delete.'));
     }
   };
 
-  const buildPayload = () => ({
-    ...formData,
-    sales_stage_id: formData.sales_stage_id ? parseInt(formData.sales_stage_id) : null,
-    opportunity_amount: formData.opportunity_amount ? parseFloat(formData.opportunity_amount) : null,
-    probability: formData.probability ? parseInt(formData.probability) : null,
-    expected_closing: formData.expected_closing || null,
-  });
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      await crmOpportunityService.create(buildPayload());
-      showAlert('success', 'Success', 'Opportunity created successfully', 2000);
-      setIsAddOpen(false);
-      fetchItems(page);
-    } catch (error) {
-      showAlert('error', 'Error', getErrorMessage(error, 'Failed to create opportunity'));
-    } finally { setIsSubmitting(false); }
-  };
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selected) return;
-    setIsSubmitting(true);
-    try {
-      await crmOpportunityService.update(selected.id, buildPayload());
-      showAlert('success', 'Success', 'Opportunity updated successfully', 2000);
-      setIsEditOpen(false);
-      fetchItems(page);
-    } catch (error) {
-      showAlert('error', 'Error', getErrorMessage(error, 'Failed to update opportunity'));
-    } finally { setIsSubmitting(false); }
-  };
-
+  // ── DataTable columns — mirrors crm-frontend Table columns ────────────────────
   const columns: TableColumn<Opportunity>[] = [
-    { name: 'Customer', cell: (row) => <span className="font-medium">{row.customer_name || '-'}</span>, minWidth: '180px' },
-    { name: 'From', selector: (row) => row.opportunity_from },
-    { name: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
-    { name: 'Stage', selector: (row) => row.sales_stage?.stage_name || '-' },
-    { name: 'Amount', cell: (row) => row.opportunity_amount ? `$${row.opportunity_amount.toLocaleString()}` : '-' },
-    { name: 'Expected Close', selector: (row) => row.expected_closing || '-' },
+    {
+      name: 'Customer',
+      cell: (row) => <span className="font-medium">{row.party_name || `#${row.id}`}</span>,
+      minWidth: '180px',
+    },
+    {
+      name: 'From',
+      cell: (row) => <span className="capitalize">{row.opportunity_from || '-'}</span>,
+      width: '110px',
+    },
+    {
+      name: 'Status',
+      cell: (row) => row.status?.status_name ? statusBadge(row.status.status_name) : <span className="text-muted-foreground">—</span>,
+      width: '130px',
+    },
+    {
+      name: 'Stage',
+      selector: (row) => row.opportunityStage?.stage_name || '-',
+    },
+    {
+      name: 'Amount',
+      cell: (row) => row.opportunity_amount
+        ? `${row.currency ?? '$'}${Number(row.opportunity_amount).toLocaleString()}`
+        : '-',
+      width: '120px',
+    },
+    {
+      name: 'Expected Close',
+      selector: (row) => row.expected_closing
+        ? String(row.expected_closing).split('T')[0]
+        : '-',
+    },
     {
       name: 'Actions',
       cell: (row) => (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleView(row)}><Eye className="mr-2 h-4 w-4" /> View</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleEdit(row)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleDelete(row.id)} className="text-red-600"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { setSelected(row); setViewOpen(true); }}>
+              <Eye className="mr-2 h-4 w-4" /> View
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate(`/crm/opportunities/${row.id}/edit`)}>
+              <Edit className="mr-2 h-4 w-4" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(row.id)}>
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -176,109 +201,122 @@ export default function OpportunitiesList() {
     },
   ];
 
-  const customStyles = {
-    headRow: { style: { backgroundColor: '#f9fafb', borderBottomWidth: '1px', borderBottomColor: '#e5e7eb', borderBottomStyle: 'solid' as const, minHeight: '56px' } },
-    headCells: { style: { fontSize: '14px', fontWeight: '600', color: '#374151', paddingLeft: '16px', paddingRight: '16px' } },
+  const tableStyles = {
+    headRow: { style: { backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', minHeight: '52px' } },
+    headCells: { style: { fontSize: '13px', fontWeight: '600', color: '#374151', padding: '0 16px' } },
   };
 
-  const renderForm = (onSubmit: (e: React.FormEvent) => void) => (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div><Label>Customer Name *</Label><Input value={formData.customer_name} onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })} required /></div>
-        <div>
-          <Label>From</Label>
-          <Select value={formData.opportunity_from} onValueChange={(v) => setFormData({ ...formData, opportunity_from: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+  // ── Render ─────────────────────────────────────────────────────────────────────
+  return (
+    <div className="space-y-6">
+      {/* Header — mirrors crm-frontend */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Opportunities</h2>
+        <Button onClick={() => navigate('/crm/opportunities/create')} className="bg-solarized-blue hover:bg-solarized-blue/90">
+          <Plus className="h-4 w-4 mr-1" /> New Opportunity
+        </Button>
+      </div>
+
+      {/* Filters row — mirrors crm-frontend flex gap-3 */}
+      <div className="flex gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search opportunities..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="w-44">
+          <Select
+            value={statusFilter || 'all'}
+            onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}
+          >
+            <SelectTrigger><SelectValue placeholder="All Statuses" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="Lead">Lead</SelectItem>
-              <SelectItem value="Prospect">Prospect</SelectItem>
-              <SelectItem value="Customer">Customer</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
+              {statuses.map((s) => (
+                <SelectItem key={s.id} value={String(s.id)}>{s.status_name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Status *</Label>
-          <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Sales Stage</Label>
-          <Select value={formData.sales_stage_id} onValueChange={(v) => setFormData({ ...formData, sales_stage_id: v })}>
-            <SelectTrigger><SelectValue placeholder="Select stage" /></SelectTrigger>
-            <SelectContent>{stages.map((s) => <SelectItem key={s.id} value={s.id.toString()}>{s.stage_name}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div><Label>Amount</Label><Input type="number" value={formData.opportunity_amount} onChange={(e) => setFormData({ ...formData, opportunity_amount: e.target.value })} /></div>
-        <div><Label>Expected Closing</Label><Input type="date" value={formData.expected_closing} onChange={(e) => setFormData({ ...formData, expected_closing: e.target.value })} /></div>
-      </div>
-      <DialogFooter>
-        <Button type="submit" disabled={isSubmitting} className="bg-solarized-blue hover:bg-solarized-blue/90">
-          {isSubmitting ? 'Saving...' : 'Save'}
-        </Button>
-      </DialogFooter>
-    </form>
-  );
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div><h1 className="text-2xl font-bold">Opportunities</h1><p className="text-muted-foreground">Manage your sales opportunities</p></div>
-        <Button onClick={handleAddClick} className="bg-solarized-blue hover:bg-solarized-blue/90"><Plus className="mr-2 h-4 w-4" /> Add Opportunity</Button>
-      </div>
+      {/* Table card */}
       <Card>
-        <CardHeader>
-          <form onSubmit={handleSearchSubmit} className="flex gap-4">
-            <Input placeholder="Search opportunities..." value={search} onChange={(e) => setSearch(e.target.value)} />
-            <Button type="submit" variant="outline"><Search className="mr-2 h-4 w-4" /> Search</Button>
-          </form>
-        </CardHeader>
-        <CardContent>
-          {!isLoading && items.length === 0 ? (
-            <div className="text-center py-12"><Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" /><p>No opportunities found</p></div>
+        <CardContent className="pt-4">
+          {!loading && items.length === 0 ? (
+            <div className="text-center py-12">
+              <Target className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
+              <p className="text-muted-foreground">No opportunities found.</p>
+            </div>
           ) : (
-            <DataTable columns={columns} data={items} progressPending={isLoading} pagination paginationServer
-              paginationTotalRows={totalRows} paginationPerPage={perPage} paginationDefaultPage={page}
-              onChangePage={(p) => setPage(p)} onChangeRowsPerPage={(pp) => { setPerPage(pp); setPage(1); }}
-              customStyles={customStyles} highlightOnHover responsive />
+            <DataTable
+              columns={columns}
+              data={items}
+              progressPending={loading}
+              pagination
+              paginationServer
+              paginationTotalRows={total}
+              paginationPerPage={perPage}
+              paginationDefaultPage={page}
+              onChangePage={(p) => setPage(p)}
+              onChangeRowsPerPage={(pp) => { setPerPage(pp); setPage(1); }}
+              customStyles={tableStyles}
+              highlightOnHover
+              responsive
+            />
           )}
         </CardContent>
       </Card>
 
-      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Opportunity Details</DialogTitle><DialogDescription>View opportunity information</DialogDescription></DialogHeader>
+      {/* View dialog */}
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Opportunity Details</DialogTitle>
+            <DialogDescription>{selected?.naming_series || `ID #${selected?.id}`}</DialogDescription>
+          </DialogHeader>
           {selected && (
-            <div className="space-y-3">
+            <div className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-3">
-                <div><p className="text-sm text-muted-foreground">Customer</p><p className="font-medium">{selected.customer_name || '-'}</p></div>
-                <div><p className="text-sm text-muted-foreground">From</p><p className="font-medium">{selected.opportunity_from}</p></div>
-                <div><p className="text-sm text-muted-foreground">Status</p><StatusBadge status={selected.status} /></div>
-                <div><p className="text-sm text-muted-foreground">Stage</p><p className="font-medium">{selected.sales_stage?.stage_name || '-'}</p></div>
-                <div><p className="text-sm text-muted-foreground">Amount</p><p className="font-medium">{selected.opportunity_amount ? `$${selected.opportunity_amount.toLocaleString()}` : '-'}</p></div>
-                <div><p className="text-sm text-muted-foreground">Expected Close</p><p className="font-medium">{selected.expected_closing || '-'}</p></div>
+                {[
+                  ['Customer / Party', selected.party_name],
+                  ['Company', selected.company_name],
+                  ['From', selected.opportunity_from],
+                  ['Status', selected.status?.status_name],
+                  ['Stage', selected.opportunityStage?.stage_name],
+                  ['Amount', selected.opportunity_amount != null ? `${selected.currency ?? ''} ${Number(selected.opportunity_amount).toLocaleString()}` : null],
+                  ['Expected Close', selected.expected_closing ? String(selected.expected_closing).split('T')[0] : null],
+                  ['Probability', selected.probability != null ? `${selected.probability}%` : null],
+                ].map(([label, val]) => (
+                  <div key={String(label)}>
+                    <p className="text-muted-foreground">{label}</p>
+                    <p className="font-medium capitalize">{val || '—'}</p>
+                  </div>
+                ))}
+              </div>
+              {selected.to_discuss && (
+                <div>
+                  <p className="text-muted-foreground mb-1">To Discuss</p>
+                  <p className="border rounded p-2 bg-muted/30 text-sm">{selected.to_discuss}</p>
+                </div>
+              )}
+              <div className="border-t pt-3 grid grid-cols-2 gap-3">
+                <div><p className="text-muted-foreground">Contact Person</p><p className="font-medium">{selected.contact_person || '—'}</p></div>
+                <div><p className="text-muted-foreground">Email</p><p className="font-medium">{selected.contact_email || '—'}</p></div>
+                <div><p className="text-muted-foreground">Mobile</p><p className="font-medium">{selected.contact_mobile || '—'}</p></div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setViewOpen(false)}>Close</Button>
+                <Button className="bg-solarized-blue hover:bg-solarized-blue/90" onClick={() => { setViewOpen(false); navigate(`/crm/opportunities/${selected.id}/edit`); }}>
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+                </Button>
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>Add Opportunity</DialogTitle><DialogDescription>Create a new opportunity</DialogDescription></DialogHeader>
-          {renderForm(handleCreate)}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>Edit Opportunity</DialogTitle><DialogDescription>Update opportunity information</DialogDescription></DialogHeader>
-          {renderForm(handleUpdate)}
         </DialogContent>
       </Dialog>
     </div>
