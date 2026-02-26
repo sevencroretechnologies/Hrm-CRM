@@ -1,3 +1,4 @@
+import { Contact, Customer, CustomerGroup, Opportunity, PaymentTerm, PriceList, Territory, WrappedPaginatedResponse } from '@/types';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
@@ -42,6 +43,141 @@ export const authService = {
   resetPassword: (data: { token: string; email: string; password: string; password_confirmation: string }) =>
     api.post('/auth/reset-password', data),
   getProfile: () => api.get('/auth/profile'),
+};
+
+
+export interface EnumOption {
+  value: string;
+  label: string;
+}
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export const userApi = {
+  list: () => api.get('/users').then(res => {
+    // Handle both paginated success wrapper and direct array
+    const data = res.data.data;
+    if (data && data.data && Array.isArray(data.data)) return data.data;
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(res.data)) return res.data;
+    return [];
+  }),
+};
+
+export const enumApi = {
+  qualificationStatuses: () => api.get<EnumOption[]>('/enums/qualification-statuses').then(res => res.data),
+  genders: () => api.get<EnumOption[]>('/enums/genders').then(res => res.data),
+};
+
+export const statusApi = {
+  list: () => api.get('/statuses').then(res => Array.isArray(res.data) ? res.data : res.data.data || []),
+};
+
+export const sourceApi = {
+  list: () => api.get('/sources').then(res => Array.isArray(res.data) ? res.data : res.data.data || []),
+};
+
+export const requestTypeApi = {
+  list: () => api.get('/request-types').then(res => Array.isArray(res.data) ? res.data : res.data.data || []),
+};
+
+export const industryTypeApi = {
+  list: () => api.get('/industry-types').then(res => Array.isArray(res.data) ? res.data : res.data.data || []),
+};
+
+export const leadApi = {
+  list: (params?: Record<string, any>) => api.get('/leads', { params }).then(res => {
+    const data = res.data;
+    if (Array.isArray(data)) return data;
+    if (data.data && Array.isArray(data.data)) return data.data; // Standard wrapped
+    if (data.data && data.data.data && Array.isArray(data.data.data)) return data.data.data; // Paginated wrapped
+    return data.data || data;
+  }),
+  get: (id: number) => api.get(`/leads/${id}`).then(res => res.data.data || res.data),
+  create: (data: any) => api.post('/leads', data).then(res => res.data),
+  update: (id: number, data: any) => api.put(`/leads/${id}`, data).then(res => res.data),
+  delete: (id: number) => api.delete(`/leads/${id}`),
+};
+
+export const opportunityApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get("/opportunities", { params }).then((res) => {
+      const data = res.data;
+      if (Array.isArray(data)) return data;
+      return data.data || data;
+    }),
+  get: (id: number) => api.get<Opportunity>(`/opportunities/${id}`).then((r) => r.data),
+  create: (data: Partial<Opportunity>) =>
+    api.post<Opportunity>("/opportunities", data).then((r) => r.data),
+  update: (id: number, data: Partial<Opportunity>) =>
+    api.put<Opportunity>(`/opportunities/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/opportunities/${id}`),
+  getProducts: (id: number) => api.get(`/opportunities/${id}/products`).then((res) => res.data),
+  declareLost: (id: number, data: any) => api.post(`/opportunities/${id}/declare-lost`, data).then((res) => res.data),
+};
+
+export const contactApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get<WrappedPaginatedResponse<Contact>>("/contacts", { params }).then((r) => r.data.data),
+  get: (id: number) => api.get<Contact>(`/contacts/${id}`).then((r) => r.data),
+  create: (data: Partial<Contact>) =>
+    api.post<Contact>("/contacts", data).then((r) => r.data),
+  update: (id: number, data: Partial<Contact>) =>
+    api.put<Contact>(`/contacts/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/contacts/${id}`),
+};
+
+export const territoryApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get<Territory[]>("/territories", { params }).then((r) => r.data),
+  get: (id: number) => api.get<Territory>(`/territories/${id}`).then((r) => r.data),
+  create: (data: Partial<Territory>) =>
+    api.post<Territory>("/territories", data).then((r) => r.data),
+  update: (id: number, data: Partial<Territory>) =>
+    api.put<Territory>(`/territories/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/territories/${id}`),
+};
+
+export const customerApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get<WrappedPaginatedResponse<Customer>>("/customers", { params }).then((r) => r.data.data),
+  get: (id: number) => api.get<Customer>(`/customers/${id}`).then((r) => r.data),
+  create: (data: Partial<Customer>) =>
+    api.post<Customer>("/customers", data).then((r) => r.data),
+  update: (id: number, data: Partial<Customer>) =>
+    api.put<Customer>(`/customers/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/customers/${id}`),
+};
+
+export const customerGroupApi = {
+  list: () => api.get<CustomerGroup[]>("/customer-groups").then((r) => r.data),
+  create: (data: Partial<CustomerGroup>) =>
+    api.post<CustomerGroup>("/customer-groups", data).then((r) => r.data),
+  update: (id: number, data: Partial<CustomerGroup>) =>
+    api.put<CustomerGroup>(`/customer-groups/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/customer-groups/${id}`),
+};
+
+export const priceListApi = {
+  list: () => api.get<PriceList[]>("/price-lists").then((r) => r.data),
+  create: (data: Partial<PriceList>) =>
+    api.post<PriceList>("/price-lists", data).then((r) => r.data),
+  update: (id: number, data: Partial<PriceList>) =>
+    api.put<PriceList>(`/price-lists/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/price-lists/${id}`),
+};
+
+export const paymentTermApi = {
+  list: () => api.get<PaymentTerm[]>("/payment-terms").then((r) => r.data),
+  create: (data: Partial<PaymentTerm>) =>
+    api.post<PaymentTerm>("/payment-terms", data).then((r) => r.data),
+  update: (id: number, data: Partial<PaymentTerm>) =>
+    api.put<PaymentTerm>(`/payment-terms/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/payment-terms/${id}`),
 };
 
 export const dashboardService = {
@@ -697,6 +833,7 @@ export const adminService = {
   getUsers: (params?: { page?: number; per_page?: number; search?: string; role?: string }) => api.get('/users', { params }),
   getUsersByOrg: (params?: { page?: number; per_page?: number; search?: string }) => api.get('/users-by-org', { params }),
   getUsersByCompany: (params?: { page?: number; per_page?: number; search?: string }) => api.get('/users-by-company', { params }),
+  dropdown: () => api.get('/users-dropdown'),
   getUser: (id: number) => api.get(`/users/${id}`),
   createUser: (data: Record<string, unknown>) => api.post('/users', data),
   updateUser: (id: number, data: Record<string, unknown>) => api.put(`/users/${id}`, data),
@@ -882,6 +1019,14 @@ export const crmSourceService = {
   delete: (id: number) => api.delete(`/sources/${id}`),
 };
 
+export const crmTerritoryService = {
+  getAll: (params?: Record<string, unknown>) => api.get('/territories', { params }),
+  getById: (id: number) => api.get(`/territories/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/territories', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/territories/${id}`, data),
+  delete: (id: number) => api.delete(`/territories/${id}`),
+};
+
 export const crmStatusService = {
   getAll: (params?: Record<string, unknown>) => api.get('/statuses', { params }),
 };
@@ -894,9 +1039,9 @@ export const crmOpportunityTypeService = {
   getAll: (params?: Record<string, unknown>) => api.get('/opportunity-types', { params }),
 };
 
-export const crmTerritoryService = {
-  getAll: (params?: Record<string, unknown>) => api.get('/territories', { params }),
-};
+// export const crmTerritoryService = {
+//   getAll: (params?: Record<string, unknown>) => api.get('/territories', { params }),
+// };
 
 export const crmContactService = {
   getAll: (params?: Record<string, unknown>) => api.get('/contacts', { params }),
@@ -922,3 +1067,19 @@ export const crmSettingService = {
   get: () => api.get('/settings'),
   update: (data: Record<string, unknown>) => api.put('/settings', data),
 };
+
+// export const crmProductCategoryService = {
+//   getAll: (params?: Record<string, unknown>) => api.get('/product-categories', { params }),
+//   getById: (id: number) => api.get(`/product-categories/${id}`),
+//   create: (data: Record<string, unknown>) => api.post('/product-categories', data),
+//   update: (id: number, data: Record<string, unknown>) => api.put(`/product-categories/${id}`, data),
+//   delete: (id: number) => api.delete(`/product-categories/${id}`),
+// };
+
+// export const crmProductService = {
+//   getAll: (params?: Record<string, unknown>) => api.get('/products', { params }),
+//   getById: (id: number) => api.get(`/products/${id}`),
+//   create: (data: Record<string, unknown>) => api.post('/products', data),
+//   update: (id: number, data: Record<string, unknown>) => api.put(`/products/${id}`, data),
+//   delete: (id: number) => api.delete(`/products/${id}`),
+// };

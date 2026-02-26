@@ -11,6 +11,11 @@ use Illuminate\Http\Request;
 class UsersController extends Controller
 {
     use ApiResponse;
+    
+    public function index(Request $request): JsonResponse
+    {
+        return $this->getUsersByOrgId($request);
+    }
 
     public function getUsersByOrgId(Request $request): JsonResponse
     {
@@ -105,6 +110,24 @@ class UsersController extends Controller
                 'total' => $users->total(),
             ],
         ], 'Users retrieved successfully');
+    }
+
+    public function dropdown(Request $request): JsonResponse
+    {
+        $query = User::query();
+
+        if ($request->has('org_id')) {
+            $query->where('org_id', $request->org_id);
+        }
+
+        if ($request->has('company_id')) {
+            $query->where('company_id', $request->company_id);
+        }
+
+        $users = $query->where('is_active', true)
+            ->get(['id', 'name', 'email']);
+
+        return $this->success($users, 'Users for dropdown retrieved successfully');
     }
 
 

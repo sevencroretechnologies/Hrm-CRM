@@ -34,8 +34,11 @@ use App\Http\Controllers\Api\crm\TaskTypeController;
 use App\Http\Controllers\Api\crm\ProductCategoryController;
 use App\Http\Controllers\Api\crm\ProductController;
 use App\Http\Controllers\Api\crm\OpportunityProductController;
-use App\Http\Controllers\Api\Auth\AccessController;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Admin\UsersController;
+use App\Http\Controllers\Api\Auth\AccessController;
+use App\Http\Controllers\Api\crm\PaymentTermController;
+use App\Http\Controllers\Api\crm\PriceListController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -54,8 +57,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/profile', [AccessController::class, 'profile']);
     });
     // Users
-    // Route::get('users', [UserController::class, 'index']);
-    Route::get('users', [UsersController::class, 'index']);
+    Route::get('users', [UsersController::class, 'getUsersByOrgId']); // Temporary fix for 'index' call
+    Route::get('users-by-org', [UsersController::class, 'getUsersByOrgId']);
+    Route::get('users-by-company', [UsersController::class, 'getUsersByCompanyId']);
+    Route::get('users-dropdown', [UsersController::class, 'dropdown']);
 
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('dashboard/lead-conversion-funnel', [DashboardController::class, 'leadConversionFunnel']);
@@ -104,8 +109,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Master Data
     Route::apiResource('customers', CustomerController::class);
     Route::apiResource('customer-groups', CustomerGroupController::class);
-    // Route::apiResource('payment-terms', PaymentTermController::class);
-    // Route::apiResource('price-lists', PriceListController::class);
+    Route::apiResource('payment-terms', PaymentTermController::class);
+    Route::apiResource('price-lists', PriceListController::class);
     Route::apiResource('product-categories', ProductCategoryController::class);
     Route::apiResource('products', ProductController::class);
     Route::apiResource('opportunity-products', OpportunityProductController::class);

@@ -509,9 +509,13 @@ const navigation: NavItem[] = [
     children: [
       { name: "Dashboard", href: "/crm/dashboard" },
       { name: "Leads", href: "/crm/leads" },
+      { name: "Customers", href: "/crm/customers" },
       { name: "Opportunities", href: "/crm/opportunities" },
       { name: "Campaigns", href: "/crm/campaigns" },
       { name: "Sources", href: "/crm/sources" },
+      { name: "Territories", href: "/crm/territories" },
+      { name: "Product List", href: "/crm/products" },
+      { name: "Product Categories", href: "/crm/product-categories" },
       { name: "Appointments", href: "/crm/appointments" },
       { name: "Prospects", href: "/crm/prospects" },
       { name: "Contracts", href: "/crm/contracts" },
@@ -568,8 +572,8 @@ function NavItemComponent({
         <button
           onClick={() => setIsOpen(!isOpen)}
           className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive
-              ? "bg-solarized-blue/10 text-solarized-blue"
-              : "text-solarized-base01 hover:bg-solarized-base2 hover:text-solarized-base02"
+            ? "bg-solarized-blue/10 text-solarized-blue"
+            : "text-solarized-base01 hover:bg-solarized-base2 hover:text-solarized-base02"
             }`}
         >
           <div className="flex items-center gap-3">
@@ -587,8 +591,8 @@ function NavItemComponent({
                 key={child.href}
                 to={child.href}
                 className={`block px-3 py-2 text-sm rounded-lg transition-colors ${location.pathname === child.href
-                    ? "bg-solarized-blue/10 text-solarized-blue"
-                    : "text-solarized-base01 hover:bg-solarized-base2 hover:text-solarized-base02"
+                  ? "bg-solarized-blue/10 text-solarized-blue"
+                  : "text-solarized-base01 hover:bg-solarized-base2 hover:text-solarized-base02"
                   }`}
               >
                 {child.name}
@@ -604,8 +608,8 @@ function NavItemComponent({
     <Link
       to={item.href}
       className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive
-          ? "bg-solarized-blue/10 text-solarized-blue"
-          : "text-solarized-base01 hover:bg-solarized-base2 hover:text-solarized-base02"
+        ? "bg-solarized-blue/10 text-solarized-blue"
+        : "text-solarized-base01 hover:bg-solarized-base2 hover:text-solarized-base02"
         }`}
       title={isCollapsed ? item.name : undefined}
     >

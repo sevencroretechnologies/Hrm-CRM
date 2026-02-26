@@ -2,29 +2,15 @@ import Swal from "sweetalert2";
 import "../styles/swal-custom.css";
 
 export const showAlert = (
-  type: "success" | "error" | "warning",
+  type: "success" | "error" | "warning" | "info",
   title: string,
   text: string,
-  timer?: number
+  timer?: number,
+  isHtml: boolean = false
 ) => {
-  const config: {
-    icon: "success" | "error" | "warning";
-    title: string;
-    text: string;
-    confirmButtonColor: string;
-    customClass: {
-      popup: string;
-      title: string;
-      htmlContainer: string;
-    };
-    timer?: number;
-    showConfirmButton?: boolean;
-    allowOutsideClick?: boolean;
-    allowEscapeKey?: boolean;
-  } = {
+  const config: any = {
     icon: type,
     title,
-    text,
     confirmButtonColor: "#268bd2",
     customClass: {
       popup: "swal-solarized",
@@ -34,6 +20,12 @@ export const showAlert = (
     allowOutsideClick: false,
     allowEscapeKey: false,
   };
+
+  if (isHtml) {
+    config.html = text;
+  } else {
+    config.text = text;
+  }
 
   if (timer) {
     config.timer = timer;

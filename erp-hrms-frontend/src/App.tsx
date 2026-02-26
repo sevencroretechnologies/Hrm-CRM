@@ -141,6 +141,10 @@ import ProspectsList from './modules/crm/prospects/ProspectsList';
 import ContractsList from './modules/crm/contracts/ContractsList';
 import SalesStagesList from './modules/crm/sales-stages/SalesStagesList';
 import SourceList from './modules/crm/sources/SourceList';
+import TerritoryList from './modules/crm/territories/TerritoryList';
+import ProductList from './modules/crm/products/ProductList';
+import ProductForm from './modules/crm/products/ProductForm';
+import ProductCategoryList from './modules/crm/products/ProductCategoryList';
 import CrmSettings from './modules/crm/settings/CrmSettings';
 
 // Error Pages
@@ -151,6 +155,9 @@ import MyLeaveBalances from './pages/leave/MyLeaveBalances';
 import MyWorkLogs from './pages/attendance/MyWorkLogs';
 import MyAttendanceSummary from './pages/attendance/MyAttendanceSummary';
 import ClockInOutSelf from './pages/attendance/ClockInOutSelf';
+import LeadForm from './modules/crm/leads/LeadForm';
+import CustomerList from './modules/crm/customers/customerList';
+import CustomerForm from './modules/crm/customers/customerForm';
 
 function App() {
   return (
@@ -407,11 +414,21 @@ function App() {
             <Route path="/crm" element={<CrmDashboard />} />
             <Route path="/crm/dashboard" element={<CrmDashboard />} />
             <Route path="/crm/leads" element={<LeadsList />} />
+            <Route path="/crm/leads/create" element={<LeadForm />} />
+            <Route path="/crm/leads/:id/edit" element={<LeadForm />} />
+            <Route path="/crm/customers" element={<CustomerList />} />
+            <Route path="/crm/customers/create" element={<CustomerForm />} />
+            <Route path="/crm/customers/:id/edit" element={<CustomerForm />} />
             <Route path="/crm/opportunities" element={<OpportunitiesList />} />
             <Route path="/crm/opportunities/create" element={<OpportunityForm />} />
             <Route path="/crm/opportunities/:id/edit" element={<OpportunityForm />} />
             <Route path="/crm/campaigns" element={<CampaignsList />} />
             <Route path="/crm/sources" element={<SourceList />} />
+            <Route path="/crm/territories" element={<TerritoryList />} />
+            <Route path="/crm/products" element={<ProductList />} />
+            <Route path="/crm/products/new" element={<ProductForm />} />
+            <Route path="/crm/products/:id/edit" element={<ProductForm />} />
+            <Route path="/crm/product-categories" element={<ProductCategoryList />} />
             <Route path="/crm/appointments" element={<AppointmentsList />} />
             <Route path="/crm/prospects" element={<ProspectsList />} />
             <Route path="/crm/contracts" element={<ContractsList />} />
