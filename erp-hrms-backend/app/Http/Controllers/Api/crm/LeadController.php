@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\crm;
 
 use App\Enums\Gender;
 use App\Enums\QualificationStatus;

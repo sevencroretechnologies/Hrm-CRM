@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\crm;
 
 use App\Models\Prospect;
 use Illuminate\Pagination\LengthAwarePaginator;

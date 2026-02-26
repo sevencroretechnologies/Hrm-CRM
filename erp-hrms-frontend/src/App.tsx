@@ -139,6 +139,7 @@ import AppointmentsList from './modules/crm/appointments/AppointmentsList';
 import ProspectsList from './modules/crm/prospects/ProspectsList';
 import ContractsList from './modules/crm/contracts/ContractsList';
 import SalesStagesList from './modules/crm/sales-stages/SalesStagesList';
+import SourceList from './modules/crm/sources/SourceList';
 import CrmSettings from './modules/crm/settings/CrmSettings';
 
 // Error Pages
@@ -407,6 +408,7 @@ function App() {
             <Route path="/crm/leads" element={<LeadsList />} />
             <Route path="/crm/opportunities" element={<OpportunitiesList />} />
             <Route path="/crm/campaigns" element={<CampaignsList />} />
+            <Route path="/crm/sources" element={<SourceList />} />
             <Route path="/crm/appointments" element={<AppointmentsList />} />
             <Route path="/crm/prospects" element={<ProspectsList />} />
             <Route path="/crm/contracts" element={<ContractsList />} />

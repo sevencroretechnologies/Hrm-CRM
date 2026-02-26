@@ -1,39 +1,39 @@
 <?php
 
-use App\Http\Controllers\Api\AppointmentController;
-use App\Http\Controllers\Api\CampaignController;
-use App\Http\Controllers\Api\CompetitorController;
-use App\Http\Controllers\Api\ContractController;
-use App\Http\Controllers\Api\CrmNoteController;
-use App\Http\Controllers\Api\CrmSettingController;
-use App\Http\Controllers\Api\DashboardController;
-use App\Http\Controllers\Api\EnumController;
-use App\Http\Controllers\Api\LeadController;
-use App\Http\Controllers\Api\OpportunityController;
-use App\Http\Controllers\Api\OpportunityLostReasonController;
-use App\Http\Controllers\Api\ProspectController;
-use App\Http\Controllers\Api\SalesStageController;
-use App\Http\Controllers\Api\SourceController;
-use App\Http\Controllers\Api\StatusController;
-use App\Http\Controllers\Api\RequestTypeController;
-use App\Http\Controllers\Api\IndustryTypeController;
-use App\Http\Controllers\Api\UserController;
-use App\Http\Controllers\Api\OpportunityStageController;
-use App\Http\Controllers\Api\OpportunityTypeController;
-use App\Http\Controllers\Api\TerritoryController;
-use App\Http\Controllers\Api\ContactController;
-use App\Http\Controllers\Api\CustomerGroupController;
-use App\Http\Controllers\Api\PaymentTermController;
-use App\Http\Controllers\Api\PriceListController;
-use App\Http\Controllers\Api\CustomerController;
-use App\Http\Controllers\Api\SalesTaskController;
-use App\Http\Controllers\Api\SalesTaskDetailController;
-use App\Http\Controllers\Api\TaskController;
-use App\Http\Controllers\Api\TaskSourceController;
-use App\Http\Controllers\Api\TaskTypeController;
-use App\Http\Controllers\Api\ProductCategoryController;
-use App\Http\Controllers\Api\ProductController;
-use App\Http\Controllers\Api\OpportunityProductController;
+use App\Http\Controllers\Api\crm\AppointmentController;
+use App\Http\Controllers\Api\crm\CampaignController;
+// use App\Http\Controllers\Api\CompetitorController; // Does not exist yet
+use App\Http\Controllers\Api\Staff\ContractController;
+// use App\Http\Controllers\Api\CrmNoteController; // Does not exist yet
+// use App\Http\Controllers\Api\CrmSettingController; // Does not exist yet
+use App\Http\Controllers\Api\crm\DashboardController;
+use App\Http\Controllers\Api\crm\EnumController;
+use App\Http\Controllers\Api\crm\LeadController;
+use App\Http\Controllers\Api\crm\OpportunityController;
+use App\Http\Controllers\Api\crm\OpportunityLostReasonController;
+use App\Http\Controllers\Api\crm\ProspectController;
+// use App\Http\Controllers\Api\SalesStageController; // Does not exist yet
+use App\Http\Controllers\Api\crm\SourceController;
+use App\Http\Controllers\Api\crm\StatusController;
+use App\Http\Controllers\Api\crm\RequestTypeController;
+use App\Http\Controllers\Api\crm\IndustryTypeController;
+// use App\Http\Controllers\Api\UserController; // Does not exist yet
+use App\Http\Controllers\Api\crm\OpportunityStageController;
+use App\Http\Controllers\Api\crm\OpportunityTypeController;
+use App\Http\Controllers\Api\crm\TerritoryController;
+use App\Http\Controllers\Api\crm\ContactController;
+use App\Http\Controllers\Api\crm\CustomerGroupController;
+// use App\Http\Controllers\Api\PaymentTermController; // Does not exist yet
+// use App\Http\Controllers\Api\PriceListController; // Does not exist yet
+use App\Http\Controllers\Api\crm\CustomerController;
+use App\Http\Controllers\Api\crm\SalesTaskController;
+use App\Http\Controllers\Api\crm\SalesTaskDetailController;
+use App\Http\Controllers\Api\crm\TaskController;
+use App\Http\Controllers\Api\crm\TaskSourceController;
+use App\Http\Controllers\Api\crm\TaskTypeController;
+use App\Http\Controllers\Api\crm\ProductCategoryController;
+use App\Http\Controllers\Api\crm\ProductController;
+use App\Http\Controllers\Api\crm\OpportunityProductController;
 use App\Http\Controllers\Api\Auth\AccessController;
 use App\Http\Controllers\Api\Admin\UsersController;
 use Illuminate\Support\Facades\Route;
@@ -82,22 +82,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('sources', SourceController::class);
 
     Route::apiResource('contracts', ContractController::class);
-    Route::post('contracts/{id}/sign', [ContractController::class, 'sign']);
+    // Route::post('contracts/{id}/sign', [ContractController::class, 'sign']); // sign method not available in Staff\ContractController
 
     Route::apiResource('appointments', AppointmentController::class);
 
-    Route::get('notes', [CrmNoteController::class, 'index']);
-    Route::post('notes', [CrmNoteController::class, 'store']);
-    Route::delete('notes/{id}', [CrmNoteController::class, 'destroy']);
+    // Route::get('notes', [CrmNoteController::class, 'index']); // CrmNoteController does not exist yet
+    // Route::post('notes', [CrmNoteController::class, 'store']);
+    // Route::delete('notes/{id}', [CrmNoteController::class, 'destroy']);
 
-    Route::apiResource('sales-stages', SalesStageController::class);
+    // Route::apiResource('sales-stages', SalesStageController::class); // SalesStageController does not exist yet
     Route::apiResource('statuses', StatusController::class);
     Route::apiResource('request-types', RequestTypeController::class);
     Route::apiResource('industry-types', IndustryTypeController::class);
     Route::apiResource('opportunity-stages', OpportunityStageController::class);
     Route::apiResource('opportunity-types', OpportunityTypeController::class);
     Route::apiResource('lost-reasons', OpportunityLostReasonController::class);
-    Route::apiResource('competitors', CompetitorController::class)->only(['index', 'store', 'destroy']);
+    // Route::apiResource('competitors', CompetitorController::class)->only(['index', 'store', 'destroy']); // CompetitorController does not exist yet
     Route::apiResource('territories', TerritoryController::class);
     Route::apiResource('contacts', ContactController::class);
 
@@ -119,6 +119,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('enums/qualification-statuses', [EnumController::class, 'qualificationStatuses']);
     Route::get('enums/genders', [EnumController::class, 'genders']);
 
-    Route::get('settings', [CrmSettingController::class, 'show']);
-    Route::put('settings', [CrmSettingController::class, 'update']);
+    // Route::get('settings', [CrmSettingController::class, 'show']); // CrmSettingController does not exist yet
+    // Route::put('settings', [CrmSettingController::class, 'update']);
 });

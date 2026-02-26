@@ -511,6 +511,7 @@ const navigation: NavItem[] = [
       { name: "Leads", href: "/crm/leads" },
       { name: "Opportunities", href: "/crm/opportunities" },
       { name: "Campaigns", href: "/crm/campaigns" },
+      { name: "Sources", href: "/crm/sources" },
       { name: "Appointments", href: "/crm/appointments" },
       { name: "Prospects", href: "/crm/prospects" },
       { name: "Contracts", href: "/crm/contracts" },

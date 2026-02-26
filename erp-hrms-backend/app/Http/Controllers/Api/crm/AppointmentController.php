@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\crm;
 
 use App\Http\Controllers\Controller;
-use App\Services\AppointmentService;
+use App\Services\crm\AppointmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Exception;

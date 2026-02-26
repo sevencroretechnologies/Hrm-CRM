@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\crm;
 
 use App\Enums\TaskSource;
 use App\Http\Controllers\Controller;

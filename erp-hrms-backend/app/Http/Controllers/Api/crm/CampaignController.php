@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\crm;
 
 use App\Http\Controllers\Controller;
-use App\Services\CampaignService;
+use App\Services\crm\CampaignService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Exception;
