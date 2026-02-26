@@ -11,6 +11,11 @@ use Illuminate\Http\Request;
 class UsersController extends Controller
 {
     use ApiResponse;
+    
+    public function index(Request $request): JsonResponse
+    {
+        return $this->getUsersByOrgId($request);
+    }
 
     public function getUsersByOrgId(Request $request): JsonResponse
     {
