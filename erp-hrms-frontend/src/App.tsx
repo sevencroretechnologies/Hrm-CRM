@@ -150,6 +150,7 @@ import MyLeaveBalances from './pages/leave/MyLeaveBalances';
 import MyWorkLogs from './pages/attendance/MyWorkLogs';
 import MyAttendanceSummary from './pages/attendance/MyAttendanceSummary';
 import ClockInOutSelf from './pages/attendance/ClockInOutSelf';
+import LeadForm from './modules/crm/leads/LeadForm';
 
 function App() {
   return (
@@ -406,6 +407,8 @@ function App() {
             <Route path="/crm" element={<CrmDashboard />} />
             <Route path="/crm/dashboard" element={<CrmDashboard />} />
             <Route path="/crm/leads" element={<LeadsList />} />
+            <Route path="/crm/leads/create" element={<LeadForm />} />
+            <Route path="/crm/leads/:id/edit" element={<LeadForm />} />
             <Route path="/crm/opportunities" element={<OpportunitiesList />} />
             <Route path="/crm/campaigns" element={<CampaignsList />} />
             <Route path="/crm/sources" element={<SourceList />} />

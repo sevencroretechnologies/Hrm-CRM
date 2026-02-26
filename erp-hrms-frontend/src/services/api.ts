@@ -44,6 +44,58 @@ export const authService = {
   getProfile: () => api.get('/auth/profile'),
 };
 
+
+export interface EnumOption {
+  value: string;
+  label: string;
+}
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export const userApi = {
+  list: () => api.get('/users').then(res => {
+    // Handle both paginated success wrapper and direct array
+    const data = res.data.data;
+    if (data && data.data && Array.isArray(data.data)) return data.data;
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(res.data)) return res.data;
+    return [];
+  }),
+};
+
+export const enumApi = {
+  qualificationStatuses: () => api.get<EnumOption[]>('/enums/qualification-statuses').then(res => res.data),
+  genders: () => api.get<EnumOption[]>('/enums/genders').then(res => res.data),
+};
+
+export const statusApi = {
+  list: () => api.get('/statuses').then(res => Array.isArray(res.data) ? res.data : res.data.data || []),
+};
+
+export const sourceApi = {
+  list: () => api.get('/sources').then(res => Array.isArray(res.data) ? res.data : res.data.data || []),
+};
+
+export const requestTypeApi = {
+  list: () => api.get('/request-types').then(res => Array.isArray(res.data) ? res.data : res.data.data || []),
+};
+
+export const industryTypeApi = {
+  list: () => api.get('/industry-types').then(res => Array.isArray(res.data) ? res.data : res.data.data || []),
+};
+
+export const leadApi = {
+  list: (params?: Record<string, any>) => api.get('/leads', { params }).then(res => res.data.data),
+  get: (id: number) => api.get(`/leads/${id}`).then(res => res.data.data || res.data),
+  create: (data: any) => api.post('/leads', data).then(res => res.data),
+  update: (id: number, data: any) => api.put(`/leads/${id}`, data).then(res => res.data),
+  delete: (id: number) => api.delete(`/leads/${id}`),
+};
+
 export const dashboardService = {
   getStats: (params?: Record<string, unknown>) => api.get('/dashboard', { params }),
   getEmployeeStats: (params?: Record<string, unknown>) => api.get('/dashboard/employee-stats', { params }),

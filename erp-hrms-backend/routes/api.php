@@ -34,7 +34,7 @@ use App\Http\Controllers\Api\crm\TaskTypeController;
 use App\Http\Controllers\Api\crm\ProductCategoryController;
 use App\Http\Controllers\Api\crm\ProductController;
 use App\Http\Controllers\Api\crm\OpportunityProductController;
-use App\Http\Controllers\Api\Auth\AccessController;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Admin\UsersController;
 use Illuminate\Support\Facades\Route;
 
@@ -49,10 +49,10 @@ Route::prefix('auth')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
 
     // Authentication
-    // Route::prefix('auth')->group(function () {
-    //     Route::post('/sign-out', [AccessController::class, 'signOut']);
-    //     Route::get('/profile', [AccessController::class, 'profile']);
-    // });
+    Route::prefix('auth')->group(function () {
+        Route::post('/sign-out', [AuthController::class, 'logout']);
+        Route::get('/profile', [AuthController::class, 'profile']);
+    });
     // Users
     // Route::get('users', [UserController::class, 'index']);
     Route::get('users', [UsersController::class, 'index']);
