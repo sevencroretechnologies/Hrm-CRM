@@ -1,3 +1,4 @@
+import { Contact, Customer, CustomerGroup, Opportunity, PaymentTerm, PriceList, Territory, WrappedPaginatedResponse } from '@/types';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
@@ -94,6 +95,79 @@ export const leadApi = {
   create: (data: any) => api.post('/leads', data).then(res => res.data),
   update: (id: number, data: any) => api.put(`/leads/${id}`, data).then(res => res.data),
   delete: (id: number) => api.delete(`/leads/${id}`),
+};
+
+export const opportunityApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get<WrappedPaginatedResponse<Opportunity>>("/opportunities", { params }).then((r) => r.data.data),
+  get: (id: number) => api.get<Opportunity>(`/opportunities/${id}`).then((r) => r.data),
+  create: (data: Partial<Opportunity>) =>
+    api.post<Opportunity>("/opportunities", data).then((r) => r.data),
+  update: (id: number, data: Partial<Opportunity>) =>
+    api.put<Opportunity>(`/opportunities/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/opportunities/${id}`),
+  getProducts: (id: number) => api.get(`/opportunities/${id}/products`).then((res) => res.data),
+  declareLost: (id: number, data: any) => api.post(`/opportunities/${id}/declare-lost`, data).then((res) => res.data),
+};
+
+export const contactApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get<WrappedPaginatedResponse<Contact>>("/contacts", { params }).then((r) => r.data.data),
+  get: (id: number) => api.get<Contact>(`/contacts/${id}`).then((r) => r.data),
+  create: (data: Partial<Contact>) =>
+    api.post<Contact>("/contacts", data).then((r) => r.data),
+  update: (id: number, data: Partial<Contact>) =>
+    api.put<Contact>(`/contacts/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/contacts/${id}`),
+};
+
+export const territoryApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get<Territory[]>("/territories", { params }).then((r) => r.data),
+  get: (id: number) => api.get<Territory>(`/territories/${id}`).then((r) => r.data),
+  create: (data: Partial<Territory>) =>
+    api.post<Territory>("/territories", data).then((r) => r.data),
+  update: (id: number, data: Partial<Territory>) =>
+    api.put<Territory>(`/territories/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/territories/${id}`),
+};
+
+export const customerApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get<WrappedPaginatedResponse<Customer>>("/customers", { params }).then((r) => r.data.data),
+  get: (id: number) => api.get<Customer>(`/customers/${id}`).then((r) => r.data),
+  create: (data: Partial<Customer>) =>
+    api.post<Customer>("/customers", data).then((r) => r.data),
+  update: (id: number, data: Partial<Customer>) =>
+    api.put<Customer>(`/customers/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/customers/${id}`),
+};
+
+export const customerGroupApi = {
+  list: () => api.get<CustomerGroup[]>("/customer-groups").then((r) => r.data),
+  create: (data: Partial<CustomerGroup>) =>
+    api.post<CustomerGroup>("/customer-groups", data).then((r) => r.data),
+  update: (id: number, data: Partial<CustomerGroup>) =>
+    api.put<CustomerGroup>(`/customer-groups/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/customer-groups/${id}`),
+};
+
+export const priceListApi = {
+  list: () => api.get<PriceList[]>("/price-lists").then((r) => r.data),
+  create: (data: Partial<PriceList>) =>
+    api.post<PriceList>("/price-lists", data).then((r) => r.data),
+  update: (id: number, data: Partial<PriceList>) =>
+    api.put<PriceList>(`/price-lists/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/price-lists/${id}`),
+};
+
+export const paymentTermApi = {
+  list: () => api.get<PaymentTerm[]>("/payment-terms").then((r) => r.data),
+  create: (data: Partial<PaymentTerm>) =>
+    api.post<PaymentTerm>("/payment-terms", data).then((r) => r.data),
+  update: (id: number, data: Partial<PaymentTerm>) =>
+    api.put<PaymentTerm>(`/payment-terms/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/payment-terms/${id}`),
 };
 
 export const dashboardService = {

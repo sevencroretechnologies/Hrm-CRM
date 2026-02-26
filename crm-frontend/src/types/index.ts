@@ -40,6 +40,113 @@ export interface Lead {
   updated_at: string;
 }
 
+export interface PriceList {
+  id: number;
+  name: string;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentTerm {
+  id: number;
+  name: string;
+  days: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerGroup {
+  id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Territory {
+  id: number;
+  territory_name: string;
+  territory_manager: number | null;
+  manager: { id: number; name: string; email: string } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContactPhone {
+  id?: number;
+  contact_id?: number;
+  phone_no: string | null;
+  is_primary: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ContactEmail {
+  id?: number;
+  contact_id?: number;
+  email: string | null;
+  is_primary: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Contact {
+  id: number;
+  salutation: string | null;
+  first_name: string;
+  middle_name: string | null;
+  last_name: string | null;
+  designation: string | null;
+  gender: string | null;
+  company_name: string | null;
+  address: string | null;
+  status: string;
+  full_name: string;
+  phones: ContactPhone[];
+  emails: ContactEmail[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IndustryType {
+  id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Customer {
+  id: number;
+  name: string;
+  customer_type: string | null;
+  customer_group_id: number | null;
+  customer_group: CustomerGroup | null;
+  territory_id: number | null;
+  territory: Territory | null;
+  lead_id: number | null;
+  lead: Lead | null;
+  opportunity_id: number | null;
+  opportunity: Opportunity | null;
+  industry_id: number | null;
+  industry: IndustryType | null;
+  default_price_list_id: number | null;
+  price_list: PriceList | null;
+  payment_term_id: number | null;
+  payment_term: PaymentTerm | null;
+  customer_contact_id: number | null;
+  primary_contact: Contact | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  tax_id: string | null;
+  billing_currency: string | null;
+  bank_account_details: string | null;
+  print_language: string | null;
+  customer_details: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Opportunity {
   id: number;
   opportunity_from: string;

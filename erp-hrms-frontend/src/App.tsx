@@ -152,6 +152,8 @@ import MyWorkLogs from './pages/attendance/MyWorkLogs';
 import MyAttendanceSummary from './pages/attendance/MyAttendanceSummary';
 import ClockInOutSelf from './pages/attendance/ClockInOutSelf';
 import LeadForm from './modules/crm/leads/LeadForm';
+import CustomerList from './modules/crm/customers/customerList';
+import CustomerForm from './modules/crm/customers/customerForm';
 
 function App() {
   return (
@@ -410,6 +412,9 @@ function App() {
             <Route path="/crm/leads" element={<LeadsList />} />
             <Route path="/crm/leads/create" element={<LeadForm />} />
             <Route path="/crm/leads/:id/edit" element={<LeadForm />} />
+            <Route path="/crm/customers" element={<CustomerList />} />
+            <Route path="/crm/customers/create" element={<CustomerForm />} />
+            <Route path="/crm/customers/:id/edit" element={<CustomerForm />} />
             <Route path="/crm/opportunities" element={<OpportunitiesList />} />
             <Route path="/crm/campaigns" element={<CampaignsList />} />
             <Route path="/crm/sources" element={<SourceList />} />
