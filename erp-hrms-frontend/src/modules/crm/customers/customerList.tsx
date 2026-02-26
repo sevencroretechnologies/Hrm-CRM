@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { customerApi } from '@/services/api';
-import type { Customer, PaginatedResponse } from '@/types';
+import type { Customer } from '@/types';
 import { showAlert, showConfirmDialog, getErrorMessage } from '@/lib/sweetalert';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -93,7 +93,7 @@ export default function CustomerList() {
 
     const columns: TableColumn<Customer>[] = [
         {
-            name: '#',
+            name: 'ID',
             selector: (_row, index) => (page - 1) * perPage + (index !== undefined ? index + 1 : 0),
             width: '60px',
         },
@@ -102,7 +102,7 @@ export default function CustomerList() {
             selector: (row) => row.name,
             sortable: true,
             minWidth: '200px',
-            cell: (row) => <span className="font-medium text-solarized-blue cursor-pointer" onClick={() => handleEdit(row)}>{row.name}</span>,
+            cell: (row) => row.name,
         },
         {
             name: 'Type',

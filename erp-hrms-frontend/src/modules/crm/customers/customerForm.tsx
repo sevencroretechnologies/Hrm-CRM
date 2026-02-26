@@ -86,6 +86,14 @@ export default function CustomerForm() {
     useEffect(() => {
         const loadOptions = async () => {
             try {
+                const fetchResilient = async (apiCall: () => Promise<any>) => {
+                    try {
+                        return await apiCall();
+                    } catch (err) {
+                        return [];
+                    }
+                };
+
                 const [
                     groupsRes,
                     territoriesRes,
@@ -96,16 +104,16 @@ export default function CustomerForm() {
                     termsRes,
                     contactsRes
                 ] = await Promise.all([
-                    customerGroupApi.list(),
-                    territoryApi.list(),
-                    leadApi.list(),
-                    opportunityApi.list(),
-                    industryTypeApi.list(),
-                    priceListApi.list(),
-                    paymentTermApi.list(),
-                    contactApi.list()
+                    fetchResilient(() => customerGroupApi.list()),
+                    fetchResilient(() => territoryApi.list()),
+                    fetchResilient(() => leadApi.list()),
+                    fetchResilient(() => opportunityApi.list()),
+                    fetchResilient(() => industryTypeApi.list()),
+                    fetchResilient(() => priceListApi.list()),
+                    fetchResilient(() => paymentTermApi.list()),
+                    fetchResilient(() => contactApi.list()),
                 ]);
-debugger;
+
                 setCustomerGroups(groupsRes || []);
                 setTerritories(territoriesRes || []);
                 setLeads(Array.isArray(leadsRes) ? leadsRes : (leadsRes as any).data || []);
@@ -115,7 +123,7 @@ debugger;
                 setPaymentTerms(termsRes || []);
                 setContacts(Array.isArray(contactsRes) ? contactsRes : (contactsRes as any).data || []);
             } catch (error) {
-                console.error("Failed to load options", error);
+                console.error("Critical error in loadOptions:", error);
             }
         };
 
