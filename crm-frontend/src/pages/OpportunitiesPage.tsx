@@ -1,61 +1,88 @@
 import { useEffect, useState, useCallback } from "react";
-import { opportunityApi, salesStageApi } from "@/services/api";
-import type { Opportunity, SalesStage } from "@/types";
+import { opportunityApi, leadApi, statusApi } from "@/services/api";
+import type { Lead, Opportunity, Status, PaginatedResponse } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ArrowLeft, ArrowRight } from "lucide-react";
 
-const STATUS_OPTIONS = ["Open", "Quotation", "Converted", "Lost", "Replied", "Closed"];
 const statusVariant = (s: string) => {
-  if (s === "Converted") return "success" as const;
-  if (s === "Lost") return "destructive" as const;
-  if (s === "Open") return "warning" as const;
+  const name = s?.toLowerCase() || "";
+  if (name.includes("open") || name.includes("new")) return "warning" as const;
+  if (name.includes("won") || name.includes("convert")) return "success" as const;
+  if (name.includes("lost") || name.includes("closed")) return "destructive" as const;
+  if (name.includes("replied")) return "default" as const;
   return "default" as const;
 };
 
 export default function OpportunitiesPage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [stages, setStages] = useState<SalesStage[]>([]);
+  const [statuses, setStatuses] = useState<Status[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Opportunity | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(15);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const fetchData = useCallback(() => {
-    setLoading(true);
-    const params: Record<string, string> = {};
-    if (search) params.search = search;
-    if (statusFilter) params.status = statusFilter;
+  useEffect(() => {
     Promise.all([
-      opportunityApi.list(params),
-      stages.length === 0 ? salesStageApi.list() : Promise.resolve(stages),
-    ]).then(([oppRes, stagesRes]) => {
-      setOpportunities(Array.isArray(oppRes) ? oppRes : oppRes.data || []);
-      if (Array.isArray(stagesRes)) setStages(stagesRes);
-    }).finally(() => setLoading(false));
-  }, [search, statusFilter, stages.length]);
+      statusApi.list(),
+      leadApi.list(),
+    ]).then(([statusRes, leadsRes]) => {
+      setStatuses(Array.isArray(statusRes) ? statusRes : []);
+      const leadsData = Array.isArray(leadsRes) ? leadsRes : (leadsRes as any)?.data || [];
+      setLeads(leadsData);
+    });
+  }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  const fetchData = useCallback((page = 1) => {
+    setLoading(true);
+    const params: Record<string, string | number> = { page, per_page: perPage };
+    if (search) params.search = search;
+    if (statusFilter) params.status_id = statusFilter;
+    opportunityApi.list(params).then((res) => {
+      const paginatedRes = res as PaginatedResponse<Opportunity>;
+      if (paginatedRes.data) {
+        setOpportunities(paginatedRes.data);
+        setCurrentPage(paginatedRes.current_page);
+        setTotalPages(paginatedRes.last_page);
+        setTotal(paginatedRes.total);
+      } else {
+        setOpportunities(Array.isArray(res) ? res : []);
+      }
+    }).finally(() => setLoading(false));
+  }, [search, statusFilter, perPage]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchData(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [fetchData]);
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ opportunity_from: "Lead", status: "Open", party_id: "0" });
+    setForm({ opportunity_from: "lead", status_id: "", party_name: "" });
     setDialogOpen(true);
   };
+
   const openEdit = (opp: Opportunity) => {
     setEditing(opp);
     setForm({
-      opportunity_from: opp.opportunity_from || "Lead",
-      party_id: String(opp.party_id),
-      customer_name: opp.customer_name || "",
-      status: opp.status || "Open",
-      sales_stage_id: String(opp.sales_stage_id || ""),
+      opportunity_from: opp.opportunity_from || "lead",
+      lead_id: String(opp.lead_id || ""),
+      party_name: opp.party_name || "",
+      company_name: opp.company_name || "",
+      status_id: String(opp.status_id || ""),
       opportunity_amount: String(opp.opportunity_amount || ""),
       expected_closing: opp.expected_closing || "",
       probability: String(opp.probability || ""),
@@ -66,20 +93,26 @@ export default function OpportunitiesPage() {
   };
 
   const handleSave = async () => {
-    const data = { ...form, party_id: Number(form.party_id), sales_stage_id: form.sales_stage_id ? Number(form.sales_stage_id) : undefined, opportunity_amount: form.opportunity_amount ? Number(form.opportunity_amount) : undefined, probability: form.probability ? Number(form.probability) : undefined };
+    const data: any = {
+      ...form,
+      status_id: form.status_id ? Number(form.status_id) : undefined,
+      opportunity_amount: form.opportunity_amount ? Number(form.opportunity_amount) : undefined,
+      probability: form.probability ? Number(form.probability) : undefined,
+      lead_id: form.opportunity_from === "lead" && form.lead_id ? Number(form.lead_id) : null,
+    };
     if (editing) {
       await opportunityApi.update(editing.id, data);
     } else {
       await opportunityApi.create(data);
     }
     setDialogOpen(false);
-    fetchData();
+    fetchData(currentPage);
   };
 
   const handleDelete = async (id: number) => {
     if (confirm("Delete this opportunity?")) {
       await opportunityApi.delete(id);
-      fetchData();
+      fetchData(currentPage);
     }
   };
 
@@ -88,7 +121,10 @@ export default function OpportunitiesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Opportunities</h2>
+        <h2 className="text-2xl font-bold">
+          Opportunities
+          {total > 0 && <small className="text-gray-400 ml-2 text-sm font-normal">({total})</small>}
+        </h2>
         <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Opportunity</Button>
       </div>
 
@@ -99,7 +135,7 @@ export default function OpportunitiesPage() {
         </div>
         <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-44">
           <option value="">All Statuses</option>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          {statuses.map((s) => <option key={s.id} value={s.id}>{s.status_name}</option>)}
         </Select>
       </div>
 
@@ -112,22 +148,24 @@ export default function OpportunitiesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Customer</TableHead>
+                <TableHead>#</TableHead>
+                <TableHead>Party Name</TableHead>
                 <TableHead>From</TableHead>
+                <TableHead>Lead</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Stage</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Expected Close</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {opportunities.map((opp) => (
+              {opportunities.map((opp, index) => (
                 <TableRow key={opp.id}>
-                  <TableCell className="font-medium">{opp.customer_name || `#${opp.party_id}`}</TableCell>
-                  <TableCell>{opp.opportunity_from}</TableCell>
-                  <TableCell><Badge variant={statusVariant(opp.status)}>{opp.status}</Badge></TableCell>
-                  <TableCell>{opp.sales_stage?.stage_name || "-"}</TableCell>
+                  <TableCell>{(currentPage - 1) * perPage + index + 1}</TableCell>
+                  <TableCell className="font-medium">{opp.party_name || opp.company_name || `#${opp.id}`}</TableCell>
+                  <TableCell>{opp.opportunity_from ? opp.opportunity_from.charAt(0).toUpperCase() + opp.opportunity_from.slice(1) : "-"}</TableCell>
+                  <TableCell>{opp.lead ? `${opp.lead.first_name} ${opp.lead.last_name || ""}`.trim() : "-"}</TableCell>
+                  <TableCell><Badge variant={statusVariant(opp.status?.status_name || "")}>{opp.status?.status_name || "-"}</Badge></TableCell>
                   <TableCell>{opp.opportunity_amount ? `$${Number(opp.opportunity_amount).toLocaleString()}` : "-"}</TableCell>
                   <TableCell>{opp.expected_closing || "-"}</TableCell>
                   <TableCell className="text-right space-x-1">
@@ -138,6 +176,56 @@ export default function OpportunitiesPage() {
               ))}
             </TableBody>
           </Table>
+
+          {/* Pagination */}
+          {total > 0 && (
+            <div className="flex flex-col md:flex-row items-center justify-between px-4 py-3 border-t">
+              <div className="flex items-center mb-2 md:mb-0">
+                <span className="text-sm text-gray-500 mr-2">Rows per page:</span>
+                <select
+                  className="p-1 border rounded text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                  value={perPage}
+                  onChange={(e) => {
+                    setPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  {[10, 15, 20, 25, 50].map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-sm text-gray-500 ml-4">
+                  {(currentPage - 1) * perPage + 1}-
+                  {Math.min(currentPage * perPage, total)} of {total}
+                </span>
+              </div>
+              <div className="flex gap-2 items-center">
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    disabled={currentPage === 1} 
+                    onClick={() => fetchData(currentPage - 1)}
+                    title="Previous Page"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-bold mx-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    disabled={currentPage === totalPages} 
+                    onClick={() => fetchData(currentPage + 1)}
+                    title="Next Page"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -145,31 +233,34 @@ export default function OpportunitiesPage() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-medium text-gray-600">From</label>
-            <Select value={form.opportunity_from || "Lead"} onChange={(e) => setField("opportunity_from", e.target.value)}>
-              <option value="Lead">Lead</option>
-              <option value="Prospect">Prospect</option>
-              <option value="Customer">Customer</option>
+            <Select value={form.opportunity_from || "lead"} onChange={(e) => { setField("opportunity_from", e.target.value); if (e.target.value !== "lead") setField("lead_id", ""); }}>
+              <option value="lead">Lead</option>
+              <option value="prospect">Prospect</option>
+              <option value="customer">Customer</option>
             </Select>
           </div>
+          {form.opportunity_from === "lead" && (
+            <div>
+              <label className="text-xs font-medium text-gray-600">Lead</label>
+              <Select value={form.lead_id || ""} onChange={(e) => setField("lead_id", e.target.value)}>
+                <option value="">Select Lead</option>
+                {leads.map((l) => <option key={l.id} value={l.id}>{l.first_name} {l.last_name || ""} {l.company_name ? `(${l.company_name})` : ""}</option>)}
+              </Select>
+            </div>
+          )}
           <div>
-            <label className="text-xs font-medium text-gray-600">Party ID</label>
-            <Input type="number" value={form.party_id || ""} onChange={(e) => setField("party_id", e.target.value)} />
+            <label className="text-xs font-medium text-gray-600">Party Name</label>
+            <Input value={form.party_name || ""} onChange={(e) => setField("party_name", e.target.value)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-600">Customer Name</label>
-            <Input value={form.customer_name || ""} onChange={(e) => setField("customer_name", e.target.value)} />
+            <label className="text-xs font-medium text-gray-600">Company Name</label>
+            <Input value={form.company_name || ""} onChange={(e) => setField("company_name", e.target.value)} />
           </div>
           <div>
             <label className="text-xs font-medium text-gray-600">Status</label>
-            <Select value={form.status || "Open"} onChange={(e) => setField("status", e.target.value)}>
-              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </Select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-600">Sales Stage</label>
-            <Select value={form.sales_stage_id || ""} onChange={(e) => setField("sales_stage_id", e.target.value)}>
-              <option value="">Select stage</option>
-              {stages.map((s) => <option key={s.id} value={s.id}>{s.stage_name}</option>)}
+            <Select value={form.status_id || ""} onChange={(e) => setField("status_id", e.target.value)}>
+              <option value="">Select Status</option>
+              {statuses.map((s) => <option key={s.id} value={s.id}>{s.status_name}</option>)}
             </Select>
           </div>
           <div>

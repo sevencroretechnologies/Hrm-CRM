@@ -1,90 +1,453 @@
 import { useEffect, useState } from "react";
-import { dashboardApi } from "@/services/api";
-import type { DashboardStats } from "@/types";
-import { Users, Target, CalendarClock, FileText } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { dashboardApi, customerApi, productApi, leadApi } from "@/services/api";
+import type { DashboardStats, Customer, Product, Lead } from "@/types";
+import { Users, Target, CalendarClock, FileText, MoreVertical, Send, Package, TrendingUp, TrendingDown } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend, CartesianGrid
+} from "recharts";
+import "./Dashboard.css";
 
-const COLORS = ["#0d6efd", "#198754", "#ffc107", "#dc3545", "#6f42c1", "#d63384"];
+// Donut chart colors
+const DONUT_COLORS = {
+  primary: ["#556ee6", "#e8ecf6"],
+  success: ["#34c38f", "#e6f7f1"],
+  warning: ["#f1b44c", "#fef4e4"],
+  info: ["#50a5f1", "#e6f2fd"],
+};
+
+const BAR_COLORS = ["#556ee6", "#34c38f", "#f1b44c", "#f46a6a", "#50a5f1", "#6f42c1", "#d63384"];
+
+const TERRITORY_BAR_COLORS = ["blue", "green", "orange", "cyan", "red", "purple"];
+const AVATAR_BG = ["bg-1", "bg-2", "bg-3", "bg-4", "bg-5", "bg-6"];
+const PRODUCT_ICON_BG = ["bg-soft-blue", "bg-soft-green", "bg-soft-orange", "bg-soft-cyan", "bg-soft-red"];
+
+// Mini donut for KPI card
+function KpiDonut({ value, total, colorKey }: { value: number; total: number; colorKey: keyof typeof DONUT_COLORS }) {
+  const pct = total > 0 ? Math.min(value / total, 1) : 0;
+  const data = [
+    { name: "filled", value: pct },
+    { name: "empty", value: 1 - pct },
+  ];
+  const [c1, c2] = DONUT_COLORS[colorKey];
+
+  return (
+    <div className="kpi-donut">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            cx="50%"
+            cy="50%"
+            innerRadius="65%"
+            outerRadius="95%"
+            startAngle={90}
+            endAngle={-270}
+            paddingAngle={0}
+            stroke="none"
+          >
+            <Cell fill={c1} />
+            <Cell fill={c2} />
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// Activity messages (static demo data)
+const activityMessages = [
+  { id: 1, type: "received", text: "New lead created successfully!" },
+  { id: 2, type: "sent", text: "Follow up scheduled for tomorrow" },
+  { id: 3, type: "received", text: "Opportunity moved to Proposal stage" },
+  { id: 4, type: "sent", text: "Contract sent for review. Waiting for client signature on the agreement." },
+];
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        backgroundColor: '#fff',
+        padding: '6px 10px',
+        border: 'none',
+        borderRadius: '6px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+        fontSize: '11px',
+        fontWeight: 600,
+        color: '#495057'
+      }}>
+        {label ? `${label}: ` : ''}{payload[0].name}: {payload[0].value}
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [leads, setLeads] = useState<Lead[]>([]);
+
 
   useEffect(() => {
-    dashboardApi.getStats().then(setStats).finally(() => setLoading(false));
+    Promise.all([
+      dashboardApi.getStats(),
+      customerApi.list({ per_page: 6 }).then(r => r.data).catch(() => []),
+      productApi.list({ per_page: 6 }).then(r => r.data).catch(() => []),
+      leadApi.list({ per_page: 50 }).then(r => r.data).catch(() => []),
+    ]).then(([s, c, p, l]) => {
+      setStats(s);
+      setCustomers(c as Customer[]);
+      setProducts(p as Product[]);
+      setLeads(l as Lead[]);
+    }).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-center py-5 text-muted">Loading...</div>;
-  if (!stats) return <div className="alert alert-danger">Failed to load dashboard</div>;
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 400 }}>
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
+  if (!stats) {
+    return <div className="alert alert-danger m-4">Failed to load dashboard data</div>;
+  }
+
+  // KPI data
   const kpis = [
-    { label: "Total Leads", value: stats.leads.total, sub: `${stats.leads.new_last_30_days} new (30d)`, icon: Users, color: "primary" },
-    { label: "Open Opportunities", value: stats.opportunities.open, sub: `$${(stats.opportunities.total_value / 1000).toFixed(0)}k value`, icon: Target, color: "success" },
-    { label: "Upcoming Appointments", value: stats.appointments.upcoming, sub: `${stats.appointments.total} total`, icon: CalendarClock, color: "warning" },
-    { label: "Active Contracts", value: stats.contracts.active, sub: `${stats.contracts.unsigned} unsigned`, icon: FileText, color: "info" },
+    {
+      label: "Total Leads",
+      value: stats.leads.total,
+      change: stats.leads.new_last_30_days,
+      changeLabel: `+${stats.leads.new_last_30_days} new`,
+      positive: true,
+      sub: "Since last month",
+      icon: Users,
+      colorKey: "primary" as const,
+      donutTotal: Math.max(stats.leads.total, 1),
+      donutValue: stats.leads.new_last_30_days,
+    },
+    {
+      label: "Open Opportunities",
+      value: stats.opportunities.open,
+      change: stats.opportunities.won_last_30_days,
+      changeLabel: `${stats.opportunities.won_last_30_days} won`,
+      positive: true,
+      sub: "Since last month",
+      icon: Target,
+      colorKey: "success" as const,
+      donutTotal: Math.max(stats.opportunities.total, 1),
+      donutValue: stats.opportunities.open,
+    },
+    {
+      label: "Appointments",
+      value: stats.appointments.upcoming,
+      change: stats.appointments.total,
+      changeLabel: `${stats.appointments.total} total`,
+      positive: true,
+      sub: "Upcoming",
+      icon: CalendarClock,
+      colorKey: "warning" as const,
+      donutTotal: Math.max(stats.appointments.total, 1),
+      donutValue: stats.appointments.upcoming,
+    },
+    {
+      label: "Active Contracts",
+      value: stats.contracts.active,
+      change: stats.contracts.unsigned,
+      changeLabel: `${stats.contracts.unsigned} unsigned`,
+      positive: stats.contracts.unsigned === 0,
+      sub: "Current period",
+      icon: FileText,
+      colorKey: "info" as const,
+      donutTotal: Math.max(stats.contracts.active + stats.contracts.unsigned, 1),
+      donutValue: stats.contracts.active,
+    },
   ];
+
+  // Bar chart data (leads by status)
+  const barData = Object.values(
+    leads.reduce((acc: Record<string, { name: string; count: number }>, lead) => {
+      const statusName = lead.status?.status_name || "Unknown";
+      if (!acc[statusName]) acc[statusName] = { name: statusName, count: 0 };
+      acc[statusName].count += 1;
+      return acc;
+    }, {})
+  );
+
+
+  // Territory / pipeline data
+  const territorySummary = stats.opportunities.by_stage.slice(0, 5).map((s, i) => {
+    const maxVal = Math.max(...stats.opportunities.by_stage.map(x => x.count), 1);
+    return {
+      name: s.stage_name,
+      count: s.count,
+      pct: Math.round((s.count / maxVal) * 100),
+      color: TERRITORY_BAR_COLORS[i % TERRITORY_BAR_COLORS.length],
+    };
+  });
 
   return (
     <div>
-      <h2 className="mb-4">Dashboard</h2>
+      {/* Header */}
+      <div className="dashboard-header">
+        <h2>Welcome !</h2>
+        <div className="dashboard-breadcrumb">
+          <span>Dashboard</span> &rsaquo; Welcome !
+        </div>
+      </div>
+
+      {/* Row 1: KPI Cards */}
       <div className="row g-3 mb-4">
         {kpis.map((kpi) => (
-          <div className="col-md-6 col-lg-3" key={kpi.label}>
-            <div className="card stats-card h-100">
-              <div className="card-body d-flex align-items-center gap-3">
-                <div className={`bg-${kpi.color} bg-opacity-10 p-2 rounded`}>
-                  <kpi.icon size={24} className={`text-${kpi.color}`} />
-                </div>
+          <div className="col-md-6 col-xl-3" key={kpi.label}>
+            <div className="kpi-card">
+              <div className="kpi-info">
+                <div className="kpi-label">{kpi.label}</div>
+                <div className="kpi-value">{kpi.value.toLocaleString()}</div>
                 <div>
-                  <h3 className="mb-0 fw-bold">{kpi.value}</h3>
-                  <small className="text-muted">{kpi.label}</small>
-                  <br />
-                  <small className="text-muted" style={{ fontSize: "0.75rem" }}>{kpi.sub}</small>
+                  <span className={`kpi-change ${kpi.positive ? "positive" : "negative"}`}>
+                    {kpi.positive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                    {kpi.changeLabel}
+                  </span>
+                  <span className="kpi-sub">{kpi.sub}</span>
                 </div>
               </div>
+              <KpiDonut value={kpi.donutValue} total={kpi.donutTotal} colorKey={kpi.colorKey} />
             </div>
           </div>
         ))}
       </div>
 
-      <div className="row g-3">
-        <div className="col-lg-6">
-          <div className="card">
-            <div className="card-header bg-white fw-semibold">Leads by Status</div>
-            <div className="card-body">
-              {stats.leads.by_status.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                    <Pie data={stats.leads.by_status} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={80} label={({ status, count }: { status: string; count: number }) => `${status} (${count})`}>
-                      {stats.leads.by_status.map((_: unknown, i: number) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+      {/* Row 2: Chart + Territory */}
+      <div className="row g-3 mb-4">
+        {/* Lead Pipeline Chart */}
+        <div className="col-md-8">
+          <div className="card p-3">
+            <h5>Lead Pipeline</h5>
+            <div style={{ height: 260 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#74788d', fontSize: 12 }}
+                    dy={10}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#74788d', fontSize: 12 }}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    cursor={{ fill: '#f8f9fa' }}
+                    content={<CustomTooltip />}
+                  />
+                  <Bar
+                    dataKey="count"
+                    radius={[4, 4, 0, 0]}
+                    barSize={40}
+                  >
+                    {barData.map((_, i) => (
+                      <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+
+        {/* Opportunity Stages */}
+        <div className="col-lg-4">
+          <div className="dash-card">
+            <div className="dash-card-header">
+              <h5>Opportunity Stages</h5>
+            </div>
+            <div className="dash-card-body" style={{ height: 280, position: 'relative' }}>
+              {territorySummary.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={territorySummary}
+                        dataKey="count"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                      >
+                        {territorySummary.map((_, i) => (
+                          <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} stroke="none" />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div style={{
+                    position: 'absolute',
+                    top: '45%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    textAlign: 'center',
+                    pointerEvents: 'none'
+                  }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#495057' }}>{stats.opportunities.total}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#74788d' }}>Total</div>
+                  </div>
+                </>
               ) : (
-                <p className="text-muted text-center py-5">No lead data yet</p>
+                <div className="text-muted text-center py-4">No stage data</div>
               )}
             </div>
           </div>
         </div>
-        <div className="col-lg-6">
-          <div className="card">
-            <div className="card-header bg-white fw-semibold">Opportunity Pipeline</div>
-            <div className="card-body">
-              {stats.opportunities.by_stage.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={stats.opportunities.by_stage}>
-                    <XAxis dataKey="stage" tick={{ fontSize: 12 }} />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#0d6efd" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-muted text-center py-5">No pipeline data yet</p>
+      </div>
+
+      {/* Row 3: Customer List + Products + Activity */}
+      <div className="row g-3">
+        {/* Customer List */}
+        <div className="col-lg-4">
+          <div className="dash-card">
+            <div className="dash-card-header">
+              <h5>Customer List</h5>
+              <div className="sort-by">
+                All Members
+                <select defaultValue="all">
+                  <option value="all">All</option>
+                </select>
+              </div>
+            </div>
+            <div className="dash-card-body" style={{ overflowY: "auto", maxHeight: 380 }}>
+              {customers.length > 0 ? customers.map((c, i) => {
+                const initials = c.name
+                  ? c.name.split(" ").map(w => w[0]).join("").substring(0, 2)
+                  : "?";
+                return (
+                  <div className="customer-list-item" key={c.id}>
+                    <div className={`customer-avatar ${AVATAR_BG[i % AVATAR_BG.length]}`}>
+                      {initials}
+                    </div>
+                    <div className="customer-details">
+                      <div className="customer-name">{c.name}</div>
+                      <div className="customer-email">{c.email || "No email"}</div>
+                    </div>
+                    <div className="customer-more">
+                      <MoreVertical size={16} />
+                    </div>
+                  </div>
+                );
+              }) : (
+                <div className="text-muted text-center py-4">No customers yet</div>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Product Catalog */}
+        <div className="col-lg-4">
+          <div className="dash-card">
+            <div className="dash-card-header">
+              <h5>Products</h5>
+              <div className="customer-more">
+                <MoreVertical size={16} />
+              </div>
+            </div>
+            <div className="dash-card-body" style={{ overflowY: "auto", maxHeight: 380, padding: "0 20px 16px" }}>
+              {products.length > 0 ? (
+                <table className="product-table">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Price</th>
+                      <th>Stock</th>
+                      <th>Category</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map((p, i) => (
+                      <tr key={p.id}>
+                        <td>
+                          <div className="product-name-cell">
+                            <div className={`product-icon ${PRODUCT_ICON_BG[i % PRODUCT_ICON_BG.length]}`}>
+                              <Package size={18} />
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{p.name}</div>
+                              <div style={{ fontSize: "0.72rem", color: "#74788d" }}>
+                                {p.code || "—"}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ fontWeight: 600 }}>
+                          ₹{p.rate?.toLocaleString() || "0"}
+                        </td>
+                        <td>
+                          <span className={`stock-badge ${p.stock > 0 ? "in-stock" : "out-of-stock"}`}>
+                            {p.stock > 0 ? "Available" : "Out of Stock"}
+                          </span>
+                        </td>
+                        <td>{p.category?.name || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="text-muted text-center py-4">No products yet</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Activity Feed / Chat */}
+        <div className="col-lg-4">
+          <div className="dash-card">
+            <div className="dash-card-header">
+              <h5>Recent Activity</h5>
+              <div className="sort-by">
+                Today
+                <select defaultValue="today">
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                </select>
+              </div>
+            </div>
+            <div className="dash-card-body" style={{ display: "flex", flexDirection: "column", maxHeight: 380 }}>
+              <div className="activity-feed">
+                <div className="activity-date">
+                  <span>Today</span>
+                </div>
+                <div className="activity-messages">
+                  {activityMessages.map((msg) => (
+                    <div className={`activity-item ${msg.type}`} key={msg.id}>
+                      <div className="activity-bubble">
+                        {msg.text}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="activity-input">
+                  <input type="text" placeholder="Enter Message..." readOnly />
+                  <button>
+                    Send <Send size={14} />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

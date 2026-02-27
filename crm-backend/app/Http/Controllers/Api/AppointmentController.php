@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\AppointmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Exception;
 
 class AppointmentController extends Controller
 {
@@ -15,8 +16,27 @@ class AppointmentController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $appointments = $this->appointmentService->list($request->all());
-        return response()->json($appointments);
+        try {
+            $data = $this->appointmentService->list($request->all());
+
+            return response()->json([
+                'message' => 'All appointments retrieved successfully.',
+                'data' => $data,
+                'pagination' => [
+                    'current_page' => $data->currentPage(),
+                    'total_pages' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total_items' => $data->total(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                ],
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Failed to retrieve appointments',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function store(Request $request): JsonResponse

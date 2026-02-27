@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { leadApi } from "@/services/api";
-import type { Lead } from "@/types";
+import type { Lead, PaginatedResponse } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Search, ArrowRightLeft } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ArrowRightLeft, ArrowLeft, ArrowRight } from "lucide-react";
 
 const STATUS_OPTIONS = ["Lead", "Open", "Replied", "Opportunity", "Quotation", "Lost Quotation", "Interested", "Converted", "Do Not Contact"];
 const statusVariant = (s: string) => {
@@ -25,16 +25,26 @@ export default function LeadsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Lead | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(15);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const fetchLeads = useCallback(() => {
+  const fetchLeads = useCallback((page = 1) => {
     setLoading(true);
-    const params: Record<string, string> = {};
+    const params: Record<string, string | number> = { page, per_page: perPage };
     if (search) params.search = search;
     if (statusFilter) params.status = statusFilter;
-    leadApi.list(params).then((res) => {
-      setLeads(Array.isArray(res) ? res : res.data || []);
-    }).finally(() => setLoading(false));
-  }, [search, statusFilter]);
+    leadApi.list(params)
+      .then((data: PaginatedResponse<Lead>) => {
+        setLeads(data.data || []);
+        setCurrentPage(data.current_page);
+        setTotalPages(data.last_page);
+        setTotal(data.total);
+      })
+      .catch(() => setLeads([]))
+      .finally(() => setLoading(false));
+  }, [search, statusFilter, perPage]);
 
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
 
@@ -44,12 +54,12 @@ export default function LeadsPage() {
     setForm({
       first_name: lead.first_name || "",
       last_name: lead.last_name || "",
-      email_id: lead.email_id || "",
+      email: lead.email || "",
       mobile_no: lead.mobile_no || "",
       company_name: lead.company_name || "",
-      status: lead.status || "Lead",
+      status: lead.status?.status_name || "Lead",
       job_title: lead.job_title || "",
-      industry: lead.industry || "",
+      industry: lead.industry?.name || "",
       city: lead.city || "",
       country: lead.country || "",
       territory: lead.territory || "",
@@ -64,20 +74,20 @@ export default function LeadsPage() {
       await leadApi.create(form);
     }
     setDialogOpen(false);
-    fetchLeads();
+    fetchLeads(currentPage);
   };
 
   const handleDelete = async (id: number) => {
     if (confirm("Delete this lead?")) {
       await leadApi.delete(id);
-      fetchLeads();
+      fetchLeads(currentPage);
     }
   };
 
   const handleConvert = async (id: number) => {
     if (confirm("Convert this lead to an opportunity?")) {
       await leadApi.convertToOpportunity(id, {});
-      fetchLeads();
+      fetchLeads(currentPage);
     }
   };
 
@@ -86,7 +96,10 @@ export default function LeadsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Leads</h2>
+        <h2 className="text-2xl font-bold">
+          Leads
+          <span className="text-sm font-normal text-gray-400 ml-2">({total})</span>
+        </h2>
         <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Lead</Button>
       </div>
 
@@ -110,6 +123,7 @@ export default function LeadsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>#</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Company</TableHead>
@@ -119,21 +133,22 @@ export default function LeadsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leads.map((lead) => (
+              {leads.map((lead, index) => (
                 <TableRow key={lead.id}>
+                  <TableCell>{(currentPage - 1) * perPage + index + 1}</TableCell>
                   <TableCell className="font-medium">{lead.first_name} {lead.last_name}</TableCell>
-                  <TableCell>{lead.email_id}</TableCell>
+                  <TableCell>{lead.email}</TableCell>
                   <TableCell>{lead.company_name}</TableCell>
-                  <TableCell><Badge variant={statusVariant(lead.status)}>{lead.status}</Badge></TableCell>
+                  <TableCell><Badge variant={(statusVariant(lead.status?.status_name || "") || "default") as any}>{lead.status?.status_name || "-"}</Badge></TableCell>
                   <TableCell>{lead.city}</TableCell>
                   <TableCell className="text-right space-x-1">
-                    <Button variant="ghost" size="icon" onClick={() => handleConvert(lead.id)} title="Convert to Opportunity">
+                    <Button variant={"ghost" as any} size="icon" onClick={() => handleConvert(lead.id)} title="Convert to Opportunity">
                       <ArrowRightLeft className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(lead)}>
+                    <Button variant={"ghost" as any} size="icon" onClick={() => openEdit(lead)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(lead.id)}>
+                    <Button variant={"ghost" as any} size="icon" onClick={() => handleDelete(lead.id)}>
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </TableCell>
@@ -141,6 +156,56 @@ export default function LeadsPage() {
               ))}
             </TableBody>
           </Table>
+
+          {/* Pagination */}
+          {total > 0 && (
+            <div className="flex flex-col md:flex-row items-center justify-between px-4 py-3 border-t">
+              <div className="flex items-center mb-2 md:mb-0">
+                <span className="text-sm text-gray-500 mr-2">Rows per page:</span>
+                <select
+                  className="p-1 border rounded text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                  value={perPage}
+                  onChange={(e) => {
+                    setPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  {[10, 15, 20, 25, 50].map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-sm text-gray-500 ml-4">
+                  {(currentPage - 1) * perPage + 1}-
+                  {Math.min(currentPage * perPage, total)} of {total}
+                </span>
+              </div>
+              <div className="flex gap-2 items-center">
+                <Button 
+                    variant={"ghost" as any} 
+                    size="icon" 
+                    disabled={currentPage === 1} 
+                    onClick={() => fetchLeads(currentPage - 1)}
+                    title="Previous Page"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-bold mx-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button 
+                    variant={"ghost" as any} 
+                    size="icon" 
+                    disabled={currentPage === totalPages} 
+                    onClick={() => fetchLeads(currentPage + 1)}
+                    title="Next Page"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -190,7 +255,7 @@ export default function LeadsPage() {
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button variant={"outline" as any} onClick={() => setDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleSave}>{editing ? "Update" : "Create"}</Button>
         </div>
       </Dialog>

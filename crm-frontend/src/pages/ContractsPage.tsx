@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { contractApi } from "@/services/api";
-import type { Contract } from "@/types";
+import type { Contract, PaginatedResponse } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Search, PenLine } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, PenLine, ArrowLeft } from "lucide-react";
 
 const statusVariant = (s: string) => {
   if (s === "Signed") return "success" as const;
@@ -25,15 +25,24 @@ export default function ContractsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Contract | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const fetchData = useCallback(() => {
+  const fetchData = useCallback((page = 1) => {
     setLoading(true);
-    const params: Record<string, string> = {};
+    const params: Record<string, string | number> = { page, per_page: 15 };
     if (search) params.search = search;
     if (statusFilter) params.status = statusFilter;
-    contractApi.list(params).then((res) => {
-      setContracts(Array.isArray(res) ? res : res.data || []);
-    }).finally(() => setLoading(false));
+    contractApi.list(params)
+      .then((data: PaginatedResponse<Contract>) => {
+        setContracts(data.data || []);
+        setCurrentPage(data.current_page);
+        setTotalPages(data.last_page);
+        setTotal(data.total);
+      })
+      .catch(() => setContracts([]))
+      .finally(() => setLoading(false));
   }, [search, statusFilter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -62,20 +71,20 @@ export default function ContractsPage() {
       await contractApi.create(form);
     }
     setDialogOpen(false);
-    fetchData();
+    fetchData(currentPage);
   };
 
   const handleDelete = async (id: number) => {
     if (confirm("Delete this contract?")) {
       await contractApi.delete(id);
-      fetchData();
+      fetchData(currentPage);
     }
   };
 
   const handleSign = async (id: number) => {
     if (confirm("Sign this contract?")) {
       await contractApi.sign(id, { signee: "Current User" });
-      fetchData();
+      fetchData(currentPage);
     }
   };
 
@@ -84,7 +93,10 @@ export default function ContractsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Contracts</h2>
+        <h2 className="text-2xl font-bold">
+          Contracts
+          <span className="text-sm font-normal text-gray-400 ml-2">({total})</span>
+        </h2>
         <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Contract</Button>
       </div>
 
@@ -112,6 +124,7 @@ export default function ContractsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>#</TableHead>
                 <TableHead>Party</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
@@ -122,8 +135,9 @@ export default function ContractsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {contracts.map((c) => (
+              {contracts.map((c, index) => (
                 <TableRow key={c.id}>
+                  <TableCell>{(currentPage - 1) * 15 + index + 1}</TableCell>
                   <TableCell className="font-medium">{c.party_name}</TableCell>
                   <TableCell>{c.party_type}</TableCell>
                   <TableCell><Badge variant={statusVariant(c.status)}>{c.status}</Badge></TableCell>
@@ -143,6 +157,36 @@ export default function ContractsPage() {
               ))}
             </TableBody>
           </Table>
+
+          {/* Pagination */}
+          {totalPages >= 1 && (
+            <div className="flex flex-col md:flex-row items-center justify-between px-4 py-3 border-t">
+              <span className="text-sm text-gray-500 mb-2 md:mb-0">
+                Showing page <strong>{currentPage}</strong> of{" "}
+                <strong>{totalPages}</strong> · {total} records
+              </span>
+              <div className="flex gap-1 items-center">
+                <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => fetchData(currentPage - 1)}>
+                  <ArrowLeft className="h-4 w-4 mr-1" /> Previous
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 2)
+                  .map((page, idx, arr) => (
+                    <span key={page} className="flex items-center gap-1">
+                      {idx > 0 && arr[idx - 1] < page - 1 && (
+                        <span className="px-1 text-gray-400">…</span>
+                      )}
+                      <Button variant={page === currentPage ? "default" : "outline"} size="sm" onClick={() => fetchData(page)}>
+                        {page}
+                      </Button>
+                    </span>
+                  ))}
+                <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => fetchData(currentPage + 1)}>
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

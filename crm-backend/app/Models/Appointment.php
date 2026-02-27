@@ -10,9 +10,7 @@ class Appointment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'scheduled_time', 'status', 'customer_name', 'customer_phone_number',
-        'customer_skype', 'customer_email', 'customer_details',
-        'appointment_with', 'party',
+        'scheduled_time', 'status','appointment_with', 'party',
     ];
 
     protected $casts = [

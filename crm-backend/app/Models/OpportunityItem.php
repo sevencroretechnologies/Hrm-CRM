@@ -11,9 +11,12 @@ class OpportunityItem extends Model
     use HasFactory;
 
     protected $fillable = [
-        'opportunity_id', 'item_code', 'item_name', 'uom', 'qty',
-        'brand', 'item_group', 'description', 'image',
-        'rate', 'amount', 'base_rate', 'base_amount',
+        'opportunity_id',
+        'item_code',
+        'item_name',
+        'qty',
+        'rate',
+        'amount',
     ];
 
     protected $casts = [

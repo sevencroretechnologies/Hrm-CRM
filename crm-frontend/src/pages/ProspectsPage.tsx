@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { prospectApi } from "@/services/api";
-import type { Prospect } from "@/types";
+import type { Prospect, PaginatedResponse } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ArrowLeft, ArrowRight } from "lucide-react";
 
 export default function ProspectsPage() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
@@ -14,15 +14,25 @@ export default function ProspectsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Prospect | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(15);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const fetchData = useCallback(() => {
+  const fetchData = useCallback((page = 1) => {
     setLoading(true);
-    const params: Record<string, string> = {};
+    const params: Record<string, string | number> = { page, per_page: perPage };
     if (search) params.search = search;
-    prospectApi.list(params).then((res) => {
-      setProspects(Array.isArray(res) ? res : res.data || []);
-    }).finally(() => setLoading(false));
-  }, [search]);
+    prospectApi.list(params)
+      .then((data: PaginatedResponse<Prospect>) => {
+        setProspects(data.data || []);
+        setCurrentPage(data.current_page);
+        setTotalPages(data.last_page);
+        setTotal(data.total);
+      })
+      .catch(() => setProspects([]))
+      .finally(() => setLoading(false));
+  }, [search, perPage]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -48,13 +58,13 @@ export default function ProspectsPage() {
       await prospectApi.create(form);
     }
     setDialogOpen(false);
-    fetchData();
+    fetchData(currentPage);
   };
 
   const handleDelete = async (id: number) => {
     if (confirm("Delete this prospect?")) {
       await prospectApi.delete(id);
-      fetchData();
+      fetchData(currentPage);
     }
   };
 
@@ -63,7 +73,10 @@ export default function ProspectsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Prospects</h2>
+        <h2 className="text-2xl font-bold">
+          Prospects
+          <span className="text-sm font-normal text-gray-400 ml-2">({total})</span>
+        </h2>
         <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Prospect</Button>
       </div>
 
@@ -81,6 +94,7 @@ export default function ProspectsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>#</TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead>Industry</TableHead>
                 <TableHead>Territory</TableHead>
@@ -90,8 +104,9 @@ export default function ProspectsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {prospects.map((p) => (
+              {prospects.map((p, index) => (
                 <TableRow key={p.id}>
+                  <TableCell>{(currentPage - 1) * perPage + index + 1}</TableCell>
                   <TableCell className="font-medium">{p.company_name}</TableCell>
                   <TableCell>{p.industry || "-"}</TableCell>
                   <TableCell>{p.territory || "-"}</TableCell>
@@ -105,6 +120,56 @@ export default function ProspectsPage() {
               ))}
             </TableBody>
           </Table>
+
+          {/* Pagination */}
+          {total > 0 && (
+            <div className="flex flex-col md:flex-row items-center justify-between px-4 py-3 border-t">
+              <div className="flex items-center mb-2 md:mb-0">
+                <span className="text-sm text-gray-500 mr-2">Rows per page:</span>
+                <select
+                  className="p-1 border rounded text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                  value={perPage}
+                  onChange={(e) => {
+                    setPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  {[10, 15, 20, 25, 50].map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-sm text-gray-500 ml-4">
+                  {(currentPage - 1) * perPage + 1}-
+                  {Math.min(currentPage * perPage, total)} of {total}
+                </span>
+              </div>
+              <div className="flex gap-2 items-center">
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    disabled={currentPage === 1} 
+                    onClick={() => fetchData(currentPage - 1)}
+                    title="Previous Page"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-bold mx-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    disabled={currentPage === totalPages} 
+                    onClick={() => fetchData(currentPage + 1)}
+                    title="Next Page"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
