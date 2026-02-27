@@ -1,4 +1,4 @@
-import { Contact, Customer, CustomerGroup, Opportunity, PaymentTerm, PriceList, Territory, WrappedPaginatedResponse } from '@/types';
+import { Contact, Customer, CustomerGroup, Lead, Opportunity, PaymentTerm, PriceList, Prospect, Territory, WrappedPaginatedResponse } from '@/types';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
@@ -90,13 +90,7 @@ export const industryTypeApi = {
 };
 
 export const leadApi = {
-  list: (params?: Record<string, any>) => api.get('/leads', { params }).then(res => {
-    const data = res.data;
-    if (Array.isArray(data)) return data;
-    if (data.data && Array.isArray(data.data)) return data.data; // Standard wrapped
-    if (data.data && data.data.data && Array.isArray(data.data.data)) return data.data.data; // Paginated wrapped
-    return data.data || data;
-  }),
+  list: (params?: Record<string, any>) => api.get<WrappedPaginatedResponse<Lead>>('/leads', { params }).then(res => res.data.data),
   get: (id: number) => api.get(`/leads/${id}`).then(res => res.data.data || res.data),
   create: (data: any) => api.post('/leads', data).then(res => res.data),
   update: (id: number, data: any) => api.put(`/leads/${id}`, data).then(res => res.data),
@@ -160,6 +154,17 @@ export const customerGroupApi = {
   update: (id: number, data: Partial<CustomerGroup>) =>
     api.put<CustomerGroup>(`/customer-groups/${id}`, data).then((r) => r.data),
   delete: (id: number) => api.delete(`/customer-groups/${id}`),
+};
+
+export const prospectApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get<WrappedPaginatedResponse<Prospect>>("/prospects", { params }).then((r) => r.data.data),
+  get: (id: number) => api.get<Prospect>(`/prospects/${id}`).then((r) => r.data),
+  create: (data: Partial<Prospect>) =>
+    api.post<Prospect>("/prospects", data).then((r) => r.data),
+  update: (id: number, data: Partial<Prospect>) =>
+    api.put<Prospect>(`/prospects/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/prospects/${id}`),
 };
 
 export const priceListApi = {
