@@ -4,16 +4,20 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class OpportunityLostReason extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
-    protected $fillable = ['reason'];
+    protected $fillable = [
+        'opportunity_id',
+        'opportunity_lost_reasons',
+    ];
 
-    public function opportunities(): BelongsToMany
+    public function opportunity(): BelongsTo
     {
-        return $this->belongsToMany(Opportunity::class, 'opportunity_lost_reason_details');
+        return $this->belongsTo(Opportunity::class);
     }
 }

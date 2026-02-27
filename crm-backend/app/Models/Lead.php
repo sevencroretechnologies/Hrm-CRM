@@ -2,72 +2,97 @@
 
 namespace App\Models;
 
+use App\Enums\Gender;
+use App\Enums\QualificationStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Lead extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
+
+    protected static function booted()
+    {
+        static::creating(function ($lead) {
+            $year = now()->year;
+            $prefix = "CRM-LEAD-{$year}-";
+
+            // Find the last lead created this year to determine the next sequence
+            $lastLead = self::where('series', 'like', "{$prefix}%")
+                ->orderBy('id', 'desc')
+                ->first();
+
+            if ($lastLead) {
+                // Extract the sequence number
+                $lastSequence = intval(substr($lastLead->series, -5));
+                $nextSequence = $lastSequence + 1;
+            } else {
+                $nextSequence = 1;
+            }
+
+            // Generate the new series
+            $lead->series = $prefix . str_pad($nextSequence, 5, '0', STR_PAD_LEFT);
+        });
+    }
 
     protected $fillable = [
-        'salutation', 'first_name', 'middle_name', 'last_name', 'lead_name',
-        'job_title', 'gender', 'lead_owner_id', 'status', 'type', 'request_type',
-        'email_id', 'website', 'mobile_no', 'whatsapp_no', 'phone', 'phone_ext',
-        'company_name', 'no_of_employees', 'annual_revenue', 'industry',
-        'market_segment', 'territory', 'fax', 'city', 'state', 'country',
-        'utm_source', 'utm_medium', 'utm_campaign', 'utm_content',
-        'qualification_status', 'qualified_by', 'qualified_on', 'company',
-        'language', 'image', 'title', 'disabled', 'unsubscribed', 'blog_subscriber',
+        'series',
+        'salutation',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'job_title',
+        'gender',
+        'status_id',
+        'source_id',
+        'request_type_id',
+        'email',
+        'phone',
+        'mobile_no',
+        'website',
+        'whatsapp_no',
+        'city',
+        'state',
+        'country',
+        'company_name',
+        'annual_revenue',
+        'no_of_employees',
+        'industry_id',
+        'qualification_status',
+        'qualified_by',
+        'qualified_on',
     ];
 
     protected $casts = [
         'annual_revenue' => 'decimal:2',
-        'disabled' => 'boolean',
-        'unsubscribed' => 'boolean',
-        'blog_subscriber' => 'boolean',
-        'qualified_on' => 'date',
+        'qualified_on' => 'datetime',
+        'qualification_status' => QualificationStatus::class,
+        'gender' => Gender::class,
     ];
 
-    protected static function booted(): void
+    protected $with = ['status', 'source', 'requestType', 'industry'];
+
+    public function status(): BelongsTo
     {
-        static::saving(function (Lead $lead) {
-            $lead->setFullName();
-            $lead->setLeadName();
-            $lead->setTitle();
-        });
+        return $this->belongsTo(Status::class);
     }
 
-    public function setFullName(): void
+    public function source(): BelongsTo
     {
-        if ($this->first_name) {
-            $this->lead_name = trim(implode(' ', array_filter([
-                $this->salutation, $this->first_name, $this->middle_name, $this->last_name
-            ])));
-        }
+        return $this->belongsTo(Source::class);
     }
 
-    public function setLeadName(): void
+    public function requestType(): BelongsTo
     {
-        if (!$this->lead_name) {
-            if ($this->company_name) {
-                $this->lead_name = $this->company_name;
-            } elseif ($this->email_id) {
-                $this->lead_name = explode('@', $this->email_id)[0];
-            }
-        }
+        return $this->belongsTo(RequestType::class);
     }
 
-    public function setTitle(): void
+    public function industry(): BelongsTo
     {
-        $this->title = $this->company_name ?: $this->lead_name;
-    }
-
-    public function leadOwner(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'lead_owner_id');
+        return $this->belongsTo(IndustryType::class, 'industry_id');
     }
 
     public function qualifiedByUser(): BelongsTo
@@ -75,15 +100,21 @@ class Lead extends Model
         return $this->belongsTo(User::class, 'qualified_by');
     }
 
-    public function prospects(): BelongsToMany
-    {
-        return $this->belongsToMany(Prospect::class, 'prospect_leads')
-            ->withPivot(['lead_name', 'email', 'mobile_no', 'status'])
-            ->withTimestamps();
-    }
-
     public function notes(): MorphMany
     {
         return $this->morphMany(CrmNote::class, 'notable');
+    }
+
+    /**
+     * Get full name attribute
+     */
+    public function getFullNameAttribute(): string
+    {
+        return trim(implode(' ', array_filter([
+            $this->salutation,
+            $this->first_name,
+            $this->middle_name,
+            $this->last_name
+        ])));
     }
 }

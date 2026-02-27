@@ -15,8 +15,8 @@ export default function CampaignForm() {
       setLoading(true);
       campaignApi.get(Number(id)).then((item) => {
         setForm({
-          campaign_name: item.campaign_name || "",
-          description: item.description || "",
+          name: item.name || "",
+          campaign_code: item.campaign_code || "",
         });
       }).finally(() => setLoading(false));
     }
@@ -58,11 +58,11 @@ export default function CampaignForm() {
           <div className="row g-3">
             <div className="col-md-6">
               <label className="form-label">Campaign Name <span className="text-danger">*</span></label>
-              <input className="form-control" value={form.campaign_name || ""} onChange={(e) => setField("campaign_name", e.target.value)} required />
+              <input className="form-control" value={form.name || ""} onChange={(e) => setField("name", e.target.value)} required />
             </div>
-            <div className="col-md-12">
-              <label className="form-label">Description</label>
-              <textarea className="form-control" rows={4} value={form.description || ""} onChange={(e) => setField("description", e.target.value)} />
+            <div className="col-md-6">
+              <label className="form-label">Campaign Code</label>
+              <input className="form-control" value={form.campaign_code || ""} onChange={(e) => setField("campaign_code", e.target.value)} />
             </div>
           </div>
         </div>

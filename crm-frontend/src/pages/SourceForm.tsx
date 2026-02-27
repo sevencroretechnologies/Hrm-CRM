@@ -1,0 +1,77 @@
+import { useEffect, useState } from "react";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import { sourceApi } from "@/services/api";
+import Swal from "sweetalert2";
+
+export default function SourceForm() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const isEdit = Boolean(id);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (id) {
+      setLoading(true);
+      sourceApi.get(Number(id)).then((item) => {
+        setForm({
+          name: item.name || "",
+          source_code: item.source_code || "",
+        });
+      }).finally(() => setLoading(false));
+    }
+  }, [id]);
+
+  const setField = (key: string, value: string) => setForm((p) => ({ ...p, [key]: value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (isEdit) {
+        await sourceApi.update(Number(id), form);
+        Swal.fire("Updated!", "Source has been updated.", "success");
+      } else {
+        await sourceApi.create(form);
+        Swal.fire("Created!", "Source has been created.", "success");
+      }
+      navigate("/sources");
+    } catch {
+      Swal.fire("Error", "Failed to save source.", "error");
+    }
+  };
+
+  if (loading) return <div className="text-center py-5 text-muted">Loading...</div>;
+
+  return (
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol className="breadcrumb">
+          <li className="breadcrumb-item"><Link to="/">CRM</Link></li>
+          <li className="breadcrumb-item"><Link to="/sources">Sources</Link></li>
+          <li className="breadcrumb-item active">{isEdit ? "Edit" : "New"}</li>
+        </ol>
+      </nav>
+      <h2 className="mb-4">{isEdit ? "Edit Source" : "New Source"}</h2>
+      <form onSubmit={handleSubmit}>
+        <div className="form-container mb-4">
+          <h5 className="mb-3 border-bottom pb-2">Source Details</h5>
+          <div className="row g-3">
+            <div className="col-md-6">
+              <label className="form-label">Source Name <span className="text-danger">*</span></label>
+              <input className="form-control" value={form.name || ""} onChange={(e) => setField("name", e.target.value)} required />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">Source Code</label>
+              <input className="form-control" value={form.source_code || ""} onChange={(e) => setField("source_code", e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        <div className="d-flex gap-2">
+          <button type="submit" className="btn btn-primary">Save</button>
+          <Link to="/sources" className="btn btn-secondary">Cancel</Link>
+        </div>
+      </form>
+    </div>
+  );
+}

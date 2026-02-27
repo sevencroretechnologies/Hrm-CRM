@@ -1,178 +1,83 @@
 export interface Lead {
   id: number;
-  salutation: string | null;
-  first_name: string | null;
-  middle_name: string | null;
-  last_name: string | null;
-  lead_name: string | null;
-  job_title: string | null;
-  gender: string | null;
-  lead_owner_id: number | null;
-  status: string;
-  type: string | null;
-  request_type: string | null;
-  email_id: string | null;
-  website: string | null;
-  mobile_no: string | null;
-  whatsapp_no: string | null;
-  phone: string | null;
-  phone_ext: string | null;
-  company_name: string | null;
-  no_of_employees: string | null;
-  annual_revenue: number | null;
-  industry: string | null;
-  market_segment: string | null;
-  territory: string | null;
-  fax: string | null;
-  city: string | null;
-  state: string | null;
-  country: string | null;
-  qualification_status: string | null;
-  qualified_by: number | null;
-  qualified_on: string | null;
-  disabled: boolean;
-  unsubscribed: boolean;
-  blog_subscriber: boolean;
-  company: string | null;
-  title: string | null;
-  notes: CrmNote[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PriceList {
-  id: number;
-  name: string;
-  currency: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PaymentTerm {
-  id: number;
-  name: string;
-  days: number | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CustomerGroup {
-  id: number;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Territory {
-  id: number;
-  territory_name: string;
-  territory_manager: number | null;
-  manager: { id: number; name: string; email: string } | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ContactPhone {
-  id?: number;
-  contact_id?: number;
-  phone_no: string | null;
-  is_primary: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface ContactEmail {
-  id?: number;
-  contact_id?: number;
-  email: string | null;
-  is_primary: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Contact {
-  id: number;
+  series: string | null;
   salutation: string | null;
   first_name: string;
   middle_name: string | null;
   last_name: string | null;
-  designation: string | null;
+  job_title: string | null;
   gender: string | null;
-  company_name: string | null;
-  address: string | null;
-  status: string;
-  full_name: string;
-  phones: ContactPhone[];
-  emails: ContactEmail[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface IndustryType {
-  id: number;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Customer {
-  id: number;
-  name: string;
-  customer_type: string | null;
-  customer_group_id: number | null;
-  customer_group: CustomerGroup | null;
-  territory_id: number | null;
-  territory: Territory | null;
-  lead_id: number | null;
-  lead: Lead | null;
-  opportunity_id: number | null;
-  opportunity: Opportunity | null;
-  industry_id: number | null;
-  industry: IndustryType | null;
-  default_price_list_id: number | null;
-  price_list: PriceList | null;
-  payment_term_id: number | null;
-  payment_term: PaymentTerm | null;
-  customer_contact_id: number | null;
-  primary_contact: Contact | null;
+  status_id: number | null;
+  status: Status | null;
+  source_id: number | null;
+  source: Source | null;
+  request_type_id: number | null;
+  request_type: RequestType | null;
   email: string | null;
   phone: string | null;
+  mobile_no: string | null;
   website: string | null;
-  tax_id: string | null;
-  billing_currency: string | null;
-  bank_account_details: string | null;
-  print_language: string | null;
-  customer_details: string | null;
+  whatsapp_no: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  company_name: string | null;
+  annual_revenue: number | null;
+  no_of_employees: string | null;
+  industry_id: number | null;
+  industry: IndustryType | null;
+  qualification_status: string | null;
+  qualified_by: number | null;
+  qualified_on: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface Opportunity {
   id: number;
-  opportunity_from: string;
-  party_id: number;
-  customer_name: string | null;
-  status: string;
-  opportunity_type: string | null;
-  opportunity_owner_id: number | null;
-  sales_stage_id: number | null;
-  sales_stage: SalesStage | null;
+  naming_series: string | null;
+  opportunity_type_id: number | null;
+  opportunity_type: OpportunityType | null;
+  opportunity_stage_id: number | null;
+  opportunity_stage: OpportunityStage | null;
+  opportunity_from: 'lead' | 'customer' | 'prospect' | null;
+  lead_id: number | null;
+  lead: Lead | null;
+  source_id: number | null;
+  source: Source | null;
   expected_closing: string | null;
+  party_name: string | null;
+  opportunity_owner: number | null;
+  owner: { id: number; name: string; email: string } | null;
   probability: number | null;
-  opportunity_amount: number | null;
-  base_opportunity_amount: number | null;
+  status_id: number | null;
+  status: Status | null;
+  company_name: string | null;
+  industry_id: number | null;
+  industry: IndustryType | null;
+  no_of_employees: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  annual_revenue: number | null;
+  market_segment: string | null;
   currency: string | null;
-  conversion_rate: number | null;
-  company: string | null;
-  transaction_date: string | null;
+  opportunity_amount: number | null;
+  customer_id: number | null;
+  customer: Customer | null;
+  prospect_id: number | null;
+  prospect: Prospect | null;
+  items: OpportunityItem[];
+  with_items: boolean;
   contact_person: string | null;
   contact_email: string | null;
   contact_mobile: string | null;
-  territory: string | null;
-  total: number | null;
-  base_total: number | null;
-  items: OpportunityItem[];
-  notes: CrmNote[];
+  territory_id: number | null;
+  territory: Territory | null;
+  next_contact_by: string | null;
+  next_contact_date: string | null;
+  to_discuss: string | null;
+  contact: Contact | null;
   created_at: string;
   updated_at: string;
 }
@@ -191,6 +96,8 @@ export interface OpportunityItem {
 export interface Prospect {
   id: number;
   company_name: string;
+  status: string;
+  source: string | null;
   industry: string | null;
   market_segment: string | null;
   customer_group: string | null;
@@ -199,6 +106,13 @@ export interface Prospect {
   annual_revenue: number | null;
   fax: string | null;
   website: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  zip_code: string | null;
   prospect_owner_id: number | null;
   company: string | null;
   leads: Lead[];
@@ -208,10 +122,18 @@ export interface Prospect {
   updated_at: string;
 }
 
+export interface Source {
+  id: number;
+  name: string;
+  source_code: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Campaign {
   id: number;
-  campaign_name: string;
-  description: string | null;
+  name: string;
+  campaign_code: string | null;
   email_schedules: CampaignEmailSchedule[];
   email_campaigns: EmailCampaign[];
   created_at: string;
@@ -287,15 +209,80 @@ export interface SalesStage {
   description: string | null;
 }
 
+export interface Status {
+  id: number;
+  status_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RequestType {
+  id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IndustryType {
+  id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface OpportunityLostReason {
   id: number;
-  reason: string;
+  opportunity_id: number;
+  opportunity_lost_reasons: string;
+  opportunity?: Opportunity | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Competitor {
   id: number;
   competitor_name: string;
   website: string | null;
+}
+
+export interface OpportunityStage {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OpportunityType {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductCategory {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Product {
+  id: number;
+  category_id: number | null;
+  category: ProductCategory | null;
+  name: string;
+  code: string | null;
+  description: string | null;
+  long_description: string | null;
+  slug: string | null;
+  stock: number;
+  rate: number;
+  amount: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CrmNote {
@@ -323,6 +310,7 @@ export interface DashboardStats {
     new_last_30_days: number;
     by_status: Array<{ status: string; count: number }>;
     by_qualification: Array<{ qualification_status: string; count: number }>;
+    funnel: Array<{ stage: string; count: number }>;
   };
   opportunities: {
     total: number;
@@ -342,10 +330,183 @@ export interface DashboardStats {
   };
 }
 
+export interface Territory {
+  id: number;
+  territory_name: string;
+  territory_manager: number | null;
+  manager: { id: number; name: string; email: string } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContactPhone {
+  id?: number;
+  contact_id?: number;
+  phone_no: string | null;
+  is_primary: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ContactEmail {
+  id?: number;
+  contact_id?: number;
+  email: string | null;
+  is_primary: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Contact {
+  id: number;
+  salutation: string | null;
+  first_name: string;
+  middle_name: string | null;
+  last_name: string | null;
+  designation: string | null;
+  gender: string | null;
+  company_name: string | null;
+  address: string | null;
+  status: string;
+  full_name: string;
+  phones: ContactPhone[];
+  emails: ContactEmail[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PaginatedResponse<T> {
   current_page: number;
   data: T[];
   last_page: number;
   per_page: number;
   total: number;
+}
+
+export interface WrappedPaginatedResponse<T> {
+  message: string;
+  data: PaginatedResponse<T>;
+  pagination: {
+    current_page: number;
+    total_pages: number;
+    per_page: number;
+    total_items: number;
+    next_page_url: string | null;
+    prev_page_url: string | null;
+  };
+}
+
+export interface CustomerGroup {
+  id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PriceList {
+  id: number;
+  name: string;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentTerm {
+  id: number;
+  name: string;
+  days: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Customer {
+  id: number;
+  name: string;
+  customer_type: string | null;
+  customer_group_id: number | null;
+  customer_group: CustomerGroup | null;
+  territory_id: number | null;
+  territory: Territory | null;
+  lead_id: number | null;
+  lead: Lead | null;
+  opportunity_id: number | null;
+  opportunity: Opportunity | null;
+  industry_id: number | null;
+  industry: IndustryType | null;
+  default_price_list_id: number | null;
+  price_list: PriceList | null;
+  payment_term_id: number | null;
+  payment_term: PaymentTerm | null;
+  customer_contact_id: number | null;
+  primary_contact: Contact | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  tax_id: string | null;
+  billing_currency: string | null;
+  bank_account_details: string | null;
+  print_language: string | null;
+  customer_details: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskSource {
+  id: number;
+  name: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TaskType {
+  id: number;
+  name: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SalesTask {
+  id: number;
+  task_source_id: number;
+  source_id: number | null;
+  task_type_id: number;
+  sales_assign_id: number | null;
+  formatted_date?: string;
+  task_source?: TaskSource;
+  task_type?: TaskType;
+  assigned_user?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  source_detail?: {
+    id: number;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    company_name?: string;
+    name?: string;
+    naming_series?: string;
+    party_name?: string;
+    opportunity_amount?: number;
+  } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SalesTaskDetail {
+  id: number;
+  sales_task_id: number | null;
+  sales_task?: SalesTask;
+  date: string;
+  time: string;
+  description: string;
+  status: 'Open' | 'In Progress' | 'Closed';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EnumOption {
+  value: string;
+  label: string;
 }

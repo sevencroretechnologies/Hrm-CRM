@@ -17,12 +17,12 @@ export default function SettingsPage() {
     Promise.all([
       settingsApi.get().catch(() => null),
       salesStageApi.list().catch(() => []),
-      lostReasonApi.list().catch(() => []),
+      lostReasonApi.list({ per_page: 1000 }).catch(() => []),
       competitorApi.list().catch(() => []),
     ]).then(([s, st, r, c]) => {
       setSettings(s);
       setStages(Array.isArray(st) ? st : []);
-      setReasons(Array.isArray(r) ? r : []);
+      setReasons(Array.isArray(r) ? r : (r as any)?.data || []);
       setCompetitors(Array.isArray(c) ? c : []);
     }).finally(() => setLoading(false));
   };
@@ -59,7 +59,7 @@ export default function SettingsPage() {
   const handleAddReason = async () => {
     const { value } = await Swal.fire({ title: "Add Lost Reason", input: "text", inputLabel: "Reason", inputPlaceholder: "Enter lost reason", showCancelButton: true });
     if (value) {
-      await lostReasonApi.create({ reason: value });
+      await lostReasonApi.create({ opportunity_lost_reasons: value, opportunity_id: 0 } as any);
       Swal.fire("Added!", "Lost reason has been added.", "success");
       fetchAll();
     }
@@ -171,7 +171,7 @@ export default function SettingsPage() {
               {reasons.length === 0 && <li className="list-group-item text-muted text-center">No reasons</li>}
               {reasons.map((r) => (
                 <li key={r.id} className="list-group-item d-flex justify-content-between align-items-center">
-                  {r.reason}
+                  {r.opportunity_lost_reasons}
                   <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteReason(r.id)}><Trash2 size={14} /></button>
                 </li>
               ))}

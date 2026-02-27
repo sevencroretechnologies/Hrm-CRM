@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\CampaignService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Exception;
 
 class CampaignController extends Controller
 {
@@ -15,15 +16,34 @@ class CampaignController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $campaigns = $this->campaignService->list($request->all());
-        return response()->json($campaigns);
+        try {
+            $data = $this->campaignService->list($request->all());
+
+            return response()->json([
+                'message' => 'All campaigns retrieved successfully.',
+                'data' => $data,
+                'pagination' => [
+                    'current_page' => $data->currentPage(),
+                    'total_pages' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total_items' => $data->total(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                ],
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Failed to retrieve campaigns',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'campaign_name' => 'required|string|max:255',
-            'description' => 'nullable|string',
+            'name' => 'required|string|max:255',
+            'campaign_code' => 'nullable|string|max:255',
             'email_schedules' => 'nullable|array',
             'email_schedules.*.email_template' => 'nullable|string|max:255',
             'email_schedules.*.send_after_days' => 'nullable|integer|min:0',
@@ -42,8 +62,8 @@ class CampaignController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $validated = $request->validate([
-            'campaign_name' => 'nullable|string|max:255',
-            'description' => 'nullable|string',
+            'name' => 'nullable|string|max:255',
+            'campaign_code' => 'nullable|string|max:255',
             'email_schedules' => 'nullable|array',
             'email_schedules.*.email_template' => 'nullable|string|max:255',
             'email_schedules.*.send_after_days' => 'nullable|integer|min:0',

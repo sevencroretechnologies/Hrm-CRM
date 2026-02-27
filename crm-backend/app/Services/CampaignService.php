@@ -11,10 +11,10 @@ class CampaignService
 {
     public function list(array $filters = []): LengthAwarePaginator
     {
-        $query = Campaign::with(['emailSchedules', 'emailCampaigns']);
+        $query = Campaign::query();
 
         if (!empty($filters['search'])) {
-            $query->where('campaign_name', 'like', "%{$filters['search']}%");
+            $query->where('name', 'like', "%{$filters['search']}%");
         }
 
         return $query->orderBy('created_at', 'desc')->paginate($filters['per_page'] ?? 15);
@@ -22,7 +22,7 @@ class CampaignService
 
     public function find(int $id): Campaign
     {
-        return Campaign::with(['emailSchedules', 'emailCampaigns'])->findOrFail($id);
+        return Campaign::findOrFail($id);
     }
 
     public function create(array $data): Campaign
