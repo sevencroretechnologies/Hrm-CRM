@@ -131,33 +131,38 @@ import JobApplications from './pages/recruitment/JobApplications';
 import OnboardingChecklist from './pages/recruitment/OnboardingChecklist';
 
 // CRM Module
-import CrmDashboard from './modules/crm/dashboard/CrmDashboard';
-import LeadsList from './modules/crm/leads/LeadsList';
-import OpportunitiesList from './modules/crm/opportunities/OpportunitiesList';
-import OpportunityForm from './modules/crm/opportunities/OpportunityForm';
-import CampaignsList from './modules/crm/campaigns/CampaignsList';
-import AppointmentsList from './modules/crm/appointments/AppointmentsList';
-import ProspectsList from './modules/crm/prospects/ProspectsList';
-import ContractsList from './modules/crm/contracts/ContractsList';
-import SalesStagesList from './modules/crm/sales-stages/SalesStagesList';
-import SourceList from './modules/crm/sources/SourceList';
-import TerritoryList from './modules/crm/territories/TerritoryList';
-import ProductList from './modules/crm/products/ProductList';
-import ProductForm from './modules/crm/products/ProductForm';
-import ProductCategoryList from './modules/crm/products/ProductCategoryList';
-import CrmSettings from './modules/crm/settings/CrmSettings';
+import CrmDashboard from '@/modules/crm/dashboard/CrmDashboard';
+import LeadsList from '@/modules/crm/leads/LeadsList';
+import OpportunitiesList from '@/modules/crm/opportunities/OpportunitiesList';
+import OpportunityForm from '@/modules/crm/opportunities/OpportunityForm';
+import CampaignsList from '@/modules/crm/campaigns/CampaignsList';
+import AppointmentsList from '@/modules/crm/appointments/AppointmentsList';
+import ProspectsList from '@/modules/crm/prospects/ProspectsList';
+import ContractsList from '@/modules/crm/contracts/ContractsList';
+import SalesStagesList from '@/modules/crm/sales-stages/SalesStagesList';
+import SalesTaskList from '@/modules/crm/sales-tasks/SalesTaskList';
+import SalesTaskDetail from '@/modules/crm/sales-tasks/SalesTaskDetail';
+import SalesTaskDetailList from '@/modules/crm/sales-tasks/SalesTaskDetailList';
+import SourceList from '@/modules/crm/sources/SourceList';
+import TerritoryList from '@/modules/crm/territories/TerritoryList';
+import ProductList from '@/modules/crm/products/ProductList';
+import ProductForm from '@/modules/crm/products/ProductForm';
+import ProductCategoryList from '@/modules/crm/products/ProductCategoryList';
+import CrmSettings from '@/modules/crm/settings/CrmSettings';
 
 // Error Pages
-import Unauthorized from './pages/Unauthorized';
-import CompanyNotices from './pages/settings/CompanyNotices';
-import AllLeaveRequests from './pages/leave/AllLeaveRequests';
-import MyLeaveBalances from './pages/leave/MyLeaveBalances';
-import MyWorkLogs from './pages/attendance/MyWorkLogs';
-import MyAttendanceSummary from './pages/attendance/MyAttendanceSummary';
-import ClockInOutSelf from './pages/attendance/ClockInOutSelf';
-import LeadForm from './modules/crm/leads/LeadForm';
-import CustomerList from './modules/crm/customers/customerList';
-import CustomerForm from './modules/crm/customers/customerForm';
+import Unauthorized from '@/pages/Unauthorized';
+import CompanyNotices from '@/pages/settings/CompanyNotices';
+import AllLeaveRequests from '@/pages/leave/AllLeaveRequests';
+import MyLeaveBalances from '@/pages/leave/MyLeaveBalances';
+import MyWorkLogs from '@/pages/attendance/MyWorkLogs';
+import MyAttendanceSummary from '@/pages/attendance/MyAttendanceSummary';
+import ClockInOutSelf from '@/pages/attendance/ClockInOutSelf';
+import LeadForm from '@/modules/crm/leads/LeadForm';
+import CustomerList from '@/modules/crm/customers/customerList';
+import CustomerForm from '@/modules/crm/customers/customerForm';
+
+
 
 function App() {
   return (
@@ -431,6 +436,9 @@ function App() {
             <Route path="/crm/product-categories" element={<ProductCategoryList />} />
             <Route path="/crm/appointments" element={<AppointmentsList />} />
             <Route path="/crm/prospects" element={<ProspectsList />} />
+            <Route path="/crm/sales-tasks" element={<SalesTaskList />} />
+            <Route path="/crm/sales-task-details" element={<SalesTaskDetailList />} />
+            <Route path="/crm/sales-tasks/:id" element={<SalesTaskDetail />} />
             <Route path="/crm/contracts" element={<ContractsList />} />
             <Route path="/crm/sales-stages" element={<SalesStagesList />} />
             <Route path="/crm/settings" element={<CrmSettings />} />

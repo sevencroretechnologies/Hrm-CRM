@@ -11,9 +11,12 @@ use Illuminate\Http\Request;
 class UsersController extends Controller
 {
     use ApiResponse;
-    
+
     public function index(Request $request): JsonResponse
     {
+        if ($request->has('company_id')) {
+            return $this->getUsersByCompanyId($request);
+        }
         return $this->getUsersByOrgId($request);
     }
 
@@ -23,17 +26,20 @@ class UsersController extends Controller
             $q->orderBy('hierarchy_level');
         }]);
 
-        $query->whereNotNull('org_id')
-            ->whereNull('company_id');
-
+        // Filter by org_id only if provided in request
         if ($request->has('org_id')) {
             $query->where('org_id', $request->org_id);
         }
 
+        // Filter by company_id only if provided in request
+        if ($request->has('company_id')) {
+            $query->where('company_id', $request->company_id);
+        }
+
         if ($request->has('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%'.$request->search.'%')
-                    ->orWhere('email', 'like', '%'.$request->search.'%');
+                $q->where('name', 'like', '%' . $request->search . '%')
+                    ->orWhere('email', 'like', '%' . $request->search . '%');
             });
         }
 
@@ -84,8 +90,8 @@ class UsersController extends Controller
 
         if ($request->has('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%'.$request->search.'%')
-                    ->orWhere('email', 'like', '%'.$request->search.'%');
+                $q->where('name', 'like', '%' . $request->search . '%')
+                    ->orWhere('email', 'like', '%' . $request->search . '%');
             });
         }
 
@@ -129,6 +135,4 @@ class UsersController extends Controller
 
         return $this->success($users, 'Users for dropdown retrieved successfully');
     }
-
-
 }

@@ -1,4 +1,4 @@
-import { Contact, Customer, CustomerGroup, Lead, Opportunity, PaymentTerm, PriceList, Prospect, Territory, WrappedPaginatedResponse } from '@/types';
+import { Contact, Customer, CustomerGroup, Lead, Opportunity, PaymentTerm, PriceList, Prospect, SalesTask, SalesTaskDetail, Territory, WrappedPaginatedResponse } from '@/types';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
@@ -58,7 +58,7 @@ export interface User {
 }
 
 export const userApi = {
-  list: () => api.get('/users').then(res => {
+  list: (params?: Record<string, any>) => api.get('/users', { params }).then(res => {
     // Handle both paginated success wrapper and direct array
     const data = res.data.data;
     if (data && data.data && Array.isArray(data.data)) return data.data;
@@ -165,6 +165,36 @@ export const prospectApi = {
   update: (id: number, data: Partial<Prospect>) =>
     api.put<Prospect>(`/prospects/${id}`, data).then((r) => r.data),
   delete: (id: number) => api.delete(`/prospects/${id}`),
+};
+
+export const taskSourceApi = {
+  list: () => api.get("/task-sources").then((res) => Array.isArray(res.data) ? res.data : res.data.data || []),
+};
+
+export const taskTypeApi = {
+  list: () => api.get("/task-types").then((res) => Array.isArray(res.data) ? res.data : res.data.data || []),
+};
+
+export const salesTaskApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get<WrappedPaginatedResponse<SalesTask>>("/sales-tasks", { params }).then((r) => r.data.data),
+  get: (id: number) => api.get<SalesTask>(`/sales-tasks/${id}`).then((r) => r.data),
+  create: (data: Partial<SalesTask>) =>
+    api.post<SalesTask>("/sales-tasks", data).then((r) => r.data),
+  update: (id: number, data: Partial<SalesTask>) =>
+    api.put<SalesTask>(`/sales-tasks/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/sales-tasks/${id}`),
+};
+
+export const salesTaskDetailApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get<WrappedPaginatedResponse<SalesTaskDetail>>("/sales-task-details", { params }).then((r) => r.data.data),
+  get: (id: number) => api.get<SalesTaskDetail>(`/sales-task-details/${id}`).then((r) => r.data),
+  create: (data: Partial<SalesTaskDetail>) =>
+    api.post<SalesTaskDetail>("/sales-task-details", data).then((r) => r.data),
+  update: (id: number, data: Partial<SalesTaskDetail>) =>
+    api.put<SalesTaskDetail>(`/sales-task-details/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/sales-task-details/${id}`),
 };
 
 export const priceListApi = {
