@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Opportunity;
-use App\Models\OpportunityItem;
+use App\Models\OpportunityProduct;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class OpportunityService
@@ -57,7 +57,7 @@ class OpportunityService
 
         foreach ($items as $item) {
             $item['opportunity_id'] = $opportunity->id;
-            OpportunityItem::create($item);
+            OpportunityProduct::create($item);
         }
 
         $opportunity->calculateTotals();
@@ -79,7 +79,7 @@ class OpportunityService
             $opportunity->items()->delete();
             foreach ($items as $item) {
                 $item['opportunity_id'] = $opportunity->id;
-                OpportunityItem::create($item);
+                OpportunityProduct::create($item);
             }
             $opportunity->calculateTotals();
             $opportunity->save();

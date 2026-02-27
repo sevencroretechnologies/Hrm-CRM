@@ -24,6 +24,16 @@ class User extends Authenticatable
     ];
 
     /**
+     * Stub for assignRole to prevent errors if permission package is not installed.
+     */
+    public function assignRole($role)
+    {
+        // For now, this is a stub. 
+        // If you want real roles, install spatie/laravel-permission
+        return $this;
+    }
+
+    /**
      * The attributes that should be hidden for serialization.
      *
      * @var array<int, string>
