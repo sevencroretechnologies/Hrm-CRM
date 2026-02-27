@@ -8,7 +8,7 @@ import {
     crmOpportunityStageService,
     crmLeadService,
     crmTerritoryService,
-    crmProspectService,
+    crmCustomerService,
     crmContactService,
     crmProductService,
     crmProductCategoryService,
@@ -86,7 +86,7 @@ export default function OpportunityForm() {
     const [opportunityStages, setOpportunityStages] = useState<DDItem[]>([]);
     const [leads, setLeads] = useState<DDItem[]>([]);
     const [territories, setTerritories] = useState<DDItem[]>([]);
-    const [prospects, setProspects] = useState<DDItem[]>([]);
+    const [customers, setCustomers] = useState<DDItem[]>([]);
     const [contacts, setContacts] = useState<DDItem[]>([]);
     const [products, setProducts] = useState<DDItem[]>([]);
     const [categories, setCategories] = useState<DDItem[]>([]);
@@ -107,18 +107,18 @@ export default function OpportunityForm() {
             crmOpportunityStageService.getAll({ per_page: 200 }),
             crmLeadService.getAll({ per_page: 500 }),
             crmTerritoryService.getAll({ per_page: 200 }),
-            crmProspectService.getAll({ per_page: 500 }),
+            crmCustomerService.getAll({ per_page: 500 }),
             crmContactService.getAll({ per_page: 500 }),
             crmProductService.getAll({ per_page: 1000 }),
             crmProductCategoryService.getAll({ per_page: 200 }),
-        ]).then(([sR, srcR, tpR, stR, lR, terR, prR, ctR, pdR, catR]) => {
+        ]).then(([sR, srcR, tpR, stR, lR, terR, custR, ctR, pdR, catR]) => {
             setStatuses(extractList(sR));
             setSources(extractList(srcR));
             setOpportunityTypes(extractList(tpR));
             setOpportunityStages(extractList(stR));
             setLeads(extractList(lR));
             setTerritories(extractList(terR));
-            setProspects(extractList(prR));
+            setCustomers(extractList(custR));
             setContacts(extractList(ctR));
             setProducts(extractList(pdR));
             setCategories(extractList(catR));
@@ -370,6 +370,7 @@ export default function OpportunityForm() {
                                         setField('customer_id', '');
                                         setField('prospect_id', '');
                                         setField('customer_contact_id', '');
+                                        setField('party_name', '');
                                     }}
                                 >
                                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -400,6 +401,30 @@ export default function OpportunityForm() {
                                         <SelectContent>
                                             <SelectItem value="none">Select Lead</SelectItem>
                                             {leads.map((l) => <SelectItem key={l.id} value={String(l.id)}>{`${l.first_name ?? ''} ${l.last_name ?? ''}`.trim() || String(l.id)}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                            {form.opportunity_from === 'customer' && (
+                                <div className="space-y-1">
+                                    <Label>Customer</Label>
+                                    <Select
+                                        value={String(form.customer_id || 'none')}
+                                        onValueChange={(v) => {
+                                            setField('customer_id', v === 'none' ? '' : v);
+                                            setField('customer_contact_id', '');
+                                            const selected = customers.find((c) => String(c.id) === v);
+                                            setField('party_name', selected ? String(selected.name ?? '') : '');
+                                        }}
+                                    >
+                                        <SelectTrigger><SelectValue placeholder="Select Customer" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">Select Customer</SelectItem>
+                                            {customers.map((c) => (
+                                                <SelectItem key={c.id} value={String(c.id)}>
+                                                    {lbl(c, 'name')}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>

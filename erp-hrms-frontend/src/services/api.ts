@@ -973,6 +973,14 @@ export const crmProspectService = {
   delete: (id: number) => api.delete(`/prospects/${id}`),
 };
 
+export const crmCustomerService = {
+  getAll: (params?: Record<string, unknown>) => api.get('/customers', { params }),
+  getById: (id: number) => api.get(`/customers/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/customers', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/customers/${id}`, data),
+  delete: (id: number) => api.delete(`/customers/${id}`),
+};
+
 export const crmCampaignService = {
   getAll: (params?: Record<string, unknown>) => api.get('/campaigns', { params }),
   getById: (id: number) => api.get(`/campaigns/${id}`),
@@ -1061,6 +1069,10 @@ export const crmProductService = {
 
 export const crmProductCategoryService = {
   getAll: (params?: Record<string, unknown>) => api.get('/product-categories', { params }),
+  getById: (id: number) => api.get(`/product-categories/${id}`),
+create: (data: Record<string, unknown>) => api.post('/product-categories', data),
+update: (id: number, data: Record<string, unknown>) => api.put(`/product-categories/${id}`, data),
+delete: (id: number) => api.delete(`/product-categories/${id}`),
 };
 
 export const crmSettingService = {
