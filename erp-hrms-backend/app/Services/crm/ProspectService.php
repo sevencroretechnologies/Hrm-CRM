@@ -19,7 +19,11 @@ class ProspectService
         }
         if (!empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where('name', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('company_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
+            });
         }
 
         return $query->orderBy('created_at', 'desc')->paginate($filters['per_page'] ?? 15);

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Lead } from '../../../types';
 import { leadApi } from '../../../services/api';
 import { showAlert, showConfirmDialog, getErrorMessage } from '../../../lib/sweetalert';
 import { Card, CardContent, CardHeader } from '../../../components/ui/card';
@@ -16,21 +17,6 @@ import {
 import DataTable, { TableColumn } from 'react-data-table-component';
 import { Plus, Search, Users, Eye, Edit, Trash2 } from 'lucide-react';
 
-interface Lead {
-  id: number;
-  series: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  mobile_no: string | null;
-  company_name: string | null;
-  status: { id: number; status_name: string } | null;
-  source: { id: number; name: string } | null;
-  request_type: { id: number; name: string } | null;
-  industry: { id: number; name: string } | null;
-  territory: string | null;
-  created_at: string;
-}
 
 export default function LeadsList() {
   const navigate = useNavigate();
@@ -49,10 +35,10 @@ export default function LeadsList() {
     try {
       const params: Record<string, unknown> = { page: currentPage, per_page: perPage, search };
       const response = await leadApi.list(params);
-      const { data, pagination } = response;
+      const { data, total } = response;
       if (Array.isArray(data)) {
         setLeads(data);
-        setTotalRows(pagination?.total_items ?? 0);
+        setTotalRows(total ?? 0);
       } else {
         setLeads([]);
         setTotalRows(0);
@@ -93,7 +79,7 @@ export default function LeadsList() {
   };
 
   const columns: TableColumn<Lead>[] = [
-    { name: 'series', selector: (row) => row.series, sortable: true },
+    { name: 'series', selector: (row) => row.series || '-', sortable: true },
     {
       name: 'Name',
       cell: (row) => <span className="font-medium">{[row.first_name, row.last_name].filter(Boolean).join(' ') || '-'}</span>,

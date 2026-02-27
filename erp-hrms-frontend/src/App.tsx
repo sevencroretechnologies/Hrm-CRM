@@ -158,6 +158,7 @@ import ClockInOutSelf from './pages/attendance/ClockInOutSelf';
 import LeadForm from './modules/crm/leads/LeadForm';
 import CustomerList from './modules/crm/customers/customerList';
 import CustomerForm from './modules/crm/customers/customerForm';
+import ProspectForm from './modules/crm/prospects/prospectForm';
 
 function App() {
   return (
@@ -431,6 +432,8 @@ function App() {
             <Route path="/crm/product-categories" element={<ProductCategoryList />} />
             <Route path="/crm/appointments" element={<AppointmentsList />} />
             <Route path="/crm/prospects" element={<ProspectsList />} />
+            <Route path="/crm/prospects/create" element={<ProspectForm />} />
+            <Route path="/crm/prospects/:id/edit" element={<ProspectForm />} />
             <Route path="/crm/contracts" element={<ContractsList />} />
             <Route path="/crm/sales-stages" element={<SalesStagesList />} />
             <Route path="/crm/settings" element={<CrmSettings />} />
