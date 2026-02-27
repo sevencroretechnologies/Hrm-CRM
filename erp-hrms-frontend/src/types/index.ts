@@ -29,6 +29,7 @@ export interface Lead {
   qualification_status: string | null;
   qualified_by: number | null;
   qualified_on: string | null;
+  territory: string | null;
   created_at: string;
   updated_at: string;
 }

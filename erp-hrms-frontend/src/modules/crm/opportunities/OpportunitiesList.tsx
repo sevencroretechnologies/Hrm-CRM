@@ -19,7 +19,7 @@ import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Target } from 'lucide-
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface OppStatus { id: number; status_name: string; }
-interface OppStage { id: number; stage_name: string; }
+interface OppStage { id: number; name: string; }
 interface Opportunity {
   id: number;
   naming_series?: string;
@@ -37,7 +37,7 @@ interface Opportunity {
   status_id: number | null;
   status: OppStatus | null;
   opportunity_stage_id: number | null;
-  opportunityStage: OppStage | null;
+  opportunity_stage: OppStage | null;
   created_at: string;
 }
 
@@ -162,7 +162,7 @@ export default function OpportunitiesList() {
     },
     {
       name: 'Stage',
-      selector: (row) => row.opportunityStage?.stage_name || '-',
+      selector: (row) => row.opportunity_stage?.name || '-',
     },
     {
       name: 'Amount',
@@ -287,7 +287,7 @@ export default function OpportunitiesList() {
                   ['Company', selected.company_name],
                   ['From', selected.opportunity_from],
                   ['Status', selected.status?.status_name],
-                  ['Stage', selected.opportunityStage?.stage_name],
+                  ['Stage', selected.opportunity_stage?.name],
                   ['Amount', selected.opportunity_amount != null ? `${selected.currency ?? ''} ${Number(selected.opportunity_amount).toLocaleString()}` : null],
                   ['Expected Close', selected.expected_closing ? String(selected.expected_closing).split('T')[0] : null],
                   ['Probability', selected.probability != null ? `${selected.probability}%` : null],
