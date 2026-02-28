@@ -162,6 +162,8 @@ import LeadForm from '@/modules/crm/leads/LeadForm';
 import CustomerList from '@/modules/crm/customers/customerList';
 import CustomerForm from '@/modules/crm/customers/customerForm';
 import ProspectForm from './modules/crm/prospects/prospectForm';
+import ContactForm from './modules/crm/contacts/contactForm';
+import ContactList from './modules/crm/contacts/contactList';
 
 
 
@@ -439,6 +441,9 @@ function App() {
             <Route path="/crm/prospects" element={<ProspectsList />} />
             <Route path="/crm/prospects/create" element={<ProspectForm />} />
             <Route path="/crm/prospects/:id/edit" element={<ProspectForm />} />
+            <Route path="/crm/contacts" element={<ContactList />} />
+            <Route path="/crm/contacts/create" element={<ContactForm />} />
+            <Route path="/crm/contacts/:id/edit" element={<ContactForm />} />
             <Route path="/crm/sales-tasks" element={<SalesTaskList />} />
             <Route path="/crm/sales-task-details" element={<SalesTaskDetailList />} />
             <Route path="/crm/sales-tasks/:id" element={<SalesTaskDetail />} />

@@ -518,7 +518,7 @@ const navigation: NavItem[] = [
       { name: "Product Categories", href: "/crm/product-categories" },
       { name: "Appointments", href: "/crm/appointments" },
       { name: "Prospects", href: "/crm/prospects" },
-      { name: "Contracts", href: "/crm/contracts" },
+      { name: "Contacts", href: "/crm/contacts" },
       // { name: "Sales Stages", href: "/crm/sales-stages" },
       { name: "Settings", href: "/crm/settings" },
       { name: "Sales Task", href: "/crm/sales-tasks" },
