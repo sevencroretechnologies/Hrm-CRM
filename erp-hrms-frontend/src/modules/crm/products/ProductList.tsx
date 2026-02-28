@@ -30,6 +30,7 @@ import { Label } from '../../../components/ui/label';
 import { Badge } from '../../../components/ui/badge';
 import DataTable, { TableColumn } from 'react-data-table-component';
 import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, Package, Tag, IndianRupee, Info } from 'lucide-react';
+import ProductForm from './ProductForm';
 
 interface ProductCategory {
   id: number;
@@ -59,6 +60,10 @@ export default function ProductList() {
   const [perPage, setPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
 
+  // Form Modal State
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+
   const fetchCategories = async () => {
     try {
       const response = await crmProductCategoryService.getAll();
@@ -86,7 +91,7 @@ export default function ProductList() {
       const responseData = response.data;
       // Handle Laravel pagination: response.data.data.data
       const arrayData = responseData?.data?.data || responseData?.data || [];
-      
+
       if (Array.isArray(arrayData)) {
         setItems(arrayData);
         setTotalRows(responseData?.data?.total || responseData?.pagination?.total_items || arrayData.length);
@@ -136,6 +141,20 @@ export default function ProductList() {
     setIsViewDialogOpen(true);
   };
 
+  const handleEdit = (product: Product) => {
+    setSelectedProductId(product.id);
+    setIsFormOpen(true);
+  };
+
+  const handleCreate = () => {
+    setSelectedProductId(null);
+    setIsFormOpen(true);
+  };
+
+  const handleFormSuccess = () => {
+    fetchItems(page);
+  };
+
   const columns: TableColumn<Product>[] = [
     {
       name: 'Product Name',
@@ -144,7 +163,6 @@ export default function ProductList() {
       cell: (row) => (
         <div className="flex flex-col py-2 cursor-pointer hover:text-solarized-blue transition-colors" onClick={() => handleView(row)}>
           <span className="font-medium">{row.name}</span>
-          {row.code && <span className="text-xs text-muted-foreground">{row.code}</span>}
         </div>
       ),
     },
@@ -188,10 +206,8 @@ export default function ProductList() {
             <DropdownMenuItem onClick={() => handleView(row)}>
               <Eye className="mr-2 h-4 w-4" /> View Details
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to={`/crm/products/${row.id}/edit`}>
-                <Edit className="mr-2 h-4 w-4" /> Edit
-              </Link>
+            <DropdownMenuItem onClick={() => handleEdit(row)}>
+              <Edit className="mr-2 h-4 w-4" /> Edit
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleDelete(row.id)} className="text-red-600">
               <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -230,16 +246,14 @@ export default function ProductList() {
           <p className="text-muted-foreground">Manage your product catalog and inventory</p>
         </div>
         <div className="flex gap-2">
-            <Button variant="outline" asChild>
-                <Link to="/crm/product-categories">
-                    Categories
-                </Link>
-            </Button>
-            <Button asChild className="bg-solarized-blue hover:bg-solarized-blue/90">
-                <Link to="/crm/products/new">
-                    <Plus className="mr-2 h-4 w-4" /> Add Product
-                </Link>
-            </Button>
+          {/* <Button variant="outline" asChild>
+            <Link to="/crm/product-categories">
+              Categories
+            </Link>
+          </Button> */}
+          <Button onClick={handleCreate} className="bg-solarized-blue hover:bg-solarized-blue/90">
+            <Plus className="mr-2 h-4 w-4" /> Add Product
+          </Button>
         </div>
       </div>
 
@@ -247,31 +261,31 @@ export default function ProductList() {
         <CardHeader>
           <div className="flex flex-col md:flex-row gap-4">
             <form onSubmit={handleSearchSubmit} className="flex-1 flex gap-2">
-                <div className="relative flex-1">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                    placeholder="Search products..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-10"
+                  placeholder="Search products..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
                 />
-                </div>
-                <Button type="submit" variant="outline">Search</Button>
+              </div>
+              <Button type="submit" variant="outline">Search</Button>
             </form>
             <div className="w-full md:w-64">
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="All Categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        {categories.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id.toString()}>
-                                {cat.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id.toString()}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>
@@ -319,10 +333,6 @@ export default function ProductList() {
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider">Product Name</Label>
                   <p className="text-lg font-semibold">{viewingProduct.name}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Code / SKU</Label>
-                  <p className="text-lg font-medium font-mono">{viewingProduct.code || '—'}</p>
                 </div>
               </div>
 
@@ -381,14 +391,19 @@ export default function ProductList() {
             <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
               Close
             </Button>
-            <Button asChild className="bg-solarized-blue hover:bg-solarized-blue/90">
-              <Link to={`/crm/products/${viewingProduct?.id}/edit`}>
-                <Edit className="mr-2 h-4 w-4" /> Edit Product
-              </Link>
+            <Button onClick={() => { setIsViewDialogOpen(false); if (viewingProduct) handleEdit(viewingProduct); }} className="bg-solarized-blue hover:bg-solarized-blue/90">
+              <Edit className="mr-2 h-4 w-4" /> Edit Product
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ProductForm
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        onSuccess={handleFormSuccess}
+        productId={selectedProductId}
+      />
     </div>
   );
 }
