@@ -116,6 +116,32 @@ export default function SalesTaskDetailModal({
         }
     };
 
+    const getTaskLabel = (t: SalesTask) => {
+        const sourceName = t.task_source?.name || "Unknown Source";
+        const typeName = t.task_type?.name || "Unknown Type";
+        let detailName = "";
+
+        if (t.source_detail) {
+            if (t.task_source_id === 3) {
+                // Opportunity
+                detailName = t.source_detail.party_name || t.source_detail.naming_series || `Opp #${t.source_id}`;
+            } else if (t.task_source_id === 1) {
+                // Lead
+                // the API returns first_name, last_name, company_name in source_detail for Lead
+                detailName = `${t.source_detail.first_name || ''} ${t.source_detail.last_name || ''}`.trim() || t.source_detail.company_name || `Lead #${t.source_id}`;
+            } else if (t.task_source_id === 2) {
+                // Prospect
+                detailName = t.source_detail.company_name || `Prospect #${t.source_id}`;
+            }
+        }
+
+        if (detailName) {
+            return `${sourceName} - ${detailName} (${typeName})`;
+        }
+
+        return `${sourceName}: ${typeName}`;
+    };
+
     return (
         <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
             <DialogContent className="sm:max-w-[500px]">
@@ -140,7 +166,7 @@ export default function SalesTaskDetailModal({
                                 <option value="">Select Task</option>
                                 {salesTasks.map((t) => (
                                     <option key={t.id} value={t.id}>
-                                        {t.task_source?.name}: {t.task_type?.name}
+                                        {getTaskLabel(t)}
                                     </option>
                                 ))}
                             </select>

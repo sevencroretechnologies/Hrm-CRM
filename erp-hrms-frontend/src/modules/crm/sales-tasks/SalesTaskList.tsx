@@ -37,7 +37,20 @@ const getBadgeColor = (sourceName: string) => {
 
 const getSourceEntityInfo = (task: SalesTask) => {
     if (task.source_detail) {
+        if (task.task_source_id === 3) {
+            // Opportunity
+            return task.source_detail.party_name || task.source_detail.naming_series || `Opp #${task.source_id}`;
+        } else if (task.task_source_id === 1) {
+            // Lead
+            return `${task.source_detail.first_name || ''} ${task.source_detail.last_name || ''}`.trim() || task.source_detail.company_name || `Lead #${task.source_id}`;
+        } else if (task.task_source_id === 2) {
+            // Prospect
+            return task.source_detail.company_name || task.source_detail.name || `Prospect #${task.source_id}`;
+        }
+
+        // Fallback for any other source types
         return task.source_detail.name ||
+            task.source_detail.naming_series ||
             task.source_detail.company_name ||
             task.source_detail.party_name ||
             (task.source_detail.first_name ? `${task.source_detail.first_name} ${task.source_detail.last_name || ''}`.trim() : null) ||

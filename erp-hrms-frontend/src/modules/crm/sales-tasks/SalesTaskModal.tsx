@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 // import SearchableSelect from "@/components/SearchableSelect";
 import { showAlert } from "@/lib/sweetalert";
 
@@ -40,6 +42,10 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
         source_id: "",
         task_type_id: "",
         sales_assign_id: "",
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+        description: "",
+        status: "Open",
     });
 
     const [sources, setSources] = useState<any[]>([]);
@@ -60,6 +66,10 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
                     source_id: "",
                     task_type_id: "",
                     sales_assign_id: "",
+                    date: new Date().toISOString().split('T')[0],
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+                    description: "",
+                    status: "Open",
                 });
                 setSourceEntities([]);
                 setErrors({});
@@ -96,9 +106,8 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
             switch (taskSourceId) {
                 case TASK_SOURCE_LEAD: {
                     const result = await leadApi.list({ per_page: 500 });
-                    // result is PaginatedResponse<Lead>, so result.data is Lead[]
-                    // We use type casting to ensure the linter doesn't complain if types are mismatched
-                    const leadsData = (result as any).data || result;
+                    const resData = (result as any).data || result;
+                    const leadsData = resData.data || resData;
                     entities = (Array.isArray(leadsData) ? leadsData : []).map((l: any) => ({
                         id: l.id,
                         label: `${l.first_name || ''} ${l.last_name || ''}`.trim() || `Lead #${l.id}`,
@@ -107,7 +116,8 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
                 }
                 case TASK_SOURCE_PROSPECT: {
                     const result = await prospectApi.list({ per_page: 500 });
-                    const prospectsData = (result as any).data || result;
+                    const resData = (result as any).data || result;
+                    const prospectsData = resData.data || resData;
                     entities = (Array.isArray(prospectsData) ? prospectsData : []).map((p: any) => ({
                         id: p.id,
                         label: p.company_name || p.name || `Prospect #${p.id}`,
@@ -116,7 +126,8 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
                 }
                 case TASK_SOURCE_OPPORTUNITY: {
                     const result = await opportunityApi.list({ per_page: 500 });
-                    const oppsData = (result as any).data || result;
+                    const resData = (result as any).data || result;
+                    const oppsData = resData.data || resData;
                     entities = (Array.isArray(oppsData) ? oppsData : []).map((o: any) => {
                         let name = o.party_name || o.company_name || o.naming_series || `Opp #${o.id}`;
                         return { id: o.id, label: name };
@@ -140,6 +151,10 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
                 source_id: data.source_id ? data.source_id.toString() : "",
                 task_type_id: data.task_type_id.toString(),
                 sales_assign_id: data.sales_assign_id ? data.sales_assign_id.toString() : "",
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+                description: "",
+                status: "Open",
             });
         } catch (error) {
             console.error("Failed to load sales task:", error);
@@ -162,6 +177,12 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
                 source_id: formData.source_id ? Number(formData.source_id) : null,
                 task_type_id: Number(formData.task_type_id),
                 sales_assign_id: formData.sales_assign_id ? Number(formData.sales_assign_id) : null,
+                ...(!taskId ? {
+                    date: formData.date,
+                    time: formData.time,
+                    description: formData.description,
+                    status: formData.status,
+                } : {}),
             };
 
             if (taskId) {
@@ -312,13 +333,69 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
                                         <option value="">Select User (Optional)</option>
                                         {users.map((user) => (
                                             <option key={user.id} value={user.id}>
-                                                {user.name} 
+                                                {user.name}
                                             </option>
                                         ))}
                                     </select>
                                     {errors.sales_assign_id && <p className="text-xs text-red-500">{errors.sales_assign_id[0]}</p>}
                                 </div>
                             </div>
+
+                            {!taskId && (
+                                <>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="date">Date</Label>
+                                            <Input
+                                                id="date"
+                                                type="date"
+                                                value={formData.date}
+                                                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                                required
+                                            />
+                                            {errors.date && <p className="text-xs text-red-500">{errors.date[0]}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="time">Time</Label>
+                                            <Input
+                                                id="time"
+                                                type="time"
+                                                value={formData.time}
+                                                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                                                required
+                                            />
+                                            {errors.time && <p className="text-xs text-red-500">{errors.time[0]}</p>}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="status">Status</Label>
+                                        <select
+                                            id="status"
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            value={formData.status}
+                                            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                            required
+                                        >
+                                            <option value="Open">Open</option>
+                                            <option value="In Progress">In Progress</option>
+                                            <option value="Closed">Closed</option>
+                                        </select>
+                                        {errors.status && <p className="text-xs text-red-500">{errors.status[0]}</p>}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="description">Description</Label>
+                                        <Textarea
+                                            id="description"
+                                            rows={4}
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                            placeholder="Enter task progress details..."
+                                            required
+                                        />
+                                        {errors.description && <p className="text-xs text-red-500">{errors.description[0]}</p>}
+                                    </div>
+                                </>
+                            )}
 
                             <DialogFooter className="pt-6">
                                 <Button type="button" variant="outline" onClick={onHide}>
