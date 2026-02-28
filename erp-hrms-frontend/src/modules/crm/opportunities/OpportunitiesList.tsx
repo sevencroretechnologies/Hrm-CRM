@@ -25,7 +25,7 @@ interface Opportunity {
   naming_series?: string;
   party_name: string | null;
   opportunity_from: string | null;
-  opportunity_amount: number | null;
+  amount: number | null;
   expected_closing: string | null;
   probability: number | null;
   currency: string | null;
@@ -39,6 +39,7 @@ interface Opportunity {
   opportunity_stage_id: number | null;
   opportunity_stage: OppStage | null;
   created_at: string;
+  items?: { amount: string | number }[];
 }
 
 // ── Status badge — same colour logic as crm-frontend statusVariant ─────────────
@@ -146,8 +147,8 @@ export default function OpportunitiesList() {
   // ── DataTable columns — mirrors crm-frontend Table columns ────────────────────
   const columns: TableColumn<Opportunity>[] = [
     {
-      name: 'Customer',
-      cell: (row) => <span className="font-medium">{row.party_name || `#${row.id}`}</span>,
+      name: 'Product code',
+      cell: (row) => <span className="font-medium">{row.party_name || `${row.naming_series}`}</span>,
       minWidth: '180px',
     },
     {
@@ -166,9 +167,12 @@ export default function OpportunitiesList() {
     },
     {
       name: 'Amount',
-      cell: (row) => row.opportunity_amount
-        ? `${row.currency ?? '$'}${Number(row.opportunity_amount).toLocaleString()}`
-        : '-',
+      cell: (row) => {
+        const amt = row.amount ?? (row.items?.reduce((sum, item) => sum + Number(item.amount || 0), 0) || 0);
+        return amt > 0
+          ? `${row.currency ?? '₹'} ${Number(amt).toLocaleString()}`
+          : '-';
+      },
       width: '120px',
     },
     {
@@ -288,7 +292,10 @@ export default function OpportunitiesList() {
                   ['From', selected.opportunity_from],
                   ['Status', selected.status?.status_name],
                   ['Stage', selected.opportunity_stage?.name],
-                  ['Amount', selected.opportunity_amount != null ? `${selected.currency ?? ''} ${Number(selected.opportunity_amount).toLocaleString()}` : null],
+                  ['Amount', (() => {
+                    const amt = selected.amount ?? (selected.items?.reduce((sum, item) => sum + Number(item.amount || 0), 0) || 0);
+                    return amt > 0 ? `${selected.currency ?? ''} ${Number(amt).toLocaleString()}` : null;
+                  })()],
                   ['Expected Close', selected.expected_closing ? String(selected.expected_closing).split('T')[0] : null],
                   ['Probability', selected.probability != null ? `${selected.probability}%` : null],
                 ].map(([label, val]) => (
