@@ -176,6 +176,7 @@ class LeadController extends Controller
                     'country' => $lead->country,
                     'website' => $lead->website,
                     'source' => $lead->source?->name,
+                    'status' => $lead->status->status_name,
                 ]
             );
 
