@@ -431,9 +431,9 @@ export default function OpportunitiesList() {
               </div>
               <DialogFooter className="mt-6">
                 <Button variant="outline" onClick={() => setViewOpen(false)}>Close</Button>
-                <Button className="bg-solarized-blue hover:bg-solarized-blue/90" onClick={() => { setViewOpen(false); navigate(`/crm/opportunities/${selected.id}/edit`); }}>
+                {/* <Button className="bg-solarized-blue hover:bg-solarized-blue/90" onClick={() => { setViewOpen(false); navigate(`/crm/opportunities/${selected.id}/edit`); }}>
                   <Edit className="mr-2 h-4 w-4" /> Edit
-                </Button>
+                </Button> */}
               </DialogFooter>
             </div>
           )}
