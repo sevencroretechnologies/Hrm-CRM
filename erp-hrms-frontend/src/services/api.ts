@@ -1,4 +1,4 @@
-import { Contact, Customer, CustomerGroup, Lead, Opportunity, PaymentTerm, PriceList, Prospect, SalesTask, SalesTaskDetail, Territory, WrappedPaginatedResponse } from '@/types';
+import { Contact, Customer, CustomerGroup, Lead, Opportunity, OpportunityLostReason, PaymentTerm, PriceList, Prospect, SalesTask, SalesTaskDetail, Territory, WrappedPaginatedResponse } from '@/types';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
@@ -134,6 +134,17 @@ export const territoryApi = {
   update: (id: number, data: Partial<Territory>) =>
     api.put<Territory>(`/territories/${id}`, data).then((r) => r.data),
   delete: (id: number) => api.delete(`/territories/${id}`),
+};
+
+export const lostReasonApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get<WrappedPaginatedResponse<OpportunityLostReason>>("/lost-reasons", { params }).then((r) => r.data.data),
+  get: (id: number) => api.get<OpportunityLostReason>(`/lost-reasons/${id}`).then((r) => r.data),
+  create: (data: { opportunity_id: number; opportunity_lost_reasons: string }) =>
+    api.post<OpportunityLostReason>("/lost-reasons", data).then((r) => r.data),
+  update: (id: number, data: { opportunity_id?: number; opportunity_lost_reasons?: string }) =>
+    api.put<OpportunityLostReason>(`/lost-reasons/${id}`, data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/lost-reasons/${id}`),
 };
 
 export const customerApi = {
@@ -999,6 +1010,16 @@ export const crmOpportunityService = {
   create: (data: Record<string, unknown>) => api.post('/opportunities', data),
   update: (id: number, data: Record<string, unknown>) => api.put(`/opportunities/${id}`, data),
   delete: (id: number) => api.delete(`/opportunities/${id}`),
+  declareLost: (id: number, data: any) => api.post(`/opportunities/${id}/declare-lost`, data),
+  setMultipleStatus: (data: { ids: number[]; status_id: number }) => api.post('/opportunities/set-multiple-status', data),
+};
+
+export const crmOpportunityLostReasonService = {
+  getAll: (params?: Record<string, unknown>) => api.get('/lost-reasons', { params }),
+  getById: (id: number) => api.get(`/lost-reasons/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/lost-reasons', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/lost-reasons/${id}`, data),
+  delete: (id: number) => api.delete(`/lost-reasons/${id}`),
 };
 
 export const crmProspectService = {
