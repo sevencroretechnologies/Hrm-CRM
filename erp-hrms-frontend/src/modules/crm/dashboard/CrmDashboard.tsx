@@ -5,7 +5,7 @@ import {
   customerApi,
   salesTaskDetailApi
 } from "../../../services/api";
-import type { DashboardStats, Opportunity, SalesTaskDetail, Customer } from "../../../types";
+import type { DashboardStats, Opportunity, SalesTaskDetail } from "../../../types";
 import {
   TrendingUp,
   TrendingDown,
@@ -18,7 +18,6 @@ import {
   PieChart, Pie, Cell, Legend, CartesianGrid, ComposedChart, Line, Bar
 } from "recharts";
 import "./CrmDashboard.css";
-
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -39,6 +38,92 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   }
   return null;
 };
+
+// Helper to get total lost reasons
+const getTotalLostReasons = (data: any[]) => data.reduce((acc, curr) => acc + curr.value, 0);
+
+function LostDealReasonsChart({ stats }: { stats: DashboardStats }) {
+  const lostReasonsColors = [
+    "#0b7296", // Blue
+    "#a53c2b", // Red/Brown
+    "#e19e1e", // Orange/Yellow
+    "#85436d", // Purple
+    "#469f52"  // Green
+  ];
+
+  const lostReasonsData = (stats.opportunities?.lost_reasons || []).map((s, i) => ({
+    name: s.reason || "Unknown",
+    value: Number(s.count),
+    color: lostReasonsColors[i % lostReasonsColors.length]
+  }));
+
+  // Fallback if no data
+  const hasData = lostReasonsData.length > 0;
+  const displayData = hasData ? lostReasonsData : [{ name: "No Data", value: 1, color: "#f8f9fa" }];
+  const totalCount = hasData ? getTotalLostReasons(lostReasonsData) : 0;
+
+  return (
+    <div className="lg:col-span-1">
+      <div className="dash-card">
+        <div className="dash-card-header flex justify-between items-center">
+          <h5 className="font-semibold text-gray-700">Lost deal reasons</h5>
+          <div className="cursor-pointer text-gray-400 hover:text-gray-600">
+            <svg width="18" height="12" viewBox="0 0 18 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 12H18V10H0V12ZM0 7H18V5H0V7ZM0 0V2H18V0H0Z" fill="currentColor" />
+            </svg>
+          </div>
+        </div>
+        <div className="dash-card-body" style={{ height: 280, position: 'relative' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart margin={{ left: 10, right: 10, top: 0, bottom: 0 }}>
+              <Pie
+                data={displayData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={90}
+                paddingAngle={0}
+                stroke="none"
+              >
+                {displayData.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+              <Legend
+                layout="horizontal"
+                verticalAlign="bottom"
+                align="center"
+                iconType="circle"
+                wrapperStyle={{
+                  paddingTop: '10px',
+                  fontSize: '12px',
+                  color: '#495057',
+                  fontWeight: 500
+                }}
+                formatter={(value) => <span style={{ color: '#495057' }}>{value}</span>}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          {hasData && (
+            <div style={{
+              position: 'absolute',
+              top: '42%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              pointerEvents: 'none'
+            }}>
+              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#495057' }}>{totalCount}</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function CrmDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -154,35 +239,10 @@ export default function CrmDashboard() {
     },
   ];
 
-  // Opportunities by Status data
-  const statusColors: Record<string, string> = {
-    "Open": "#556ee6",
-    "Converted": "#f1b44c",
-    "Lost": "#34c38f",
-    "Closed": "#74788d",
-    "Qualified": "#50a5f1",
-    "Proposal": "#f46a6a"
-  };
-
-  const opportunitiesStatusData = (stats.opportunities?.by_status || []).map(s => {
-    const s_any = s as any;
-    const statusName = s_any.status?.status_name || s_any.status || "Unknown";
-    return {
-      name: statusName,
-      count: s.count,
-      color: statusColors[statusName] || "#74788d"
-    };
-  });
-
-  // Fallback if no status data
-  if (opportunitiesStatusData.length === 0) {
-    opportunitiesStatusData.push({ name: "No Data", count: 1, color: "#e9ecef" });
-  }
-
   return (
     <div className="crm-dash-wrapper">
       {/* Header */}
-      <div className="dashboard-header">
+      <div className="dashboard-header mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Welcome !</h2>
           <p className="text-gray-500 text-sm mt-1">Overview of your CRM activity</p>
@@ -196,7 +256,7 @@ export default function CrmDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {kpis.map((kpi) => (
           <div key={kpi.label} className="kpi-card flex flex-col justify-between p-5">
-            <div className="kpi-label text-gray-500 text-sm mb-3 font-medium">{kpi.label}</div>
+            <div className="kpi-label text-gray-500 text-sm mb-3 font-medium tracking-wide uppercase">{kpi.label}</div>
             <div className="flex items-baseline gap-4">
               <div className="text-2xl font-bold text-gray-800">{kpi.value}</div>
               <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${kpi.positive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -208,13 +268,13 @@ export default function CrmDashboard() {
         ))}
       </div>
 
-      {/* Row 2: Chart + Territory */}
+      {/* Row 2: Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Sales Overview Chart */}
         <div className="lg:col-span-2">
           <div className="dash-card">
             <div className="dash-card-header">
-              <h5>Sales Overview</h5>
+              <h5 className="font-semibold text-gray-700">Sales Overview</h5>
             </div>
             <div className="dash-card-body">
               <div style={{ height: 260 }}>
@@ -269,55 +329,8 @@ export default function CrmDashboard() {
           </div>
         </div>
 
-
-        {/* Opportunities by Status */}
-        <div className="lg:col-span-1">
-          <div className="dash-card">
-            <div className="dash-card-header">
-              <h5>Opportunities by Status</h5>
-            </div>
-            <div className="dash-card-body" style={{ height: 280, position: 'relative' }}>
-              <>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={opportunitiesStatusData}
-                      dataKey="count"
-                      nameKey="name"
-                      cx="40%"
-                      cy="50%"
-                      innerRadius={65}
-                      outerRadius={90}
-                      paddingAngle={2}
-                    >
-                      {opportunitiesStatusData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} stroke="none" />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend
-                      layout="vertical"
-                      verticalAlign="middle"
-                      align="right"
-                      iconType="circle"
-                      wrapperStyle={{ right: 20 }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '40%',
-                  transform: 'translate(-50%, -50%)',
-                  textAlign: 'center',
-                  pointerEvents: 'none'
-                }}>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#495057' }}>{stats.opportunities?.total || 0}</div>
-                </div>
-              </>
-            </div>
-          </div>
-        </div>
+        {/* Lost Deal Reasons Chart */}
+        <LostDealReasonsChart stats={stats} />
       </div>
 
       {/* Row 3: Latest Opportunities + Tasks */}
@@ -326,7 +339,7 @@ export default function CrmDashboard() {
         <div className="lg:col-span-2">
           <div className="dash-card">
             <div className="dash-card-header !pb-4">
-              <h5>Latest Opportunities</h5>
+              <h5 className="font-semibold text-gray-700">Latest Opportunities</h5>
               <div className="text-blue-500 hover:text-blue-600 font-medium cursor-pointer text-sm">
                 View All &rsaquo;
               </div>
@@ -385,7 +398,7 @@ export default function CrmDashboard() {
         <div className="lg:col-span-1 flex flex-col gap-6">
           <div className="dash-card">
             <div className="dash-card-header !pb-4">
-              <h5>Tasks Overview</h5>
+              <h5 className="font-semibold text-gray-700">Tasks Overview</h5>
             </div>
             <div className="dash-card-body">
               <div className="flex flex-col gap-3">
@@ -421,8 +434,6 @@ export default function CrmDashboard() {
               </div>
             </div>
           </div>
-
-
         </div>
       </div>
     </div>

@@ -320,6 +320,7 @@ export interface DashboardStats {
     total_value: number;
     by_status: Array<{ status: string; count: number }>;
     by_stage: Array<{ stage_name: string; count: number; total_value: number }>;
+    lost_reasons: Array<{ reason: string; count: number }>;
   };
   appointments: {
     total: number;

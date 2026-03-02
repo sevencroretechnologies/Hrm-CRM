@@ -113,6 +113,12 @@ class DashboardService
                 'total_value' => $oppTotalValue,
                 'by_status' => $oppByStatus,
                 'by_stage' => $oppByStage,
+                'lost_reasons' => DB::table('opportunity_lost_reasons')
+                    ->whereNull('deleted_at')
+                    ->select('opportunity_lost_reasons as reason', DB::raw('count(*) as count'))
+                    ->groupBy('opportunity_lost_reasons')
+                    ->get()
+                    ->toArray(),
             ],
             'appointments' => [
                 'total' => $appointmentsTotal,
