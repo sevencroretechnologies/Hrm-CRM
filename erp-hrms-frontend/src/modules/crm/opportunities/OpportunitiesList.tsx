@@ -21,6 +21,7 @@ import {
 } from '../../../components/ui/dropdown-menu';
 import DataTable, { TableColumn } from 'react-data-table-component';
 import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Target, XCircle } from 'lucide-react';
+// import { Customer } from '@/types';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface OppStatus { id: number; status_name: string; }
@@ -45,6 +46,17 @@ interface Opportunity {
   opportunity_stage: OppStage | null;
   created_at: string;
   items?: { amount: string | number }[];
+  lead?: Lead | null;
+  customer?: Customer | null;
+}
+
+interface Lead {
+  first_name: string | null;
+  last_name: string | null;
+}
+
+interface Customer {
+  name: string | null;
 }
 
 // ── Helper functions for data extraction ──────────────────────────────────────
@@ -222,8 +234,27 @@ export default function OpportunitiesList() {
     // },
     {
       name: 'Party',
-      cell: (row) => <span className="font-medium">{row.party_name || `${row.naming_series}`}</span>,
-      minWidth: '180px',
+      cell: (row) => {
+        let party = '-';
+
+        if (row.opportunity_from === 'lead' && row.lead) {
+          party = [row.lead.first_name, row.lead.last_name]
+            .filter(Boolean)
+            .join(' ');
+        }
+        else if (row.opportunity_from === 'customer' && row.customer) {
+          party = row.customer.name || '-';
+        }
+        else if (row.party_name) {
+          party = row.party_name;
+        }
+        else if (row.naming_series) {
+          party = row.naming_series;
+        }
+
+        return <span className="font-medium">{party}</span>;
+      },
+      minWidth: '200px',
     },
     {
       name: 'From',
