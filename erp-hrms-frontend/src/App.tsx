@@ -163,6 +163,7 @@ import CustomerForm from '@/modules/crm/customers/customerForm';
 import ProspectForm from './modules/crm/prospects/prospectForm';
 import ContactForm from './modules/crm/contacts/contactForm';
 import ContactList from './modules/crm/contacts/contactList';
+import OpportunityLostReasonList from './modules/crm/opportunities/OpportunityLostReasonList';
 
 
 
@@ -429,6 +430,7 @@ function App() {
             <Route path="/crm/opportunities" element={<OpportunitiesList />} />
             <Route path="/crm/opportunities/create" element={<OpportunityForm />} />
             <Route path="/crm/opportunities/:id/edit" element={<OpportunityForm />} />
+            <Route path="/crm/opportunity-lost-reasons" element={<OpportunityLostReasonList />} />
             <Route path="/crm/campaigns" element={<CampaignsList />} />
             <Route path="/crm/sources" element={<SourceList />} />
             <Route path="/crm/territories" element={<TerritoryList />} />
