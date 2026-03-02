@@ -186,10 +186,14 @@ export default function CrmDashboard() {
   ];
 
   // Bar chart data (leads by status)
-  const barData = stats.leads.by_status.map(s => ({
-    name: s.status,
-    count: s.count
-  }));
+ const barData = Object.values(
+    leads.reduce((acc: Record<string, { name: string; count: number }>, lead) => {
+      const statusName = lead.status?.status_name || "Unknown";
+      if (!acc[statusName]) acc[statusName] = { name: statusName, count: 0 };
+      acc[statusName].count += 1;
+      return acc;
+    }, {})
+  );
 
 
   // Territory / pipeline data
