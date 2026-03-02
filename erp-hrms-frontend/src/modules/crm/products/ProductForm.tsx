@@ -130,10 +130,6 @@ export default function ProductForm({ isOpen, onClose, onSuccess, productId }: P
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Edit Product' : 'Add New Product'}</DialogTitle>
         </DialogHeader>
-
-        {isLoading ? (
-          <div className="py-8 text-center">Loading product data...</div>
-        ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <h3 className="text-sm font-medium border-b pb-2">Basic Information</h3>
@@ -239,7 +235,6 @@ export default function ProductForm({ isOpen, onClose, onSuccess, productId }: P
               </Button>
             </DialogFooter>
           </form>
-        )}
       </DialogContent>
     </Dialog>
   );

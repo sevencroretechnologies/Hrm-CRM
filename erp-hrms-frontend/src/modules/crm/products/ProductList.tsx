@@ -204,7 +204,7 @@ export default function ProductList() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => handleView(row)}>
-              <Eye className="mr-2 h-4 w-4" /> View Details
+              <Eye className="mr-2 h-4 w-4" /> View
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleEdit(row)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
@@ -391,9 +391,9 @@ export default function ProductList() {
             <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
               Close
             </Button>
-            <Button onClick={() => { setIsViewDialogOpen(false); if (viewingProduct) handleEdit(viewingProduct); }} className="bg-solarized-blue hover:bg-solarized-blue/90">
+            {/* <Button onClick={() => { setIsViewDialogOpen(false); if (viewingProduct) handleEdit(viewingProduct); }} className="bg-solarized-blue hover:bg-solarized-blue/90">
               <Edit className="mr-2 h-4 w-4" /> Edit Product
-            </Button>
+            </Button> */}
           </DialogFooter>
         </DialogContent>
       </Dialog>

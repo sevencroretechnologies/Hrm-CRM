@@ -172,12 +172,12 @@ export default function ProductCategoryList() {
       sortable: true,
       cell: (row) => <span className="text-muted-foreground line-clamp-1">{row.description || '—'}</span>,
     },
-    {
-      name: 'Created At',
-      selector: (row) => row.created_at,
-      sortable: true,
-      cell: (row) => <span>{new Date(row.created_at).toLocaleDateString()}</span>,
-    },
+    // {
+    //   name: 'Created At',
+    //   selector: (row) => row.created_at,
+    //   sortable: true,
+    //   cell: (row) => <span>{new Date(row.created_at).toLocaleDateString()}</span>,
+    // },
     {
       name: 'Actions',
       cell: (row) => (
@@ -189,7 +189,7 @@ export default function ProductCategoryList() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => handleView(row)}>
-              <Eye className="mr-2 h-4 w-4" /> View Details
+              <Eye className="mr-2 h-4 w-4" /> View
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleEdit(row)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
@@ -367,9 +367,9 @@ export default function ProductCategoryList() {
             <Button variant="outline" onClick={() => setIsViewOpen(false)}>
               Close
             </Button>
-            <Button onClick={() => { setIsViewOpen(false); handleEdit(selectedCategory!); }} className="bg-solarized-blue hover:bg-solarized-blue/90">
+            {/* <Button onClick={() => { setIsViewOpen(false); handleEdit(selectedCategory!); }} className="bg-solarized-blue hover:bg-solarized-blue/90">
               <Edit className="mr-2 h-4 w-4" /> Edit Category
-            </Button>
+            </Button> */}
           </DialogFooter>
         </DialogContent>
       </Dialog>
