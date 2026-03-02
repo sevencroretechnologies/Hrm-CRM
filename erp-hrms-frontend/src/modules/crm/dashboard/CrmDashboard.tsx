@@ -1,83 +1,24 @@
 import { useEffect, useState } from "react";
-import { 
-  crmLeadService, 
-  crmCustomerService, 
-  crmProductService, 
-  dashboardService 
+import {
+  dashboardService,
+  opportunityApi,
+  customerApi,
+  salesTaskDetailApi
 } from "../../../services/api";
-import type { DashboardStats, Customer, Product, Lead } from "../../../types";
-import { 
-  Users, 
-  Target, 
-  CalendarClock, 
-  FileText, 
-  MoreVertical, 
-  Send, 
-  Package, 
-  TrendingUp, 
-  TrendingDown 
+import type { DashboardStats, Opportunity, SalesTaskDetail, Customer } from "../../../types";
+import {
+  TrendingUp,
+  TrendingDown,
+  CheckSquare,
+  AlertCircle,
+  ClipboardList
 } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, CartesianGrid
+  XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend, CartesianGrid, ComposedChart, Line, Bar
 } from "recharts";
 import "./CrmDashboard.css";
 
-// Donut chart colors
-const DONUT_COLORS = {
-  primary: ["#556ee6", "#e8ecf6"],
-  success: ["#34c38f", "#e6f7f1"],
-  warning: ["#f1b44c", "#fef4e4"],
-  info: ["#50a5f1", "#e6f2fd"],
-};
-
-const BAR_COLORS = ["#556ee6", "#34c38f", "#f1b44c", "#f46a6a", "#50a5f1", "#6f42c1", "#d63384"];
-
-const TERRITORY_BAR_COLORS = ["blue", "green", "orange", "cyan", "red", "purple"];
-const AVATAR_BG = ["bg-1", "bg-2", "bg-3", "bg-4", "bg-5", "bg-6"];
-const PRODUCT_ICON_BG = ["bg-soft-blue", "bg-soft-green", "bg-soft-orange", "bg-soft-cyan", "bg-soft-red"];
-
-// Mini donut for KPI card
-function KpiDonut({ value, total, colorKey }: { value: number; total: number; colorKey: keyof typeof DONUT_COLORS }) {
-  const pct = total > 0 ? Math.min(value / total, 1) : 0;
-  const data = [
-    { name: "filled", value: pct },
-    { name: "empty", value: 1 - pct },
-  ];
-  const [c1, c2] = DONUT_COLORS[colorKey];
-
-  return (
-    <div className="kpi-donut">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={data}
-            dataKey="value"
-            cx="50%"
-            cy="50%"
-            innerRadius="65%"
-            outerRadius="95%"
-            startAngle={90}
-            endAngle={-270}
-            paddingAngle={0}
-            stroke="none"
-          >
-            <Cell fill={c1} />
-            <Cell fill={c2} />
-          </Pie>
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-// Activity messages (static demo data)
-const activityMessages = [
-  { id: 1, type: "received", text: "New lead created successfully!" },
-  { id: 2, type: "sent", text: "Follow up scheduled for tomorrow" },
-  { id: 3, type: "received", text: "Opportunity moved to Proposal stage" },
-  { id: 4, type: "sent", text: "Contract sent for review. Waiting for client signature on the agreement." },
-];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -101,30 +42,76 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function CrmDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [salesOverviewData, setSalesOverviewData] = useState<any[]>([]);
+  const [latestOpportunities, setLatestOpportunities] = useState<Opportunity[]>([]);
+  const [tasks, setTasks] = useState<SalesTaskDetail[]>([]);
+  const [totalCustomers, setTotalCustomers] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-  const [leads, setLeads] = useState<Lead[]>([]);
-
 
   useEffect(() => {
     Promise.all([
       dashboardService.getStats().then(r => r.data).catch(() => null),
-      crmCustomerService.getAll({ per_page: 6 }).then(r => r.data.data.data).catch(() => []),
-      crmProductService.getAll({ per_page: 6 }).then(r => r.data.data.data).catch(() => []),
-      crmLeadService.getAll({ per_page: 50 }).then(r => r.data.data.data).catch(() => []),
-    ]).then(([s, c, p, l]) => {
+      dashboardService.getSalesOverview().then(r => Array.isArray(r) ? r : r.data).catch(() => []),
+      opportunityApi.list({ per_page: 5, sort_by: 'created_at', sort_order: 'desc' }).then(r => Array.isArray(r) ? r : r.data).catch(() => []),
+      salesTaskDetailApi.list({ per_page: 100 }).then(r => Array.isArray(r) ? r : r.data).catch(() => []),
+      customerApi.list({ per_page: 1 }).then(r => r.total || 0).catch(() => 0)
+    ]).then(([s, salesOvw, opps, tsks, custTotal]) => {
       setStats(s);
-      setCustomers(c as Customer[]);
-      setProducts(p as Product[]);
-      setLeads(l as Lead[]);
+      setSalesOverviewData(salesOvw as any[]);
+      setLatestOpportunities(opps as Opportunity[]);
+      setTasks(tsks as SalesTaskDetail[]);
+      setTotalCustomers(custTotal as number);
     }).finally(() => setLoading(false));
   }, []);
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center" style={{ minHeight: 400 }}>
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="crm-dash-wrapper">
+        <div className="dashboard-header mb-6">
+          <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
+          <div className="h-4 w-64 bg-gray-100 rounded animate-pulse"></div>
+        </div>
+
+        {/* KPI Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="kpi-card p-5 h-[104px] flex flex-col justify-between">
+              <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-3"></div>
+              <div className="flex justify-between items-end">
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-5 w-16 bg-gray-100 rounded animate-pulse"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Charts Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <div className="lg:col-span-2 dash-card lg:h-[340px]">
+            <div className="p-4 border-b border-gray-100"><div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div></div>
+            <div className="p-4 h-[260px]"><div className="h-full w-full bg-gray-50 rounded animate-pulse"></div></div>
+          </div>
+          <div className="lg:col-span-1 dash-card lg:h-[340px]">
+            <div className="p-4 border-b border-gray-100"><div className="h-5 w-40 bg-gray-200 rounded animate-pulse"></div></div>
+            <div className="p-4 flex justify-center items-center h-[260px]"><div className="h-40 w-40 bg-gray-100 rounded-full animate-pulse"></div></div>
+          </div>
+        </div>
+
+        {/* Tables Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 dash-card min-h-[300px]">
+            <div className="p-4 border-b border-gray-100"><div className="h-5 w-40 bg-gray-200 rounded animate-pulse"></div></div>
+            <div className="p-4 flex flex-col gap-4">
+              {[1, 2, 3, 4].map(i => <div key={i} className="h-10 w-full bg-gray-50 rounded animate-pulse"></div>)}
+            </div>
+          </div>
+          <div className="lg:col-span-1 dash-card min-h-[300px]">
+            <div className="p-4 border-b border-gray-100"><div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div></div>
+            <div className="p-4 flex flex-col gap-4">
+              {[1, 2, 3].map(i => <div key={i} className="h-14 w-full bg-gray-50 rounded animate-pulse"></div>)}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -133,87 +120,72 @@ export default function CrmDashboard() {
     return <div className="p-4 bg-red-50 text-red-600 rounded-lg m-4">Failed to load dashboard data</div>;
   }
 
+  // Calculate task metrics
+  const today = new Date().toISOString().split('T')[0];
+  const dueToday = tasks.filter(t => t.date === today && t.status !== 'Closed').length;
+  const overdue = tasks.filter(t => t.date < today && t.status !== 'Closed').length;
+  const completedTasks = tasks.filter(t => t.status === 'Closed').length;
+
   // KPI data
   const kpis = [
     {
       label: "Total Leads",
-      value: stats.leads.total,
-      change: stats.leads.new_last_30_days,
-      changeLabel: `+${stats.leads.new_last_30_days} new`,
+      value: stats.leads?.total?.toString() || "0",
+      changeLabel: `+${stats.leads?.new_last_30_days || 0} new`,
       positive: true,
-      sub: "Since last month",
-      icon: Users,
-      colorKey: "primary" as const,
-      donutTotal: Math.max(stats.leads.total, 1),
-      donutValue: stats.leads.new_last_30_days,
     },
     {
-      label: "Open Opportunities",
-      value: stats.opportunities.open,
-      change: stats.opportunities.won_last_30_days,
-      changeLabel: `${stats.opportunities.won_last_30_days} won`,
+      label: "Opportunities",
+      value: stats.opportunities?.total?.toString() || "0",
+      changeLabel: `${stats.opportunities?.open || 0} open`,
       positive: true,
-      sub: "Since last month",
-      icon: Target,
-      colorKey: "success" as const,
-      donutTotal: Math.max(stats.opportunities.total, 1),
-      donutValue: stats.opportunities.open,
     },
     {
-      label: "Appointments",
-      value: stats.appointments.upcoming,
-      change: stats.appointments.total,
-      changeLabel: `${stats.appointments.total} total`,
+      label: "Customers",
+      value: totalCustomers.toString(),
+      changeLabel: "Total",
       positive: true,
-      sub: "Upcoming",
-      icon: CalendarClock,
-      colorKey: "warning" as const,
-      donutTotal: Math.max(stats.appointments.total, 1),
-      donutValue: stats.appointments.upcoming,
     },
     {
-      label: "Active Contracts",
-      value: stats.contracts.active,
-      change: stats.contracts.unsigned,
-      changeLabel: `${stats.contracts.unsigned} unsigned`,
-      positive: stats.contracts.unsigned === 0,
-      sub: "Current period",
-      icon: FileText,
-      colorKey: "info" as const,
-      donutTotal: Math.max(stats.contracts.active + stats.contracts.unsigned, 1),
-      donutValue: stats.contracts.active,
+      label: "Total Revenue",
+      value: `₹${(stats.opportunities?.total_value || 0).toLocaleString()}`,
+      changeLabel: "Expected",
+      positive: true,
     },
   ];
 
-  // Bar chart data (leads by status)
- const barData = Object.values(
-    leads.reduce((acc: Record<string, { name: string; count: number }>, lead) => {
-      const statusName = lead.status?.status_name || "Unknown";
-      if (!acc[statusName]) acc[statusName] = { name: statusName, count: 0 };
-      acc[statusName].count += 1;
-      return acc;
-    }, {})
-  );
+  // Opportunities by Status data
+  const statusColors: Record<string, string> = {
+    "Open": "#556ee6",
+    "Converted": "#f1b44c",
+    "Lost": "#34c38f",
+    "Closed": "#74788d",
+    "Qualified": "#50a5f1",
+    "Proposal": "#f46a6a"
+  };
 
-
-  // Territory / pipeline data
-  const territorySummary = stats.opportunities.by_stage.slice(0, 5).map((s, i) => {
-    const maxVal = Math.max(...stats.opportunities.by_stage.map(x => x.count), 1);
+  const opportunitiesStatusData = (stats.opportunities?.by_status || []).map(s => {
+    const s_any = s as any;
+    const statusName = s_any.status?.status_name || s_any.status || "Unknown";
     return {
-      name: s.stage_name,
+      name: statusName,
       count: s.count,
-      pct: Math.round((s.count / maxVal) * 100),
-      color: TERRITORY_BAR_COLORS[i % TERRITORY_BAR_COLORS.length],
+      color: statusColors[statusName] || "#74788d"
     };
   });
+
+  // Fallback if no status data
+  if (opportunitiesStatusData.length === 0) {
+    opportunitiesStatusData.push({ name: "No Data", count: 1, color: "#e9ecef" });
+  }
 
   return (
     <div className="crm-dash-wrapper">
       {/* Header */}
       <div className="dashboard-header">
         <div>
-           <h2 className="text-2xl font-bold text-gray-800">Welcome !</h2>
-           <p className="text-gray-500 text-sm mt-1">Overview of your CRM activity</p>
+          <h2 className="text-2xl font-bold text-gray-800">Welcome !</h2>
+          <p className="text-gray-500 text-sm mt-1">Overview of your CRM activity</p>
         </div>
         <div className="dashboard-breadcrumb">
           <span>Dashboard</span> &rsaquo; Welcome !
@@ -223,41 +195,31 @@ export default function CrmDashboard() {
       {/* Row 1: KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {kpis.map((kpi) => (
-          <div key={kpi.label} className="kpi-card">
-            <div className="kpi-info">
-              <div className="kpi-label">{kpi.label}</div>
-              <div className="kpi-value">{kpi.value.toLocaleString()}</div>
-              <div>
-                <span className={`kpi-change ${kpi.positive ? "positive" : "negative"}`}>
-                  {kpi.positive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                  {kpi.changeLabel}
-                </span>
-                <span className="kpi-sub ml-2 text-xs text-gray-500">{kpi.sub}</span>
+          <div key={kpi.label} className="kpi-card flex flex-col justify-between p-5">
+            <div className="kpi-label text-gray-500 text-sm mb-3 font-medium">{kpi.label}</div>
+            <div className="flex items-baseline gap-4">
+              <div className="text-2xl font-bold text-gray-800">{kpi.value}</div>
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${kpi.positive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {kpi.positive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                {kpi.changeLabel}
               </div>
             </div>
-            <KpiDonut value={kpi.donutValue} total={kpi.donutTotal} colorKey={kpi.colorKey} />
           </div>
         ))}
       </div>
 
       {/* Row 2: Chart + Territory */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Lead Pipeline Chart */}
+        {/* Sales Overview Chart */}
         <div className="lg:col-span-2">
           <div className="dash-card">
             <div className="dash-card-header">
-              <h5>Lead Pipeline</h5>
-              <div className="sort-by">
-                Current Month
-                <select defaultValue="all" className="ml-1 font-semibold outline-none cursor-pointer">
-                  <option value="all">All</option>
-                </select>
-              </div>
+              <h5>Sales Overview</h5>
             </div>
             <div className="dash-card-body">
               <div style={{ height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <ComposedChart data={salesOverviewData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
                     <XAxis
                       dataKey="name"
@@ -267,25 +229,40 @@ export default function CrmDashboard() {
                       dy={10}
                     />
                     <YAxis
+                      yAxisId="left"
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: '#74788d', fontSize: 12 }}
-                      allowDecimals={false}
+                      tickFormatter={(val) => `₹${val / 1000}k`}
                     />
-                    <Tooltip
-                      cursor={{ fill: '#f8f9fa' }}
-                      content={<CustomTooltip />}
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={false}
                     />
+                    <Tooltip cursor={{ fill: '#f8f9fa' }} content={<CustomTooltip />} />
+                    <Legend verticalAlign="top" height={36} iconType="rect" align="left" wrapperStyle={{ left: 0, top: -10 }} />
                     <Bar
-                      dataKey="count"
+                      yAxisId="left"
+                      dataKey="revenue"
+                      name="Revenue"
+                      fill="#556ee6"
                       radius={[4, 4, 0, 0]}
-                      barSize={40}
-                    >
-                      {barData.map((_, i) => (
-                        <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
+                      barSize={20}
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="deals"
+                      name="Deals"
+                      stroke="#34c38f"
+                      strokeWidth={2}
+                      dot={{ r: 4, fill: '#fff', stroke: '#34c38f', strokeWidth: 2 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </div>
@@ -293,185 +270,159 @@ export default function CrmDashboard() {
         </div>
 
 
-        {/* Opportunity Stages */}
+        {/* Opportunities by Status */}
         <div className="lg:col-span-1">
           <div className="dash-card">
             <div className="dash-card-header">
-              <h5>Opportunity Stages</h5>
+              <h5>Opportunities by Status</h5>
             </div>
             <div className="dash-card-body" style={{ height: 280, position: 'relative' }}>
-              {territorySummary.length > 0 ? (
-                <>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={territorySummary}
-                        dataKey="count"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                      >
-                        {territorySummary.map((_, i) => (
-                          <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} stroke="none" />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div style={{
-                    position: 'absolute',
-                    top: '40%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    textAlign: 'center',
-                    pointerEvents: 'none'
-                  }}>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#495057' }}>{stats.opportunities.total}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#74788d' }}>Total</div>
-                  </div>
-                </>
-              ) : (
-                <div className="text-gray-400 text-center py-12">No stage data available</div>
-              )}
+              <>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={opportunitiesStatusData}
+                      dataKey="count"
+                      nameKey="name"
+                      cx="40%"
+                      cy="50%"
+                      innerRadius={65}
+                      outerRadius={90}
+                      paddingAngle={2}
+                    >
+                      {opportunitiesStatusData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} stroke="none" />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend
+                      layout="vertical"
+                      verticalAlign="middle"
+                      align="right"
+                      iconType="circle"
+                      wrapperStyle={{ right: 20 }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '40%',
+                  transform: 'translate(-50%, -50%)',
+                  textAlign: 'center',
+                  pointerEvents: 'none'
+                }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#495057' }}>{stats.opportunities?.total || 0}</div>
+                </div>
+              </>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Row 3: Customer List + Products + Activity */}
+      {/* Row 3: Latest Opportunities + Tasks */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Customer List */}
-        <div className="lg:col-span-1">
+        {/* Latest Opportunities Table */}
+        <div className="lg:col-span-2">
           <div className="dash-card">
-            <div className="dash-card-header">
-              <h5>Customer List</h5>
-              <div className="sort-by">
-                All Members
-                <select defaultValue="all">
-                  <option value="all">All</option>
-                </select>
+            <div className="dash-card-header !pb-4">
+              <h5>Latest Opportunities</h5>
+              <div className="text-blue-500 hover:text-blue-600 font-medium cursor-pointer text-sm">
+                View All &rsaquo;
               </div>
             </div>
-            <div className="dash-card-body" style={{ overflowY: "auto", maxHeight: 380 }}>
-              {customers.length > 0 ? customers.map((c, i) => {
-                const initials = c.name
-                  ? c.name.split(" ").map(w => w[0]).join("").substring(0, 2)
-                  : "?";
-                return (
-                  <div className="customer-list-item" key={c.id}>
-                    <div className={`customer-avatar ${AVATAR_BG[i % AVATAR_BG.length]}`}>
-                      {initials}
-                    </div>
-                    <div className="customer-details">
-                      <div className="customer-name">{c.name}</div>
-                      <div className="customer-email">{c.email || "No email"}</div>
-                    </div>
-                    <div className="customer-more">
-                      <MoreVertical size={16} />
-                    </div>
-                  </div>
-                );
-              }) : (
-                <div className="text-gray-400 text-center py-12">No customers yet</div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Product Catalog */}
-        <div className="lg:col-span-1">
-          <div className="dash-card">
-            <div className="dash-card-header">
-              <h5>Products</h5>
-              <div className="customer-more">
-                <MoreVertical size={16} />
-              </div>
-            </div>
-            <div className="dash-card-body" style={{ overflowY: "auto", maxHeight: 380, padding: "0 20px 16px" }}>
-              {products.length > 0 ? (
-                <table className="product-table">
+            <div className="dash-card-body p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr>
-                      <th>Product</th>
-                      <th>Price</th>
-                      <th>Stock</th>
+                    <tr className="bg-gray-50/50 border-b border-gray-100">
+                      <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Party Name</th>
+                      <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                      <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Expected Close</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {products.map((p, i) => (
-                      <tr key={p.id}>
-                        <td>
-                          <div className="product-name-cell">
-                            <div className={`product-icon ${PRODUCT_ICON_BG[i % PRODUCT_ICON_BG.length]}`}>
-                              <Package size={18} />
-                            </div>
-                            <div>
-                              <div className="font-semibold text-sm">{p.name}</div>
-                              <div className="text-xs text-gray-500">
-                                {p.code || "—"}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="font-semibold">
-                          ₹{p.rate?.toLocaleString() || "0"}
-                        </td>
-                        <td>
-                          <span className={`stock-badge ${p.stock > 0 ? "in-stock" : "out-of-stock"}`}>
-                            {p.stock > 0 ? "In Stock" : "Out of Stock"}
-                          </span>
-                        </td>
+                    {latestOpportunities.length > 0 ? latestOpportunities.map((row, i) => {
+                      let color = "text-slate-600 bg-slate-100";
+                      const status = row.status?.status_name || 'Open';
+                      if (status === 'Open') color = "text-amber-600 bg-amber-50";
+                      if (status === 'Converted' || status === 'Won') color = "text-emerald-700 bg-emerald-50";
+                      if (status === 'Lost') color = "text-rose-600 bg-rose-50";
+
+                      let partyName = row.party_name || row.company_name;
+                      if (!partyName) {
+                        partyName = row.customer ? (row.customer as any).company_name :
+                          row.lead ? ((row.lead as any).company_name || `${(row.lead as any).first_name || ''} ${(row.lead as any).last_name || ''}`.trim()) :
+                            'Unknown';
+                      }
+
+                      return (
+                        <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
+                          <td className="px-5 py-3.5 text-sm font-medium text-gray-700">{partyName}</td>
+                          <td className="px-5 py-3.5 text-sm">
+                            <span className={`px-2.5 py-1 rounded text-xs font-semibold tracking-wide ${color}`}>
+                              {status}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-sm font-semibold text-gray-700">₹{(row.opportunity_amount || 0).toLocaleString()}</td>
+                          <td className="px-5 py-3.5 text-sm text-gray-500">{row.expected_closing || 'N/A'}</td>
+                        </tr>
+                      );
+                    }) : (
+                      <tr>
+                        <td colSpan={4} className="px-5 py-8 text-center text-gray-400 text-sm">No recent opportunities found</td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
-              ) : (
-                <div className="text-gray-400 text-center py-12">No products yet</div>
-              )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Activity Feed / Chat */}
-        <div className="lg:col-span-1">
+        {/* Tasks Overview */}
+        <div className="lg:col-span-1 flex flex-col gap-6">
           <div className="dash-card">
-            <div className="dash-card-header">
-              <h5>Recent Activity</h5>
-              <div className="sort-by">
-                Today
-                <select defaultValue="today">
-                  <option value="today">Today</option>
-                  <option value="week">This Week</option>
-                </select>
-              </div>
+            <div className="dash-card-header !pb-4">
+              <h5>Tasks Overview</h5>
             </div>
-            <div className="dash-card-body" style={{ display: "flex", flexDirection: "column", maxHeight: 380 }}>
-              <div className="activity-feed">
-                <div className="activity-date">
-                  <span>Today</span>
-                </div>
-                <div className="activity-messages">
-                  {activityMessages.map((msg) => (
-                    <div className={`activity-item ${msg.type}`} key={msg.id}>
-                      <div className="activity-bubble shadow-sm">
-                        {msg.text}
-                      </div>
+            <div className="dash-card-body">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded bg-amber-50 flex items-center justify-center text-amber-500">
+                      <CheckSquare size={16} />
                     </div>
-                  ))}
+                    <span className="text-sm font-medium text-gray-700">Tasks Due Today</span>
+                  </div>
+                  <span className="text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded text-sm min-w-[28px] text-center">{dueToday}</span>
                 </div>
-                <div className="activity-input">
-                  <input type="text" placeholder="Enter Message..." readOnly />
-                  <button className="bg-primary text-white transition-all">
-                    <Send size={14} className="mr-1" /> Send
-                  </button>
+
+                <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded bg-rose-50 flex items-center justify-center text-rose-500">
+                      <AlertCircle size={16} />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">Overdue Tasks</span>
+                  </div>
+                  <span className="text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded text-sm min-w-[28px] text-center">{overdue}</span>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded bg-emerald-50 flex items-center justify-center text-emerald-500">
+                      <ClipboardList size={16} />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">Completed Tasks</span>
+                  </div>
+                  <span className="text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded text-sm min-w-[28px] text-center">{completedTasks}</span>
                 </div>
               </div>
             </div>
           </div>
+
+
         </div>
       </div>
     </div>

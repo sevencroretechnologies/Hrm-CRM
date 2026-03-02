@@ -8,9 +8,7 @@ use Illuminate\Http\JsonResponse;
 
 class DashboardController extends Controller
 {
-    public function __construct(private DashboardService $dashboardService)
-    {
-    }
+    public function __construct(private DashboardService $dashboardService) {}
 
     public function stats(): JsonResponse
     {
@@ -25,5 +23,10 @@ class DashboardController extends Controller
     public function opportunityPipeline(): JsonResponse
     {
         return response()->json($this->dashboardService->getOpportunityPipeline());
+    }
+
+    public function salesOverview(): JsonResponse
+    {
+        return response()->json($this->dashboardService->getSalesOverview());
     }
 }

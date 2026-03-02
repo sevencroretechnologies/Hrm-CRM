@@ -19,17 +19,23 @@ class DashboardService
         $leadsNew30 = Lead::where('created_at', '>=', $thirtyDaysAgo)->count();
 
         // Leads by status (join with statuses table to get the status name)
-        $leadsByStatus = Lead::leftJoin('statuses', 'leads.status_id', '=', 'statuses.id')
+        $leadsByStatus = DB::table('leads')
+            ->leftJoin('statuses', 'leads.status_id', '=', 'statuses.id')
+            ->whereNull('leads.deleted_at')
             ->select('statuses.status_name as status', DB::raw('count(*) as count'))
             ->groupBy('statuses.status_name')
             ->get()
+            ->map(fn($item) => (array) $item)
             ->toArray();
 
         // Leads by qualification
-        $leadsByQualification = Lead::select('qualification_status', DB::raw('count(*) as count'))
+        $leadsByQualification = DB::table('leads')
+            ->whereNull('deleted_at')
+            ->select('qualification_status', DB::raw('count(*) as count'))
             ->whereNotNull('qualification_status')
             ->groupBy('qualification_status')
             ->get()
+            ->map(fn($item) => (array) $item)
             ->toArray();
 
         // Opportunities stats (join with statuses table for status filtering)
@@ -49,14 +55,19 @@ class DashboardService
             ->where('statuses.status_name', 'Open')
             ->sum('opportunities.opportunity_amount');
 
-        $oppByStatus = Opportunity::leftJoin('statuses', 'opportunities.status_id', '=', 'statuses.id')
+        $oppByStatus = DB::table('opportunities')
+            ->leftJoin('statuses', 'opportunities.status_id', '=', 'statuses.id')
+            ->whereNull('opportunities.deleted_at')
             ->select('statuses.status_name as status', DB::raw('count(*) as count'))
             ->groupBy('statuses.status_name')
             ->get()
+            ->map(fn($item) => (array) $item)
             ->toArray();
 
         // Opportunities by stage (use opportunity_stages table)
-        $oppByStage = Opportunity::leftJoin('opportunity_stages', 'opportunities.opportunity_stage_id', '=', 'opportunity_stages.id')
+        $oppByStage = DB::table('opportunities')
+            ->leftJoin('opportunity_stages', 'opportunities.opportunity_stage_id', '=', 'opportunity_stages.id')
+            ->whereNull('opportunities.deleted_at')
             ->select(
                 'opportunity_stages.name as stage_name',
                 DB::raw('count(*) as count'),
@@ -64,6 +75,7 @@ class DashboardService
             )
             ->groupBy('opportunity_stages.name')
             ->get()
+            ->map(fn($item) => (array) $item)
             ->toArray();
 
         // Appointments - check if table exists
@@ -143,5 +155,36 @@ class DashboardService
             ->orderBy('count', 'desc')
             ->get()
             ->toArray();
+    }
+
+    public function getSalesOverview(): array
+    {
+        $months = 7; // Show 7 months to match original design structure 
+        $startDate = now()->subMonths($months - 1)->startOfMonth();
+
+        // Fetch opportunities within the timeframe
+        $opportunities = Opportunity::where('created_at', '>=', $startDate)
+            ->get(['created_at', 'opportunity_amount']);
+
+        $data = [];
+
+        // Loop backwards to build chronological monthly data points
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $monthDate = now()->subMonths($i);
+            $yearMonth = $monthDate->format('Y-m');
+            $monthName = $monthDate->format('M'); // e.g. 'Jan', 'Feb'
+
+            $monthOpps = $opportunities->filter(function ($opp) use ($yearMonth) {
+                return $opp->created_at->format('Y-m') === $yearMonth;
+            });
+
+            $data[] = [
+                'name' => $monthName,
+                'revenue' => $monthOpps->sum('opportunity_amount'),
+                'deals' => $monthOpps->count(),
+            ];
+        }
+
+        return $data;
     }
 }

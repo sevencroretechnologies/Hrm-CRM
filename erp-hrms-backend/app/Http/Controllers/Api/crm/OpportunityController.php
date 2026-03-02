@@ -16,7 +16,7 @@ class OpportunityController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Opportunity::query();
+            $query = Opportunity::with(['status', 'lead', 'customer']);
 
             if ($request->filled('search')) {
                 $search = $request->search;
