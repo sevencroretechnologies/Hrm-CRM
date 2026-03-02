@@ -3,98 +3,57 @@
 namespace App\Services\crm;
 
 use App\Models\Campaign;
-use App\Models\CampaignEmailSchedule;
-use App\Models\EmailCampaign;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class CampaignService
 {
+    /**
+     * List all campaigns with filtering and searching.
+     */
     public function list(array $filters = []): LengthAwarePaginator
     {
         $query = Campaign::query();
 
         if (!empty($filters['search'])) {
-            $query->where('name', 'like', "%{$filters['search']}%");
+            $query->where('name', 'like', "%{$filters['search']}%")
+                  ->orWhere('campaign_code', 'like', "%{$filters['search']}%");
         }
 
         return $query->orderBy('created_at', 'desc')->paginate($filters['per_page'] ?? 15);
     }
 
+    /**
+     * Find a campaign by ID.
+     */
     public function find(int $id): Campaign
     {
         return Campaign::findOrFail($id);
     }
 
+    /**
+     * Create a new campaign.
+     */
     public function create(array $data): Campaign
     {
-        $schedules = $data['email_schedules'] ?? [];
-        unset($data['email_schedules']);
-
-        $campaign = Campaign::create($data);
-
-        foreach ($schedules as $schedule) {
-            $schedule['campaign_id'] = $campaign->id;
-            CampaignEmailSchedule::create($schedule);
-        }
-
-        return $campaign->fresh(['emailSchedules']);
+        return Campaign::create($data);
     }
 
+    /**
+     * Update an existing campaign.
+     */
     public function update(int $id, array $data): Campaign
     {
         $campaign = Campaign::findOrFail($id);
-        $schedules = $data['email_schedules'] ?? null;
-        unset($data['email_schedules']);
-
         $campaign->update($data);
-
-        if ($schedules !== null) {
-            $campaign->emailSchedules()->delete();
-            foreach ($schedules as $schedule) {
-                $schedule['campaign_id'] = $campaign->id;
-                CampaignEmailSchedule::create($schedule);
-            }
-        }
-
-        return $campaign->fresh(['emailSchedules', 'emailCampaigns']);
+        return $campaign;
     }
 
+    /**
+     * Delete a campaign.
+     */
     public function delete(int $id): bool
     {
         $campaign = Campaign::findOrFail($id);
-        $campaign->emailSchedules()->delete();
-        $campaign->emailCampaigns()->delete();
         return $campaign->delete();
-    }
-
-    public function listEmailCampaigns(array $filters = []): LengthAwarePaginator
-    {
-        $query = EmailCampaign::with(['campaign', 'sender']);
-
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-        if (!empty($filters['campaign_id'])) {
-            $query->where('campaign_id', $filters['campaign_id']);
-        }
-
-        return $query->orderBy('created_at', 'desc')->paginate($filters['per_page'] ?? 15);
-    }
-
-    public function createEmailCampaign(array $data): EmailCampaign
-    {
-        return EmailCampaign::create($data);
-    }
-
-    public function updateEmailCampaign(int $id, array $data): EmailCampaign
-    {
-        $emailCampaign = EmailCampaign::findOrFail($id);
-        $emailCampaign->update($data);
-        return $emailCampaign->fresh(['campaign', 'sender']);
-    }
-
-    public function deleteEmailCampaign(int $id): bool
-    {
-        return EmailCampaign::findOrFail($id)->delete();
     }
 }

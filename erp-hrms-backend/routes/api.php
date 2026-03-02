@@ -183,10 +183,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('prospects', ProspectController::class);
 
     Route::apiResource('campaigns', CampaignController::class);
-    Route::get('email-campaigns', [CampaignController::class, 'emailCampaigns']);
-    Route::post('email-campaigns', [CampaignController::class, 'storeEmailCampaign']);
-    Route::put('email-campaigns/{id}', [CampaignController::class, 'updateEmailCampaign']);
-    Route::delete('email-campaigns/{id}', [CampaignController::class, 'destroyEmailCampaign']);
 
     Route::apiResource('sources', SourceController::class);
 
