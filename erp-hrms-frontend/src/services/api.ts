@@ -228,6 +228,7 @@ export const paymentTermApi = {
 
 export const dashboardService = {
   getStats: (params?: Record<string, unknown>) => api.get('/dashboard/stats', { params }),
+  getSalesOverview: (params?: Record<string, unknown>) => api.get('/dashboard/sales-overview', { params }),
   getEmployeeStats: (params?: Record<string, unknown>) => api.get('/dashboard/employee-stats', { params }),
   getAttendanceStats: (params?: Record<string, unknown>) => api.get('/dashboard/attendance-stats', { params }),
   getLeaveStats: (params?: Record<string, unknown>) => api.get('/dashboard/leave-stats', { params }),

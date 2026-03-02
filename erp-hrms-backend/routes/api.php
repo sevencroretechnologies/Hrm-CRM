@@ -166,6 +166,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('users', [UsersController::class, 'index']);
 
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('dashboard/sales-overview', [DashboardController::class, 'salesOverview']);
     Route::get('dashboard/lead-conversion-funnel', [DashboardController::class, 'leadConversionFunnel']);
     Route::get('dashboard/opportunity-pipeline', [DashboardController::class, 'opportunityPipeline']);
 
