@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   dashboardService,
   opportunityApi,
@@ -21,6 +22,7 @@ import "./CrmDashboard.css";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
+    const data = payload[0].payload;
     return (
       <div style={{
         backgroundColor: '#fff',
@@ -30,95 +32,117 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
         fontSize: '11px',
         fontWeight: 600,
-        color: '#495057'
+        color: '#495057',
+        maxWidth: '300px',
+        whiteSpace: 'normal',
+        wordWrap: 'break-word',
+        zIndex: 50
       }}>
-        {label ? `${label}: ` : ''}{payload[0].name}: {payload[0].value}
+        {data.fullName || payload[0].name}: {payload[0].value}
       </div>
     );
   }
   return null;
 };
 
-// Helper to get total lost reasons
-const getTotalLostReasons = (data: any[]) => data.reduce((acc, curr) => acc + curr.value, 0);
+
 
 function LostDealReasonsChart({ stats }: { stats: DashboardStats }) {
+  const navigate = useNavigate();
   const lostReasonsColors = [
     "#0b7296", // Blue
     "#a53c2b", // Red/Brown
     "#e19e1e", // Orange/Yellow
     "#85436d", // Purple
-    "#469f52"  // Green
+    "#469f52", // Green
+    "#74788d"  // Grey for Others
   ];
 
-  const lostReasonsData = (stats.opportunities?.lost_reasons || []).map((s, i) => ({
-    name: s.reason || "Unknown",
-    value: Number(s.count),
-    color: lostReasonsColors[i % lostReasonsColors.length]
-  }));
+  let rawLostReasons = (stats.opportunities?.lost_reasons || [])
+    .filter((s: any) => s.reason && s.reason.toLowerCase() !== 'open')
+    .map((s: any) => ({
+      name: s.reason || "Unknown",
+      value: Number(s.count)
+    })).sort((a: any, b: any) => b.value - a.value);
+
+  let finalLostReasons;
+  if (rawLostReasons.length > 5) {
+    finalLostReasons = rawLostReasons.slice(0, 4);
+    const othersCount = rawLostReasons.slice(4).reduce((acc, curr) => acc + curr.value, 0);
+    finalLostReasons.push({ name: "Others", value: othersCount });
+  } else {
+    finalLostReasons = rawLostReasons;
+  }
+
+  const lostReasonsData = finalLostReasons.map((s, i) => {
+    const rawName = s.name;
+    const displayName = rawName.length > 40 ? rawName.substring(0, 40) + "..." : rawName;
+    return {
+      name: displayName,
+      fullName: rawName,
+      value: s.value,
+      color: lostReasonsColors[i % lostReasonsColors.length]
+    };
+  });
 
   // Fallback if no data
   const hasData = lostReasonsData.length > 0;
-  const displayData = hasData ? lostReasonsData : [{ name: "No Data", value: 1, color: "#f8f9fa" }];
-  const totalCount = hasData ? getTotalLostReasons(lostReasonsData) : 0;
+  const displayData = hasData ? lostReasonsData : [{ name: "No Data", value: 1, fullName: "No Data", color: "#f8f9fa" }];
 
   return (
-    <div className="lg:col-span-1">
-      <div className="dash-card">
+    <div className="lg:col-span-1 h-full">
+      <div
+        className="dash-card cursor-pointer hover:shadow-md transition-shadow h-full flex flex-col min-h-[350px]"
+        onClick={() => navigate('/crm/opportunities')}
+      >
         <div className="dash-card-header flex justify-between items-center">
           <h5 className="font-semibold text-gray-700">Lost deal reasons</h5>
-          <div className="cursor-pointer text-gray-400 hover:text-gray-600">
+          <div className="text-gray-400">
             <svg width="18" height="12" viewBox="0 0 18 12" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M0 12H18V10H0V12ZM0 7H18V5H0V7ZM0 0V2H18V0H0Z" fill="currentColor" />
             </svg>
           </div>
         </div>
-        <div className="dash-card-body" style={{ height: 280, position: 'relative' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart margin={{ left: 10, right: 10, top: 0, bottom: 0 }}>
-              <Pie
-                data={displayData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={90}
-                paddingAngle={0}
-                stroke="none"
-              >
-                {displayData.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend
-                layout="horizontal"
-                verticalAlign="bottom"
-                align="center"
-                iconType="circle"
-                wrapperStyle={{
-                  paddingTop: '10px',
-                  fontSize: '12px',
-                  color: '#495057',
-                  fontWeight: 500
-                }}
-                formatter={(value) => <span style={{ color: '#495057' }}>{value}</span>}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          {hasData && (
-            <div style={{
-              position: 'absolute',
-              top: '42%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              textAlign: 'center',
-              pointerEvents: 'none'
-            }}>
-              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#495057' }}>{totalCount}</div>
-            </div>
-          )}
+        <div className="dash-card-body flex flex-col md:flex-row items-center gap-6" style={{ minHeight: 320, padding: '24px' }}>
+          {/* Chart Section */}
+          <div className="flex-shrink-0 w-full md:w-[280px] lg:w-[300px]" style={{ height: 280 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                <Pie
+                  data={displayData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={75}
+                  outerRadius={115}
+                  paddingAngle={0}
+                  stroke="#fff"
+                  strokeWidth={2}
+                >
+                  {displayData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Legend Section */}
+          <div className="flex-1 w-full flex flex-col justify-center gap-3">
+            {displayData.map((entry, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <div
+                  className="w-3 h-3 rounded-full flex-shrink-0 mt-1"
+                  style={{ backgroundColor: entry.color }}
+                />
+                <div className="text-[12px] font-medium text-gray-600 leading-snug break-words">
+                  {entry.name}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -269,15 +293,14 @@ export default function CrmDashboard() {
       </div>
 
       {/* Row 2: Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Sales Overview Chart */}
-        <div className="lg:col-span-2">
-          <div className="dash-card">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="lg:col-span-1">
+          <div className="dash-card h-full min-h-[350px] flex flex-col">
             <div className="dash-card-header">
               <h5 className="font-semibold text-gray-700">Sales Overview</h5>
             </div>
-            <div className="dash-card-body">
-              <div style={{ height: 260 }}>
+            <div className="dash-card-body flex-[1]">
+              <div style={{ height: '100%', minHeight: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={salesOverviewData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
