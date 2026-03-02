@@ -186,9 +186,14 @@ export default function OpportunityForm() {
     });
 
     const handleProductSelect = (product: DDItem) => {
-        const rate = Number(product.rate ?? product.amount ?? 0);
-        const qty = Number(newItem.qty) || 0;
-        const amount = rate > 0 ? rate * qty : Number(product.amount ?? 0);
+        const productRate = Number(product.rate ?? 0);
+        const productAmount = Number(product.amount ?? 0);
+        // When rate is 0, use the stored amount as the effective unit price
+        // so that qty × rate calculation works correctly
+        const rate = productRate > 0 ? productRate : productAmount;
+        const qty = Number(newItem.qty) || 1;
+        const amount = rate * qty;
+
         setNewItem({
             ...newItem,
             product_id: product.id,
@@ -196,6 +201,7 @@ export default function OpportunityForm() {
             item_name: String(product.name ?? ''),
             category_id: product.category_id as number,
             description: String(product.description ?? ''),
+            qty,
             rate,
             amount,
             is_new_product: false,
@@ -209,20 +215,47 @@ export default function OpportunityForm() {
         setShowProductDropdown(false);
     };
 
-    const updateItemField = (field: string, value: string) => {
-        if (field === 'amount') { setNewItem((p) => ({ ...p, amount: value })); return; }
-        if (value === '') {
-            setNewItem((p) => ({ ...p, [field]: '', amount: Number(p.rate) > 0 ? 0 : p.amount }));
+    const updateItemDetails = (field: string, value: any) => {
+        if (field === 'amount') {
+            setNewItem(prev => ({ ...prev, amount: value }));
             return;
         }
-        const val = parseFloat(value);
+
+        const strValue = String(value);
+
+        if (strValue === "") {
+            setNewItem(prev => {
+                const updated = { ...prev, [field]: "" };
+                // If we clear qty or rate, amount should recalculate. If either is empty, amount becomes empty.
+                const newQty = field === 'qty' ? "" : Number(prev.qty);
+                const newRate = field === 'rate' ? "" : Number(prev.rate);
+
+                updated.amount = (newQty === "" || newRate === "") ? "" : Number(newQty) * Number(newRate);
+                return updated;
+            });
+            return;
+        }
+
+        const numValue = parseFloat(strValue);
+
         if (field === 'qty') {
-            setNewItem((p) => {
-                const rateVal = Number(p.rate ?? 0);
-                return { ...p, qty: value, amount: rateVal > 0 ? (isNaN(val) ? 0 : val) * rateVal : p.amount };
+            setNewItem(prev => {
+                const rateVal = Number(prev.rate || 0);
+                return {
+                    ...prev,
+                    qty: strValue,
+                    amount: isNaN(numValue) ? "" : numValue * rateVal
+                };
             });
         } else if (field === 'rate') {
-            setNewItem((p) => ({ ...p, rate: value, amount: Number(p.qty ?? 0) * (isNaN(val) ? 0 : val) }));
+            setNewItem(prev => {
+                const qtyVal = Number(prev.qty || 0);
+                return {
+                    ...prev,
+                    rate: strValue,
+                    amount: isNaN(numValue) ? "" : qtyVal * numValue
+                };
+            });
         }
     };
 
@@ -562,19 +595,19 @@ export default function OpportunityForm() {
                                         {/* Quantity — col-md-2 */}
                                         <div className="col-span-6 md:col-span-2">
                                             <Label className="mb-1 block">Quantity</Label>
-                                            <Input type="number" min="1" value={newItem.qty} onChange={(e) => updateItemField('qty', e.target.value)} />
+                                            <Input type="number" min="1" value={newItem.qty} onChange={(e) => updateItemDetails('qty', e.target.value)} />
                                         </div>
 
                                         {/* Rate — col-md-2 */}
                                         <div className="col-span-6 md:col-span-2">
                                             <Label className="mb-1 block">Rate ({form.currency || 'INR'})</Label>
-                                            <Input type="number" min="0" value={newItem.rate} onChange={(e) => updateItemField('rate', e.target.value)} />
+                                            <Input type="number" min="0" value={newItem.rate} onChange={(e) => updateItemDetails('rate', e.target.value)} />
                                         </div>
 
                                         {/* Amount — col-md-2 */}
                                         <div className="col-span-6 md:col-span-2">
                                             <Label className="mb-1 block">Amount ({form.currency || 'INR'})</Label>
-                                            <Input type="number" value={newItem.amount} onChange={(e) => updateItemField('amount', e.target.value)} />
+                                            <Input type="number" value={newItem.amount} onChange={(e) => updateItemDetails('amount', e.target.value)} />
                                         </div>
 
                                         {/* Add button — col-md-2 */}

@@ -73,10 +73,14 @@ class SalesTaskController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'task_source_id' => 'required|exists:task_sources,id',
-            'source_id'      => 'nullable|integer',
-            'task_type_id'   => 'required|exists:task_types,id',
+            'task_source_id'  => 'required|exists:task_sources,id',
+            'source_id'       => 'nullable|integer',
+            'task_type_id'    => 'required|exists:task_types,id',
             'sales_assign_id' => 'nullable|exists:users,id',
+            'date'            => 'required|date',
+            'time'            => 'required',
+            'description'     => 'nullable|string',
+            'status'          => 'required|in:Open,In Progress,Closed',
         ]);
 
         // Validate that source_id exists in the correct table
@@ -84,7 +88,25 @@ class SalesTaskController extends Controller
             $this->validateSourceId($validated['task_source_id'], $validated['source_id']);
         }
 
-        $salesTask = SalesTask::create($validated);
+        $salesTask = \Illuminate\Support\Facades\DB::transaction(function () use ($validated) {
+            $task = SalesTask::create([
+                'task_source_id'  => $validated['task_source_id'],
+                'source_id'       => $validated['source_id'],
+                'task_type_id'    => $validated['task_type_id'],
+                'sales_assign_id' => $validated['sales_assign_id'],
+            ]);
+
+            \App\Models\SalesTaskDetail::create([
+                'sales_task_id' => $task->id,
+                'date'          => $validated['date'],
+                'time'          => $validated['time'],
+                'description'   => $validated['description'],
+                'status'        => $validated['status'],
+            ]);
+
+            return $task;
+        });
+
         $salesTask->load(['taskSource', 'taskType', 'assignedUser']);
         $salesTask->source_detail = $this->getSourceDetail($salesTask);
 

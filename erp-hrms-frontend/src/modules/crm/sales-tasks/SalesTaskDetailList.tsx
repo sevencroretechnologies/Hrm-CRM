@@ -25,6 +25,27 @@ const getStatusBadgeColor = (status: string) => {
     }
 };
 
+const getTaskName = (task: any) => {
+    if (!task) return "Unknown Task";
+
+    let detailName = "";
+    if (task.source_detail) {
+        if (task.task_source_id === 3) {
+            detailName = task.source_detail.party_name || task.source_detail.naming_series || `Opp #${task.source_id}`;
+        } else if (task.task_source_id === 1) {
+            detailName = `${task.source_detail.first_name || ''} ${task.source_detail.last_name || ''}`.trim() || task.source_detail.company_name || `Lead #${task.source_id}`;
+        } else if (task.task_source_id === 2) {
+            detailName = task.source_detail.company_name || `Prospect #${task.source_id}`;
+        }
+    }
+
+    if (detailName) {
+        return detailName;
+    }
+
+    return `#${task.id}`;
+};
+
 export default function SalesTaskDetailList() {
     const [details, setDetails] = useState<SalesTaskDetail[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -116,11 +137,11 @@ export default function SalesTaskDetailList() {
             name: 'Sales Task',
             cell: (row) => (
                 <div className="flex flex-col">
-                    <span className="text-xs text-muted-foreground">
-                        {row.sales_task?.task_source?.name || "Task"}
+                    <span className="text-xs text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis max-w-48" title={getTaskName(row.sales_task)}>
+                        {row.sales_task?.task_source?.name || "Task"} - {getTaskName(row.sales_task)}
                     </span>
-                    <span className="font-medium">
-                        {row.sales_task?.task_type?.name || `#${row.sales_task_id}`}
+                    <span className="font-medium whitespace-nowrap">
+                        {row.sales_task?.task_type?.name || "Unknown Type"}
                     </span>
                 </div>
             ),
