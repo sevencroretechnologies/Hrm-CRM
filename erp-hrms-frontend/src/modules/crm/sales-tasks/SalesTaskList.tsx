@@ -172,11 +172,11 @@ export default function SalesTaskList() {
             selector: (row) => row.assigned_user?.name || "-",
             sortable: true,
         },
-        {
-            name: 'Date',
-            selector: (row) => row.formatted_date || new Date(row.created_at).toLocaleDateString(),
-            sortable: true,
-        },
+        // {
+        //     name: 'Date',
+        //     selector: (row) => row.formatted_date || new Date(row.created_at).toLocaleDateString(),
+        //     sortable: true,
+        // },
         {
             name: 'Actions',
             cell: (row) => (
@@ -188,7 +188,7 @@ export default function SalesTaskList() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => openViewModal(row.id)}>
-                            <Eye className="mr-2 h-4 w-4" /> View Detail
+                            <Eye className="mr-2 h-4 w-4" /> View
                         </DropdownMenuItem>
                         {/* <DropdownMenuItem onClick={() => navigate(`/crm/sales-tasks/${row.id}`)}>
                             <LayoutGrid className="mr-2 h-4 w-4 text-purple-600" /> View Progress

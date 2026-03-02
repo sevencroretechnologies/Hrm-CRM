@@ -401,7 +401,7 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
                                 <Button type="button" variant="outline" onClick={onHide}>
                                     Close
                                 </Button>
-                                <Button type="submit" disabled={loading}>
+                                <Button type="submit" disabled={loading} className="bg-solarized-blue hover:bg-solarized-blue/90">
                                     <Save className="mr-2 h-4 w-4" />
                                     {loading ? "Saving..." : taskId ? "Update" : "Save"}
                                 </Button>

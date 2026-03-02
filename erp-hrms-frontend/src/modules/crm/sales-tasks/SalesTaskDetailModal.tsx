@@ -237,7 +237,7 @@ export default function SalesTaskDetailModal({
                             Close
                         </Button>
                         {!readOnly && (
-                            <Button type="submit" disabled={loading}>
+                            <Button type="submit" disabled={loading} className="bg-solarized-blue hover:bg-solarized-blue/90">
                                 <Save className="mr-2 h-4 w-4" />
                                 {loading ? "Saving..." : detail ? "Update" : "Save"}
                             </Button>
