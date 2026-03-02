@@ -176,12 +176,12 @@ export default function SourceList() {
       selector: (row) => row.source_code || '-',
       sortable: true,
     },
-    {
-      name: 'Created At',
-      selector: (row) => row.created_at,
-      sortable: true,
-      cell: (row) => <span>{new Date(row.created_at).toLocaleDateString()}</span>,
-    },
+    // {
+    //   name: 'Created At',
+    //   selector: (row) => row.created_at,
+    //   sortable: true,
+    //   cell: (row) => <span>{new Date(row.created_at).toLocaleDateString()}</span>,
+    // },
     {
       name: 'Actions',
       cell: (row) => (

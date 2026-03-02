@@ -144,12 +144,12 @@ export default function CampaignsList() {
       selector: (row) => row.campaign_code || '-',
       sortable: true,
     },
-    {
-      name: 'Created At',
-      selector: (row) => row.created_at,
-      sortable: true,
-      cell: (row) => <span>{new Date(row.created_at).toLocaleDateString()}</span>,
-    },
+    // {
+    //   name: 'Created At',
+    //   selector: (row) => row.created_at,
+    //   sortable: true,
+    //   cell: (row) => <span>{new Date(row.created_at).toLocaleDateString()}</span>,
+    // },
     {
       name: 'Actions',
       cell: (row) => (
@@ -309,12 +309,12 @@ export default function CampaignsList() {
                 <p className="text-sm text-muted-foreground">Campaign Code</p>
                 <p className="font-medium">{selected.campaign_code || '-'}</p>
               </div>
-              <div>
+              {/* <div>
                 <p className="text-sm text-muted-foreground">Created At</p>
                 <p className="font-medium">
                   {selected.created_at ? new Date(selected.created_at).toLocaleDateString() : '-'}
                 </p>
-              </div>
+              </div> */}
             </div>
           )}
         </DialogContent>
