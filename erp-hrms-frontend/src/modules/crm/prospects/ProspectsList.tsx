@@ -162,9 +162,9 @@ export default function ProspectList() {
           <h1 className="text-2xl font-bold">Prospects</h1>
           <p className="text-muted-foreground">Manage your prospects</p>
         </div>
-        <Button onClick={handleAddClick} className="bg-solarized-blue hover:bg-solarized-blue/90">
+        {/* <Button onClick={handleAddClick} className="bg-solarized-blue hover:bg-solarized-blue/90">
           <Plus className="mr-2 h-4 w-4" /> New Prospect
-        </Button>
+        </Button> */}
       </div>
 
       <Card>
