@@ -146,15 +146,17 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
     const loadSalesTask = async (id: number) => {
         try {
             const data = await salesTaskApi.get(id);
+            const detail = data.details && data.details.length > 0 ? data.details[0] : null;
+
             setFormData({
                 task_source_id: data.task_source_id.toString(),
                 source_id: data.source_id ? data.source_id.toString() : "",
                 task_type_id: data.task_type_id.toString(),
                 sales_assign_id: data.sales_assign_id ? data.sales_assign_id.toString() : "",
-                date: new Date().toISOString().split('T')[0],
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
-                description: "",
-                status: "Open",
+                date: detail?.date || new Date().toISOString().split('T')[0],
+                time: detail?.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+                description: detail?.description || "",
+                status: detail?.status || "Open",
             });
         } catch (error) {
             console.error("Failed to load sales task:", error);
@@ -177,12 +179,10 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
                 source_id: formData.source_id ? Number(formData.source_id) : null,
                 task_type_id: Number(formData.task_type_id),
                 sales_assign_id: formData.sales_assign_id ? Number(formData.sales_assign_id) : null,
-                ...(!taskId ? {
-                    date: formData.date,
-                    time: formData.time,
-                    description: formData.description,
-                    status: formData.status,
-                } : {}),
+                date: formData.date,
+                time: formData.time,
+                description: formData.description,
+                status: formData.status,
             };
 
             if (taskId) {
@@ -196,6 +196,7 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
             onHide();
         } catch (error: any) {
             if (error.response?.data?.errors) {
+                // ...
                 setErrors(error.response.data.errors);
             }
             console.error("Failed to save sales task:", error);
@@ -253,9 +254,35 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
                                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">Assigned User</Label>
                                 <p className="font-medium text-sm">
                                     {users.find(u => u.id === Number(formData.sales_assign_id))?.name || "Not Assigned"}
-                                    {/* {users.find(u => u.id === Number(formData.sales_assign_id))?.email &&
-                                        <span className="text-muted-foreground ml-1">({users.find(u => u.id === Number(formData.sales_assign_id))?.email})</span>
-                                    } */}
+                                </p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Date</Label>
+                                <p className="font-medium text-sm">{formData.date || "-"}</p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Time</Label>
+                                <p className="font-medium text-sm">{formData.time || "-"}</p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Status</Label>
+                                <div>
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${formData.status === 'Closed' ? 'bg-green-100 text-green-700' :
+                                            formData.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+                                                'bg-orange-100 text-orange-700'
+                                        }`}>
+                                        {formData.status}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="col-span-2 space-y-1">
+                                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Description</Label>
+                                <p className="text-sm border rounded-md p-3 bg-muted/30 whitespace-pre-wrap">
+                                    {formData.description || "No description provided."}
                                 </p>
                             </div>
                         </div>
@@ -341,61 +368,57 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
                                 </div>
                             </div>
 
-                            {!taskId && (
-                                <>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="date">Date</Label>
-                                            <Input
-                                                id="date"
-                                                type="date"
-                                                value={formData.date}
-                                                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                                required
-                                            />
-                                            {errors.date && <p className="text-xs text-red-500">{errors.date[0]}</p>}
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="time">Time</Label>
-                                            <Input
-                                                id="time"
-                                                type="time"
-                                                value={formData.time}
-                                                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                                                required
-                                            />
-                                            {errors.time && <p className="text-xs text-red-500">{errors.time[0]}</p>}
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="status">Status</Label>
-                                        <select
-                                            id="status"
-                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            value={formData.status}
-                                            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                            required
-                                        >
-                                            <option value="Open">Open</option>
-                                            <option value="In Progress">In Progress</option>
-                                            <option value="Closed">Closed</option>
-                                        </select>
-                                        {errors.status && <p className="text-xs text-red-500">{errors.status[0]}</p>}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="description">Description</Label>
-                                        <Textarea
-                                            id="description"
-                                            rows={4}
-                                            value={formData.description}
-                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                            placeholder="Enter task progress details..."
-                                            required
-                                        />
-                                        {errors.description && <p className="text-xs text-red-500">{errors.description[0]}</p>}
-                                    </div>
-                                </>
-                            )}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="date">Date</Label>
+                                    <Input
+                                        id="date"
+                                        type="date"
+                                        value={formData.date}
+                                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                        required
+                                    />
+                                    {errors.date && <p className="text-xs text-red-500">{errors.date[0]}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="time">Time</Label>
+                                    <Input
+                                        id="time"
+                                        type="time"
+                                        value={formData.time}
+                                        onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                                        required
+                                    />
+                                    {errors.time && <p className="text-xs text-red-500">{errors.time[0]}</p>}
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="status">Status</Label>
+                                <select
+                                    id="status"
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    value={formData.status}
+                                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                    required
+                                >
+                                    <option value="Open">Open</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Closed">Closed</option>
+                                </select>
+                                {errors.status && <p className="text-xs text-red-500">{errors.status[0]}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="description">Description</Label>
+                                <Textarea
+                                    id="description"
+                                    rows={4}
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    placeholder="Enter task progress details..."
+                                    required
+                                />
+                                {errors.description && <p className="text-xs text-red-500">{errors.description[0]}</p>}
+                            </div>
 
                             <DialogFooter className="pt-6">
                                 <Button type="button" variant="outline" onClick={onHide}>
