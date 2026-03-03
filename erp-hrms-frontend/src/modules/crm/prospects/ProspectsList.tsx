@@ -38,7 +38,7 @@ export default function ProspectList() {
         page: currentPage,
         per_page: perPage,
       };
-      
+
       if (search.trim()) {
         params.search = search.trim();
       }
@@ -111,6 +111,12 @@ export default function ProspectList() {
 
   const columns: TableColumn<Prospect>[] = [
     { name: 'Company Name', selector: (row) => row.company_name || '-', sortable: true, minWidth: '200px' },
+    {
+      name: 'Party Name',
+      selector: (row) => row.leads?.[0]?.pivot?.lead_name || '-',
+      sortable: true,
+      minWidth: '200px'
+    },
     { name: 'Email', selector: (row) => row.email || '-', minWidth: '180px' },
     { name: 'Phone', selector: (row) => row.phone || '-', minWidth: '150px' },
     { name: 'Status', cell: (row) => <StatusBadge status={row.status} />, width: '130px' },
@@ -122,9 +128,9 @@ export default function ProspectList() {
           <Button variant="ghost" size="icon" onClick={() => handleView(row)} title="View">
             <Eye className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => handleEdit(row)} title="Edit">
+          {/* <Button variant="ghost" size="icon" onClick={() => handleEdit(row)} title="Edit">
             <Edit className="h-4 w-4 text-blue-600" />
-          </Button>
+          </Button> */}
           <Button variant="ghost" size="icon" onClick={() => handleDelete(row.id)} title="Delete">
             <Trash2 className="h-4 w-4 text-red-600" />
           </Button>
@@ -220,6 +226,10 @@ export default function ProspectList() {
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Company Name</label>
                   <p className="text-base">{selectedItem.company_name || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Party Name</label>
+                  <p className="text-base">{selectedItem.leads?.[0]?.pivot?.lead_name || '-'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Email</label>

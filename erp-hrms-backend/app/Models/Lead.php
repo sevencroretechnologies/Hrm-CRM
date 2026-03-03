@@ -106,6 +106,13 @@ class Lead extends Model
         return $this->morphMany(CrmNote::class, 'notable');
     }
 
+    public function prospects(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Prospect::class, 'prospect_leads')
+            ->withPivot(['lead_name', 'email', 'mobile_no', 'status'])
+            ->withTimestamps();
+    }
+
     /**
      * Get full name attribute
      */

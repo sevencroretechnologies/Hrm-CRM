@@ -32,6 +32,12 @@ export interface Lead {
   territory: string | null;
   created_at: string;
   updated_at: string;
+  pivot?: {
+    lead_name: string;
+    email: string;
+    mobile_no: string;
+    status: string;
+  };
 }
 
 export interface Opportunity {

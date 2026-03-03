@@ -40,7 +40,7 @@ class ProspectController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'company_name' => 'required|string|max:255|unique:prospects',
+            'company_name' => 'nullable|string|max:255|unique:prospects',
             'status' => 'nullable|string|max:50',
             'source' => 'nullable|string|max:255',
             'industry' => 'nullable|string|max:255',
@@ -77,6 +77,7 @@ class ProspectController extends Controller
         $validated = $request->validate([
             'company_name' => 'nullable|string|max:255|unique:prospects,company_name,' . $id,
             'status' => 'nullable|string|max:50',
+// ...
             'source' => 'nullable|string|max:255',
             'industry' => 'nullable|string|max:255',
             'market_segment' => 'nullable|string|max:255',

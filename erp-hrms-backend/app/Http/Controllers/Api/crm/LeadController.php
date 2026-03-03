@@ -157,28 +157,34 @@ class LeadController extends Controller
         $lead->load('status', 'source', 'industry');
 
         if ($lead->status && $lead->status->status_name === 'Interest') {
-            $companyName = $lead->company_name ?? trim(($lead->first_name ?? '') . ' ' . ($lead->last_name ?? ''));
+            // Find existing prospect linked to this lead
+            $prospect = $lead->prospects()->first();
 
-            if (empty($companyName)) {
-                $companyName = "Lead #{$lead->id}";
+            if (!$prospect && $lead->company_name) {
+                // If not linked, try finding by company name
+                $prospect = Prospect::where('company_name', $lead->company_name)->first();
             }
 
-            $prospect = Prospect::updateOrCreate(
-                ['company_name' => $companyName],
-                [
-                    'industry' => $lead->industry?->name,
-                    'annual_revenue' => $lead->annual_revenue,
-                    'no_of_employees' => $lead->no_of_employees,
-                    'email' => $lead->email,
-                    'phone' => $lead->mobile_no ?? $lead->phone,
-                    'city' => $lead->city,
-                    'state' => $lead->state,
-                    'country' => $lead->country,
-                    'website' => $lead->website,
-                    'source' => $lead->source?->name,
-                    'status' => $lead->status->status_name,
-                ]
-            );
+            $prospectData = [
+                'company_name' => $lead->company_name,
+                'industry' => $lead->industry?->name,
+                'annual_revenue' => $lead->annual_revenue,
+                'no_of_employees' => $lead->no_of_employees,
+                'email' => $lead->email,
+                'phone' => $lead->mobile_no ?? $lead->phone,
+                'city' => $lead->city,
+                'state' => $lead->state,
+                'country' => $lead->country,
+                'website' => $lead->website,
+                'source' => $lead->source?->name,
+                'status' => $lead->status->status_name,
+            ];
+
+            if ($prospect) {
+                $prospect->update($prospectData);
+            } else {
+                $prospect = Prospect::create($prospectData);
+            }
 
             // Link lead to prospect
             $prospect->leads()->syncWithoutDetaching([
