@@ -184,14 +184,14 @@ export default function ProductList() {
       name: 'Stock',
       selector: (row) => row.stock,
       sortable: true,
-      width: '100px',
+      // width: '100px',
     },
     {
       name: 'Amount',
       selector: (row) => row.amount,
       sortable: true,
       cell: (row) => <span>₹{Number(row.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>,
-      width: '120px',
+      // width: '120px',
     },
     {
       name: 'Actions',
