@@ -390,53 +390,109 @@ export default function OpportunitiesList() {
 
       {/* View dialog */}
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Opportunity Details</DialogTitle>
-            <DialogDescription>{selected?.naming_series || `ID #${selected?.id}`}</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-solarized-blue" />
+              Opportunity Details
+            </DialogTitle>
+            <DialogDescription>
+              {selected?.naming_series || `ID #${selected?.id}`}
+            </DialogDescription>
           </DialogHeader>
           {selected && (
-            <div className="space-y-4 text-sm mt-4">
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  ['Customer / Party', selected.party_name],
-                  ['Company', selected.company_name],
-                  ['From', selected.opportunity_from],
-                  ['Status', selected.status?.status_name],
-                  ['Stage', selected.opportunity_stage?.name],
-                  // ['Amount', selected.opportunity_amount != null ? `${selected.currency ?? '₹'} ${Number(selected.opportunity_amount).toLocaleString()}` : null],
-                  ['Amount', (() => {
-                    const amt = selected.amount ?? (selected.items?.reduce((sum, item) => sum + Number(item.amount || 0), 0) || 0);
-                    return amt > 0 ? `${selected.currency ?? ''} ${Number(amt).toLocaleString()}` : null;
-                  })()],
-                  ['Expected Close', selected.expected_closing ? String(selected.expected_closing).split('T')[0] : null],
-                  ['Probability', selected.probability != null ? `${selected.probability}%` : null],
-                ].map(([label, val]) => (
-                  <div key={String(label)} className="p-2 bg-muted/20 rounded">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">{label}</p>
-                    <p className="font-medium capitalize text-sm">{val || '—'}</p>
-                  </div>
-                ))}
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Customer / Party</Label>
+                  <p className="text-base font-semibold text-solarized-blue">
+                    {(() => {
+                      if (selected.opportunity_from === 'lead' && selected.lead) {
+                        return [selected.lead.first_name, selected.lead.last_name].filter(Boolean).join(' ');
+                      } else if (selected.opportunity_from === 'customer' && selected.customer) {
+                        return selected.customer.name;
+                      }
+                      return selected.party_name || '—';
+                    })()}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Company</Label>
+                  <p className="text-base font-medium">{selected.company_name || '—'}</p>
+                </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Opportunity From</Label>
+                  <p className="text-sm font-medium capitalize">{selected.opportunity_from || '—'}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Status</Label>
+                  <div>
+                    {selected.status?.status_name ? statusBadge(selected.status.status_name) : '—'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Stage</Label>
+                  <p className="text-sm font-medium">{selected.opportunity_stage?.name || '—'}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Amount</Label>
+                  <p className="text-lg font-bold text-solarized-blue">
+                    {(() => {
+                      const amt = selected.amount ?? (selected.items?.reduce((sum, item) => sum + Number(item.amount || 0), 0) || 0);
+                      return amt > 0 ? `${selected.currency ?? '₹'} ${Number(amt).toLocaleString()}` : '—';
+                    })()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Expected Close</Label>
+                  <p className="text-sm font-medium">{selected.expected_closing ? String(selected.expected_closing).split('T')[0] : '—'}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Probability</Label>
+                  <p className="text-sm font-medium">{selected.probability != null ? `${selected.probability}%` : '—'}</p>
+                </div>
+              </div>
+
               {selected.to_discuss && (
-                <div className="mt-4">
-                  <p className="text-xs font-bold text-muted-foreground uppercase mb-1">To Discuss</p>
-                  <p className="border rounded p-3 bg-muted/10 text-sm italic">{selected.to_discuss}</p>
+                <div className="space-y-1 p-3 bg-slate-50 rounded-lg border">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">To Discuss</Label>
+                  <p className="text-sm leading-relaxed italic">{selected.to_discuss}</p>
                 </div>
               )}
-              <div className="border-t pt-4 grid grid-cols-3 gap-3 mt-4">
-                <div><p className="text-[10px] uppercase font-bold text-muted-foreground">Contact Person</p><p className="font-medium">{selected.contact_person || '—'}</p></div>
-                <div><p className="text-[10px] uppercase font-bold text-muted-foreground">Email</p><p className="font-medium break-all">{selected.contact_email || '—'}</p></div>
-                <div><p className="text-[10px] uppercase font-bold text-muted-foreground">Mobile</p><p className="font-medium">{selected.contact_mobile || '—'}</p></div>
+
+              <div className="border-t pt-4">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-3 block">Primary Contact</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-[10px] uppercase text-muted-foreground">Person</Label>
+                    <p className="text-sm font-medium truncate">{selected.contact_person || '—'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase text-muted-foreground">Email</Label>
+                    <p className="text-xs font-medium truncate">{selected.contact_email || '—'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase text-muted-foreground">Mobile</Label>
+                    <p className="text-sm font-medium truncate">{selected.contact_mobile || '—'}</p>
+                  </div>
+                </div>
               </div>
-              <DialogFooter className="mt-6">
-                <Button variant="outline" onClick={() => setViewOpen(false)}>Close</Button>
-                {/* <Button className="bg-solarized-blue hover:bg-solarized-blue/90" onClick={() => { setViewOpen(false); navigate(`/crm/opportunities/${selected.id}/edit`); }}>
-                  <Edit className="mr-2 h-4 w-4" /> Edit
-                </Button> */}
-              </DialogFooter>
             </div>
           )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Save } from "lucide-react";
+import { Save, CheckSquare } from "lucide-react";
 import {
     salesTaskApi,
     taskSourceApi,
@@ -216,11 +216,12 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
     };
 
     return (
-        <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+        <Dialog open={show} onOpenChange={onHide}>
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                    <DialogTitle>
-                        {readOnly ? "View Sales Task" : taskId ? "Edit Sales Task" : "New Sales Task"}
+                    <DialogTitle className="flex items-center gap-2">
+                        <CheckSquare className="h-5 w-5 text-solarized-blue" />
+                        {readOnly ? "Sales Task Details" : taskId ? "Edit Sales Task" : "New Sales Task"}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -271,8 +272,8 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
                                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">Status</Label>
                                 <div>
                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${formData.status === 'Closed' ? 'bg-green-100 text-green-700' :
-                                            formData.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
-                                                'bg-orange-100 text-orange-700'
+                                        formData.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+                                            'bg-orange-100 text-orange-700'
                                         }`}>
                                         {formData.status}
                                     </span>

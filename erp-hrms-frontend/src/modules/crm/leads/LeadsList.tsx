@@ -13,7 +13,9 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '../../../components/ui/dialog';
+import { Label } from '../../../components/ui/label';
 import DataTable, { TableColumn } from 'react-data-table-component';
 import { Plus, Search, Users, Eye, Edit, Trash2 } from 'lucide-react';
 
@@ -149,24 +151,83 @@ export default function LeadsList() {
       </Card>
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Lead Details</DialogTitle><DialogDescription>View lead information</DialogDescription></DialogHeader>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-solarized-blue" />
+              Lead Details
+            </DialogTitle>
+            <DialogDescription>
+              Detailed information about the lead
+            </DialogDescription>
+          </DialogHeader>
           {selectedLead && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div><p className="text-sm text-muted-foreground">Series</p><p className="font-medium">{selectedLead.series || '-'}</p></div>
-                <div><p className="text-sm text-muted-foreground">Name</p><p className="font-medium">{[selectedLead.first_name, selectedLead.last_name].filter(Boolean).join(' ')}</p></div>
-                <div><p className="text-sm text-muted-foreground">Email</p><p className="font-medium">{selectedLead.email || '-'}</p></div>
-                <div><p className="text-sm text-muted-foreground">Mobile</p><p className="font-medium">{selectedLead.mobile_no || '-'}</p></div>
-                <div><p className="text-sm text-muted-foreground">Company</p><p className="font-medium">{selectedLead.company_name || '-'}</p></div>
-                <div><p className="text-sm text-muted-foreground">Status</p><StatusBadge status={selectedLead.status?.status_name} /></div>
-                <div><p className="text-sm text-muted-foreground">Source</p><p className="font-medium">{selectedLead.source?.name || '-'}</p></div>
-                <div><p className="text-sm text-muted-foreground">Request Type</p><p className="font-medium">{selectedLead.request_type?.name || '-'}</p></div>
-                <div><p className="text-sm text-muted-foreground">Industry</p><p className="font-medium">{selectedLead.industry?.name || '-'}</p></div>
-                <div><p className="text-sm text-muted-foreground">Territory</p><p className="font-medium">{selectedLead.territory || '-'}</p></div>
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Series</Label>
+                  <p className="text-base font-medium">{selectedLead.series || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Lead Name</Label>
+                  <p className="text-base font-semibold text-solarized-blue">
+                    {[selectedLead.first_name, selectedLead.last_name].filter(Boolean).join(' ') || '-'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Email Address</Label>
+                  <p className="text-sm font-medium">{selectedLead.email || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Mobile Number</Label>
+                  <p className="text-sm font-medium">{selectedLead.mobile_no || '-'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Company Name</Label>
+                  <p className="text-base font-medium">{selectedLead.company_name || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Status</Label>
+                  <div>
+                    <StatusBadge status={selectedLead.status?.status_name} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Source</Label>
+                  <p className="text-sm">{selectedLead.source?.name || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Territory</Label>
+                  <p className="text-sm">{selectedLead.territory || '-'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Industry</Label>
+                  <p className="text-sm">{selectedLead.industry?.name || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Request Type</Label>
+                  <p className="text-sm">{selectedLead.request_type?.name || '-'}</p>
+                </div>
               </div>
             </div>
           )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

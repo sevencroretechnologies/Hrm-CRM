@@ -292,31 +292,36 @@ export default function CampaignsList() {
         </CardContent>
       </Card>
 
-      {/* View Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Campaign Details</DialogTitle>
-            <DialogDescription>View campaign information</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5 text-solarized-blue" />
+              Campaign Details
+            </DialogTitle>
+            <DialogDescription>
+              Detailed information about the campaign
+            </DialogDescription>
           </DialogHeader>
           {selected && (
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Campaign Name</p>
-                <p className="font-medium">{selected.name}</p>
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Campaign Name</Label>
+                  <p className="text-base font-semibold text-solarized-blue">{selected.name}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Campaign Code</Label>
+                  <p className="text-sm font-medium">{selected.campaign_code || '-'}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Campaign Code</p>
-                <p className="font-medium">{selected.campaign_code || '-'}</p>
-              </div>
-              {/* <div>
-                <p className="text-sm text-muted-foreground">Created At</p>
-                <p className="font-medium">
-                  {selected.created_at ? new Date(selected.created_at).toLocaleDateString() : '-'}
-                </p>
-              </div> */}
             </div>
           )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

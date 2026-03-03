@@ -1,13 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import {
     crmOpportunityLostReasonService as lostReasonApi,
     crmOpportunityService as opportunityApi
 } from "@/services/api";
 import type { OpportunityLostReason, Opportunity } from "@/types";
-import { Plus, Trash2, Edit2, Search, Eye, LayoutTemplate, Ghost } from "lucide-react";
+import { Trash2, Edit2, Search, Eye, Ghost, TrendingDown } from "lucide-react";
 import { showAlert, showConfirmDialog, getErrorMessage } from "@/lib/sweetalert";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -57,7 +56,6 @@ function extractTotal(raw: unknown): number {
 }
 
 export default function OpportunityLostReasonList() {
-    const navigate = useNavigate();
     const [reasons, setReasons] = useState<OpportunityLostReason[]>([]);
     const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
     const [loading, setLoading] = useState(true);
@@ -112,10 +110,10 @@ export default function OpportunityLostReasonList() {
         fetchReasons(1);
     };
 
-    const handleAddClick = () => {
+    /* const handleAddClick = () => {
         setCurrentReason({ opportunity_id: undefined, opportunity_lost_reasons: "" });
         setIsModalOpen(true);
-    };
+    }; */
 
     const handleEditClick = (reason: OpportunityLostReason) => {
         setCurrentReason(reason);
@@ -357,58 +355,41 @@ export default function OpportunityLostReasonList() {
                 </DialogContent>
             </Dialog>
 
-            {/* View Dialog */}
             <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                        <DialogTitle>Reason Details</DialogTitle>
+                        <DialogTitle className="flex items-center gap-2">
+                            <TrendingDown className="h-5 w-5 text-solarized-blue" />
+                            Reason Details
+                        </DialogTitle>
                         <DialogDescription>
-                            Full details of the opportunity lost reason.
+                            Full details of why this opportunity was lost.
                         </DialogDescription>
                     </DialogHeader>
                     {selectedReason && (
                         <div className="space-y-6 py-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Opportunity</p>
-                                    <p className="font-medium text-solarized-blue">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Opportunity</Label>
+                                    <p className="text-base font-semibold text-solarized-blue">
                                         {selectedReason.opportunity?.party_name || `Opp #${selectedReason.opportunity_id}`}
                                     </p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Series</p>
-                                    <p className="font-medium">{selectedReason.opportunity?.naming_series || '—'}</p>
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Series</Label>
+                                    <p className="text-sm font-medium">{selectedReason.opportunity?.naming_series || '—'}</p>
                                 </div>
                             </div>
-                            <div className="space-y-1">
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lost Reason</p>
-                                <div className="p-4 bg-muted/30 rounded-lg border">
-                                    <p className="text-sm leading-relaxed">{selectedReason.opportunity_lost_reasons}</p>
+                            <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Lost Reason</Label>
+                                <div className="p-4 bg-slate-50 rounded-lg border">
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{selectedReason.opportunity_lost_reasons}</p>
                                 </div>
                             </div>
-                            {/* <div className="grid grid-cols-2 gap-4 pt-2 border-t text-[13px]">
-                                <div className="space-y-1">
-                                    <p className="text-muted-foreground">Created At</p>
-                                    <p>{selectedReason.created_at ? new Date(selectedReason.created_at).toLocaleDateString() : '—'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-muted-foreground">ID</p>
-                                    <p className="font-mono text-xs">{selectedReason.id}</p>
-                                </div>
-                            </div> */}
                         </div>
                     )}
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsViewOpen(false)}>Close</Button>
-                        {/* <Button
-                            className="bg-solarized-blue hover:bg-solarized-blue/90"
-                            onClick={() => {
-                                setIsViewOpen(false);
-                                if (selectedReason) handleEditClick(selectedReason);
-                            }}
-                        >
-                            <Edit2 className="mr-2 h-4 w-4" /> Edit
-                        </Button> */}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

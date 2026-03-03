@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '../../../components/ui/dropdown-menu';
 import DataTable, { TableColumn } from 'react-data-table-component';
-import { Plus, Search, MoreHorizontal, Edit, Trash2, LayoutGrid } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Edit, Trash2, LayoutGrid, Eye } from 'lucide-react';
 
 interface Source {
   id: number;
@@ -39,6 +39,7 @@ export default function SourceList() {
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedSource, setSelectedSource] = useState<Source | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -56,11 +57,11 @@ export default function SourceList() {
         search,
       };
       const response = await crmSourceService.getAll(params);
-      
+
       // The backend SourceController returns Source::all() - a plain array
       // Handle all possible response shapes gracefully
       const responseData = response.data;
-      
+
       if (Array.isArray(responseData)) {
         // Plain array response (current backend behaviour)
         setItems(responseData);
@@ -192,6 +193,9 @@ export default function SourceList() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => { setSelectedSource(row); setIsViewOpen(true); }}>
+              <Eye className="mr-2 h-4 w-4" /> View
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleEdit(row)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
             </DropdownMenuItem>
@@ -338,6 +342,38 @@ export default function SourceList() {
             <DialogDescription>Update lead source information</DialogDescription>
           </DialogHeader>
           {renderForm(handleUpdate)}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LayoutGrid className="h-5 w-5 text-solarized-blue" />
+              Source Details
+            </DialogTitle>
+            <DialogDescription>
+              Detailed information about the lead source
+            </DialogDescription>
+          </DialogHeader>
+          {selectedSource && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Source Name</Label>
+                  <p className="text-base font-semibold text-solarized-blue">{selectedSource.name}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Source Code</Label>
+                  <p className="text-sm font-medium">{selectedSource.source_code || '-'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

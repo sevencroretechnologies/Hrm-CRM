@@ -12,7 +12,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '../../../components/ui/dialog';
+import { Label } from '../../../components/ui/label';
+import { TrendingUp } from 'lucide-react';
 import DataTable, { TableColumn } from 'react-data-table-component';
 import { Search, Users, Eye, Edit, Trash2, Plus } from 'lucide-react';
 
@@ -215,80 +218,92 @@ export default function ProspectList() {
       </Card>
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Prospect Details</DialogTitle>
-            <DialogDescription>Detailed information for the selected prospect</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-solarized-blue" />
+              Prospect Details
+            </DialogTitle>
+            <DialogDescription>
+              Detailed information about the prospect
+            </DialogDescription>
           </DialogHeader>
           {selectedItem && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Company Name</label>
-                  <p className="text-base">{selectedItem.company_name || '-'}</p>
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Company Name</Label>
+                  <p className="text-base font-semibold text-solarized-blue">{selectedItem.company_name || '—'}</p>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Party Name</label>
-                  <p className="text-base">{selectedItem.leads?.[0]?.pivot?.lead_name || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Email</label>
-                  <p className="text-base">{selectedItem.email || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Phone</label>
-                  <p className="text-base">{selectedItem.phone || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Website</label>
-                  <p className="text-base">{selectedItem.website || '-'}</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Status</label>
-                  <div className="mt-1">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Status</Label>
+                  <div>
                     <StatusBadge status={selectedItem.status} />
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Source</label>
-                  <p className="text-base">{selectedItem.source || '-'}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Email</Label>
+                  <p className="text-sm font-medium">{selectedItem.email || '—'}</p>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Industry</label>
-                  <p className="text-base">{selectedItem.industry || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Territory</label>
-                  <p className="text-base">{selectedItem.territory || '-'}</p>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Mobile</Label>
+                  <p className="text-sm font-medium">{selectedItem.phone || '—'}</p>
                 </div>
               </div>
-              <div className="md:col-span-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Market Segment</label>
-                    <p className="text-base">{selectedItem.market_segment || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Customer Group</label>
-                    <p className="text-base">{selectedItem.customer_group || '-'}</p>
-                  </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Source</Label>
+                  <p className="text-sm font-medium">{selectedItem.source || '—'}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Industry</Label>
+                  <p className="text-sm font-medium">{selectedItem.industry || '—'}</p>
                 </div>
               </div>
-              <div className="md:col-span-2">
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Address</label>
-                    <p className="text-base">{selectedItem.address || '-'}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {[selectedItem.city, selectedItem.state, selectedItem.country, selectedItem.zip_code].filter(Boolean).join(', ') || ''}
-                    </p>
-                  </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Market Segment</Label>
+                  <p className="text-sm font-medium">{selectedItem.market_segment || '—'}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Customer Group</Label>
+                  <p className="text-sm font-medium">{selectedItem.customer_group || '—'}</p>
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Territory</Label>
+                  <p className="text-sm font-medium">{selectedItem.territory || '—'}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Website</Label>
+                  <p className="text-sm font-medium truncate">{selectedItem.website || '—'}</p>
+                </div>
+              </div>
+
+              {(selectedItem.address || selectedItem.city) && (
+                <div className="space-y-1 p-3 bg-slate-50 rounded-lg border">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Address</Label>
+                  <p className="text-sm leading-relaxed">
+                    {selectedItem.address}
+                    {selectedItem.address && (selectedItem.city || selectedItem.state) && <br />}
+                    {[selectedItem.city, selectedItem.state, selectedItem.country, selectedItem.zip_code].filter(Boolean).join(', ')}
+                  </p>
+                </div>
+              )}
             </div>
           )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

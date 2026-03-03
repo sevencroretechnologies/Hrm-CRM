@@ -5,16 +5,17 @@ import { contactApi } from "@/services/api";
 import { showAlert, showConfirmDialog, getErrorMessage } from "@/lib/sweetalert";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog";
+    DialogFooter,
+} from '../../../components/ui/dialog';
 import DataTable, { TableColumn } from 'react-data-table-component';
-import { Plus, Search, UserCircle, Eye, Edit, Trash2, Phone, Mail, Star } from 'lucide-react';
+import { Plus, Search, UserCircle, Eye, Edit, Trash2, Phone, Mail, Star, User } from 'lucide-react';
 
 export default function ContactList() {
     const navigate = useNavigate();
@@ -146,8 +147,8 @@ export default function ContactList() {
             name: 'Status',
             cell: (row) => (
                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${row.status === 'Open' ? 'bg-green-100 text-green-700' :
-                        row.status === 'Replied' ? 'bg-blue-100 text-blue-700' :
-                            'bg-gray-100 text-gray-700'
+                    row.status === 'Replied' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-700'
                     }`}>
                     {row.status}
                 </span>
@@ -249,109 +250,113 @@ export default function ContactList() {
             </Card>
 
             <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="sm:max-w-[700px]">
                     <DialogHeader>
-                        <DialogTitle>Contact Details</DialogTitle>
-                        <DialogDescription>Full information for {selectedContact?.full_name}</DialogDescription>
+                        <DialogTitle className="flex items-center gap-2">
+                            <User className="h-5 w-5 text-solarized-blue" />
+                            Contact Details
+                        </DialogTitle>
                     </DialogHeader>
                     {selectedContact && (
-                        <div className="space-y-6">
+                        <div className="space-y-6 py-4">
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Salutation</p>
-                                    <p className="font-medium">{selectedContact.salutation || '-'}</p>
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Full Name</Label>
+                                    <p className="text-base font-semibold text-solarized-blue">
+                                        {selectedContact.salutation ? `${selectedContact.salutation} ` : ''}
+                                        {selectedContact.full_name || `${selectedContact.first_name} ${selectedContact.last_name}`}
+                                    </p>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Name</p>
-                                    <p className="font-medium">{selectedContact.full_name}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Designation</p>
-                                    <p className="font-medium">{selectedContact.designation || '-'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Gender</p>
-                                    <p className="font-medium">{selectedContact.gender || '-'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Company</p>
-                                    <p className="font-medium">{selectedContact.company_name || '-'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Status</p>
-                                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${selectedContact.status === 'Open' ? 'bg-green-100 text-green-700' :
-                                            selectedContact.status === 'Replied' ? 'bg-blue-100 text-blue-700' :
-                                                'bg-gray-100 text-gray-700'
-                                        }`}>
-                                        {selectedContact.status}
-                                    </span>
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Status</Label>
+                                    <p className="text-sm font-medium">{selectedContact.status || '—'}</p>
                                 </div>
                             </div>
 
-                            <div>
-                                <p className="text-sm text-muted-foreground mb-2 font-semibold">Phone Numbers</p>
-                                <div className="border rounded-md overflow-hidden">
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-muted">
-                                            <tr>
-                                                <th className="px-4 py-2 text-left">Phone No</th>
-                                                <th className="px-4 py-2 text-center">Primary</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y">
-                                            {(selectedContact.phones || []).length > 0 ? (
-                                                selectedContact.phones.map((p, i) => (
-                                                    <tr key={i}>
-                                                        <td className="px-4 py-2">{p.phone_no}</td>
-                                                        <td className="px-4 py-2 text-center">
-                                                            {p.is_primary && <Star className="h-4 w-4 mx-auto text-yellow-500 fill-current" />}
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            ) : (
-                                                <tr><td colSpan={2} className="px-4 py-2 text-center text-muted-foreground">No phone numbers</td></tr>
-                                            )}
-                                        </tbody>
-                                    </table>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Gender</Label>
+                                    <p className="text-sm font-medium">{selectedContact.gender || '—'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Designation</Label>
+                                    <p className="text-sm font-medium">{selectedContact.designation || '—'}</p>
                                 </div>
                             </div>
 
-                            <div>
-                                <p className="text-sm text-muted-foreground mb-2 font-semibold">Email Addresses</p>
-                                <div className="border rounded-md overflow-hidden">
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-muted">
-                                            <tr>
-                                                <th className="px-4 py-2 text-left">Email</th>
-                                                <th className="px-4 py-2 text-center">Primary</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y">
-                                            {(selectedContact.emails || []).length > 0 ? (
-                                                selectedContact.emails.map((e, i) => (
-                                                    <tr key={i}>
-                                                        <td className="px-4 py-2">{e.email}</td>
-                                                        <td className="px-4 py-2 text-center">
-                                                            {e.is_primary && <Star className="h-4 w-4 mx-auto text-yellow-500 fill-current" />}
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            ) : (
-                                                <tr><td colSpan={2} className="px-4 py-2 text-center text-muted-foreground">No email addresses</td></tr>
-                                            )}
-                                        </tbody>
-                                    </table>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Phone Numbers</Label>
+                                    <div className="border rounded-md overflow-hidden">
+                                        <table className="w-full text-xs">
+                                            <thead className="bg-slate-50 border-b">
+                                                <tr>
+                                                    <th className="px-2 py-1.5 text-left font-semibold text-muted-foreground">Phone</th>
+                                                    <th className="px-2 py-1.5 text-center font-semibold text-muted-foreground w-16">Primary</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {(selectedContact.phones || []).length > 0 ? (
+                                                    selectedContact.phones.map((p, i) => (
+                                                        <tr key={i} className="border-b last:border-0">
+                                                            <td className="px-2 py-1.5">{p.phone_no}</td>
+                                                            <td className="px-2 py-1.5 text-center">
+                                                                {p.is_primary && <Star className="h-4 w-4 mx-auto text-yellow-500 fill-current" />}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr><td colSpan={2} className="px-2 py-3 text-center text-muted-foreground">No phone numbers</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Email Addresses</Label>
+                                    <div className="border rounded-md overflow-hidden">
+                                        <table className="w-full text-xs">
+                                            <thead className="bg-slate-50 border-b">
+                                                <tr>
+                                                    <th className="px-2 py-1.5 text-left font-semibold text-muted-foreground">Email</th>
+                                                    <th className="px-2 py-1.5 text-center font-semibold text-muted-foreground w-16">Primary</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {(selectedContact.emails || []).length > 0 ? (
+                                                    selectedContact.emails.map((e, i) => (
+                                                        <tr key={i} className="border-b last:border-0">
+                                                            <td className="px-2 py-1.5 truncate max-w-[150px]">{e.email}</td>
+                                                            <td className="px-2 py-1.5 text-center">
+                                                                {e.is_primary && <Star className="h-4 w-4 mx-auto text-yellow-500 fill-current" />}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr><td colSpan={2} className="px-2 py-3 text-center text-muted-foreground">No email addresses</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div>
-                                <p className="text-sm text-muted-foreground">Address</p>
-                                <p className="font-medium whitespace-pre-wrap">{selectedContact.address || '-'}</p>
-                            </div>
+                            {selectedContact.address && (
+                                <div className="space-y-1 p-3 bg-slate-50 rounded-lg border">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Address</Label>
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{selectedContact.address}</p>
+                                </div>
+                            )}
                         </div>
                     )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsViewOpen(false)}>
+                            Close
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }

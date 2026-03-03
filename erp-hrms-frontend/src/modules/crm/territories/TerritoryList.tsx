@@ -219,7 +219,7 @@ export default function TerritoryList() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => handleView(row)}>
-                    <Eye className="mr-2 h-4 w-4" /> View
+              <Eye className="mr-2 h-4 w-4" /> View
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleEdit(row)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
@@ -367,34 +367,31 @@ export default function TerritoryList() {
       </Dialog>
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>View Territory</DialogTitle>
-            <DialogDescription>Details of the territory</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-solarized-blue" />
+              Territory Details
+            </DialogTitle>
+            <DialogDescription>
+              Detailed information about the territory
+            </DialogDescription>
           </DialogHeader>
           {selectedTerritory && (
-            <div className="space-y-4 py-4">
+            <div className="space-y-6 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Territory Name</Label>
-                  <p className="font-medium text-sm">{selectedTerritory.territory_name}</p>
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Territory Name</Label>
+                  <p className="text-base font-semibold text-solarized-blue">{selectedTerritory.territory_name}</p>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Territory Manager</Label>
-                  <p className="font-medium text-sm">
-                    {selectedTerritory.manager ? selectedTerritory.manager.name : "Not Assigned"}
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Manager</Label>
+                  <p className="text-sm font-medium">
+                    {typeof selectedTerritory.manager === 'object' ? selectedTerritory.manager?.name : selectedTerritory.manager || 'Not Assigned'}
                   </p>
                 </div>
-                {/* {selectedTerritory.created_at && (
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Created At</Label>
-                    <p className="font-medium text-sm">
-                      {new Date(selectedTerritory.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                )} */}
               </div>
-              <DialogFooter className="mt-6 border-t pt-4">
+              <DialogFooter>
                 <Button variant="outline" onClick={() => setIsViewOpen(false)}>
                   Close
                 </Button>

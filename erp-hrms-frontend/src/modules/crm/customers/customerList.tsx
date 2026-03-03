@@ -5,16 +5,18 @@ import type { Customer } from '@/types';
 import { showAlert, showConfirmDialog, getErrorMessage } from '@/lib/sweetalert';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Dialog,
     DialogContent,
     DialogDescription,
     DialogHeader,
     DialogTitle,
+    DialogFooter,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import DataTable, { TableColumn } from 'react-data-table-component';
-import { Plus, Search, Users, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Users, Eye, Edit, Trash2, Building2 } from 'lucide-react';
 
 export default function CustomerList() {
     const navigate = useNavigate();
@@ -218,43 +220,68 @@ export default function CustomerList() {
             <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
                 <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
-                        <DialogTitle>Customer Details</DialogTitle>
-                        <DialogDescription>Full information for {selectedCustomer?.name}</DialogDescription>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Building2 className="h-5 w-5 text-solarized-blue" />
+                            Customer Details
+                        </DialogTitle>
+                        <DialogDescription>
+                            Full information for {selectedCustomer?.name}
+                        </DialogDescription>
                     </DialogHeader>
                     {selectedCustomer && (
-                        <div className="grid grid-cols-2 gap-6 py-4">
-                            <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Customer Type</p>
-                                <p className="font-semibold">{selectedCustomer.customer_type || '—'}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Customer Group</p>
-                                <p className="font-semibold">{selectedCustomer.customer_group?.name || '—'}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Territory</p>
-                                <p className="font-semibold">{selectedCustomer.territory?.territory_name || '—'}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Email</p>
-                                <p className="font-semibold">{selectedCustomer.email || '—'}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Phone</p>
-                                <p className="font-semibold">{selectedCustomer.phone || '—'}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Website</p>
-                                <p className="font-semibold">{selectedCustomer.website || '—'}</p>
-                            </div>
-                            {selectedCustomer.industry && (
+                        <div className="space-y-6 py-4">
+                            <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                    <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Industry</p>
-                                    <p className="font-semibold">{selectedCustomer.industry.name || '—'}</p>
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Customer Name</Label>
+                                    <p className="text-base font-semibold text-solarized-blue">{selectedCustomer.name}</p>
                                 </div>
-                            )}
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Customer Type</Label>
+                                    <p className="text-sm font-medium">{selectedCustomer.customer_type || '—'}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Customer Group</Label>
+                                    <p className="text-sm font-medium">{selectedCustomer.customer_group?.name || '—'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Territory</Label>
+                                    <p className="text-sm font-medium">{selectedCustomer.territory?.territory_name || '—'}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Email</Label>
+                                    <p className="text-sm font-medium">{selectedCustomer.email || '—'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Phone</Label>
+                                    <p className="text-sm font-medium">{selectedCustomer.phone || '—'}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Website</Label>
+                                    <p className="text-sm font-medium truncate">{selectedCustomer.website || '—'}</p>
+                                </div>
+                                {selectedCustomer.industry && (
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Industry</Label>
+                                        <p className="text-sm font-medium">{selectedCustomer.industry.name || '—'}</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsViewOpen(false)}>
+                            Close
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
