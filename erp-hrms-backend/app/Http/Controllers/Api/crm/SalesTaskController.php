@@ -18,7 +18,7 @@ class SalesTaskController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = SalesTask::with(['taskSource', 'taskType', 'assignedUser']);
+            $query = SalesTask::with(['taskSource', 'taskType', 'assignedUser', 'details']);
 
             // Filter by task_source_id (Lead=1, Prospect=2, Opportunity=3)
             if ($request->has('task_source_id')) {
@@ -127,6 +127,10 @@ class SalesTaskController extends Controller
             'source_id'       => 'nullable|integer',
             'task_type_id'    => 'exists:task_types,id',
             'sales_assign_id' => 'nullable|exists:users,id',
+            'date'            => 'nullable|date',
+            'time'            => 'nullable',
+            'description'     => 'nullable|string',
+            'status'          => 'nullable|in:Open,In Progress,Closed',
         ]);
 
         // Validate source_id if either field is being updated
@@ -137,8 +141,28 @@ class SalesTaskController extends Controller
             $this->validateSourceId($taskSourceId, $sourceId);
         }
 
-        $salesTask->update($validated);
-        $salesTask->load(['taskSource', 'taskType', 'assignedUser']);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $salesTask) {
+            // Update main task
+            $salesTask->update(Arr::only($validated, [
+                'task_source_id',
+                'source_id',
+                'task_type_id',
+                'sales_assign_id'
+            ]));
+
+            // Update or create details (assuming one primary detail for now as per current structure)
+            $detailData = Arr::only($validated, ['date', 'time', 'description', 'status']);
+            if (!empty($detailData)) {
+                $detail = $salesTask->details()->first();
+                if ($detail) {
+                    $detail->update($detailData);
+                } else {
+                    $salesTask->details()->create($detailData);
+                }
+            }
+        });
+
+        $salesTask->load(['taskSource', 'taskType', 'assignedUser', 'details']);
         $salesTask->source_detail = $this->getSourceDetail($salesTask);
 
         return response()->json($salesTask);

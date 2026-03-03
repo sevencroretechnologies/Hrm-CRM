@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { salesTaskApi } from '@/services/api';
 import { SalesTask } from '@/types';
 import { showAlert, showConfirmDialog, getErrorMessage } from '@/lib/sweetalert';
@@ -60,7 +60,6 @@ const getSourceEntityInfo = (task: SalesTask) => {
 };
 
 export default function SalesTaskList() {
-    const navigate = useNavigate();
     const [salesTasks, setSalesTasks] = useState<SalesTask[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [search, setSearch] = useState('');
@@ -172,11 +171,29 @@ export default function SalesTaskList() {
             selector: (row) => row.assigned_user?.name || "-",
             sortable: true,
         },
-        // {
-        //     name: 'Date',
-        //     selector: (row) => row.formatted_date || new Date(row.created_at).toLocaleDateString(),
-        //     sortable: true,
-        // },
+        {
+            name: 'Date',
+            selector: (row) => row.details?.[0]?.date || "-",
+            sortable: true,
+            width: '120px',
+        },
+        {
+            name: 'Time',
+            selector: (row) => row.details?.[0]?.time || "-",
+            width: '100px',
+        },
+        {
+            name: 'Status',
+            cell: (row) => (
+                <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${row.details?.[0]?.status === 'Closed' ? 'bg-green-100 text-green-700' :
+                    row.details?.[0]?.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+                        'bg-orange-100 text-orange-700'
+                    }`}>
+                    {row.details?.[0]?.status || "-"}
+                </span>
+            ),
+            width: '120px',
+        },
         {
             name: 'Actions',
             cell: (row) => (

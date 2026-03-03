@@ -487,6 +487,7 @@ export interface SalesTask {
     name: string;
     email: string;
   };
+  details: SalesTaskDetail[];
   source_detail?: {
     id: number;
     first_name?: string;
