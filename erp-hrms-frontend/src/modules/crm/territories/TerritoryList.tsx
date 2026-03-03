@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { crmTerritoryService, adminService } from '../../../services/api';
+import { crmTerritoryService, userApi } from '../../../services/api';
 import { showAlert, showConfirmDialog, getErrorMessage } from '../../../lib/sweetalert';
 import { Card, CardContent, CardHeader } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '../../../components/ui/dropdown-menu';
 import DataTable, { TableColumn } from 'react-data-table-component';
-import { Plus, Search, MoreHorizontal, Edit, Trash2, MapPin } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Edit, Trash2, MapPin, Eye } from 'lucide-react';
 
 interface Territory {
   id: number;
@@ -50,9 +50,10 @@ export default function TerritoryList() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  
+
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedTerritory, setSelectedTerritory] = useState<Territory | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -63,12 +64,8 @@ export default function TerritoryList() {
 
   const fetchUsers = async () => {
     try {
-      const response = await adminService.dropdown();
-      if (Array.isArray(response.data)) {
-        setUsers(response.data);
-      } else if (response.data?.data && Array.isArray(response.data.data)) {
-        setUsers(response.data.data);
-      }
+      const usersData = await userApi.list({ per_page: 500 });
+      setUsers(usersData);
     } catch (error) {
       console.error('Failed to fetch users:', error);
     }
@@ -81,7 +78,7 @@ export default function TerritoryList() {
         search,
       };
       const response = await crmTerritoryService.getAll(params);
-      
+
       // Backend returns simple array [ ... ]
       if (Array.isArray(response.data)) {
         setItems(response.data);
@@ -108,14 +105,19 @@ export default function TerritoryList() {
     fetchItems();
   };
 
-  const resetForm = () => setFormData({ 
-    territory_name: '', 
-    territory_manager: '' 
+  const resetForm = () => setFormData({
+    territory_name: '',
+    territory_manager: ''
   });
 
   const handleAddClick = () => {
     resetForm();
     setIsAddOpen(true);
+  };
+
+  const handleView = (territory: Territory) => {
+    setSelectedTerritory(territory);
+    setIsViewOpen(true);
   };
 
   const handleEdit = (territory: Territory) => {
@@ -216,6 +218,9 @@ export default function TerritoryList() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleView(row)}>
+                    <Eye className="mr-2 h-4 w-4" /> View
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleEdit(row)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
             </DropdownMenuItem>
@@ -264,8 +269,8 @@ export default function TerritoryList() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="territory_manager">Territory Manager</Label>
-        <Select 
-          value={formData.territory_manager?.toString()} 
+        <Select
+          value={formData.territory_manager?.toString()}
           onValueChange={(v) => setFormData({ ...formData, territory_manager: v })}
         >
           <SelectTrigger>
@@ -358,6 +363,44 @@ export default function TerritoryList() {
             <DialogDescription>Update territory information</DialogDescription>
           </DialogHeader>
           {renderForm(handleUpdate)}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>View Territory</DialogTitle>
+            <DialogDescription>Details of the territory</DialogDescription>
+          </DialogHeader>
+          {selectedTerritory && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Territory Name</Label>
+                  <p className="font-medium text-sm">{selectedTerritory.territory_name}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Territory Manager</Label>
+                  <p className="font-medium text-sm">
+                    {selectedTerritory.manager ? selectedTerritory.manager.name : "Not Assigned"}
+                  </p>
+                </div>
+                {/* {selectedTerritory.created_at && (
+                  <div className="space-y-1">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Created At</Label>
+                    <p className="font-medium text-sm">
+                      {new Date(selectedTerritory.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                )} */}
+              </div>
+              <DialogFooter className="mt-6 border-t pt-4">
+                <Button variant="outline" onClick={() => setIsViewOpen(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
