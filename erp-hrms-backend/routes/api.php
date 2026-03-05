@@ -113,7 +113,6 @@ use App\Http\Controllers\Api\Recruitment\OfferTemplateController;
 use App\Http\Controllers\Api\Reports\DashboardController as ReportsDashboardController;
 use App\Http\Controllers\Api\Reports\DataExportController;
 use App\Http\Controllers\Api\Recruitment\CandidateSourceController;
-use App\Http\Controllers\Api\Settings\WorkingDayController;
 // Assets Controllers
 use App\Http\Controllers\Api\Reports\DataImportController;
 use App\Http\Controllers\Api\Reports\DataTableController;
