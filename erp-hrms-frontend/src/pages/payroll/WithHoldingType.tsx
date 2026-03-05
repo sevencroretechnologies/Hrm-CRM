@@ -196,19 +196,19 @@ export default function WithholdingTypes() {
     try {
       if (isEditMode && selectedType) {
         await payrollService.updateWithholdingType(selectedType.id, formData);
-        showAlert('success', 'Success', 'Withholding type updated successfully', 2000);
+        showAlert('success', 'Success', 'Deduction Types updated successfully', 2000);
       } else {
         await payrollService.createWithholdingType(formData);
-        showAlert('success', 'Success', 'Withholding type created successfully', 2000);
+        showAlert('success', 'Success', 'Deduction Types created successfully', 2000);
       }
 
       setIsDialogOpen(false);
       resetForm();
       fetchWithholdingTypes(page);
     } catch (err: any) {
-      console.error('Failed to save withholding type:', err);
+      console.error('Failed to save deduction type:', err);
 
-      const message = getErrorMessage(err, 'Failed to save withholding type');
+      const message = getErrorMessage(err, 'Failed to save deduction type');
 
       // Handle backend validation errors
       if (err.response?.data?.errors) {
@@ -225,19 +225,19 @@ export default function WithholdingTypes() {
 
   const handleDelete = async (id: number) => {
     const result = await showConfirmDialog(
-      'Delete Withholding Type',
-      'Are you sure you want to delete this withholding type?'
+      'Delete Deduction Types',
+      'Are you sure you want to delete this deduction type?'
     );
 
     if (!result.isConfirmed) return;
 
     try {
       await payrollService.deleteWithholdingType(id);
-      showAlert('success', 'Deleted!', 'Withholding type deleted successfully', 2000);
+      showAlert('success', 'Deleted!', 'Deduction Types deleted successfully', 2000);
       fetchWithholdingTypes(page);
     } catch (error) {
-      console.error('Failed to delete withholding type:', error);
-      showAlert('error', 'Error', getErrorMessage(error, 'Failed to delete withholding type'));
+      console.error('Failed to delete deduction type:', error);
+      showAlert('error', 'Error', getErrorMessage(error, 'Failed to delete deduction type'));
     }
   };
 
@@ -380,7 +380,7 @@ export default function WithholdingTypes() {
         </div>
         <Button className="bg-solarized-blue hover:bg-solarized-blue/90" onClick={handleAddClick}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Withholding Type
+          Add Deduction Types
         </Button>
       </div>
 
@@ -488,8 +488,8 @@ export default function WithholdingTypes() {
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Withholding Type Details</DialogTitle>
-            <DialogDescription>View the details of this withholding type</DialogDescription>
+            <DialogTitle>Deduction Types Details</DialogTitle>
+            <DialogDescription>View the details of this deduction type</DialogDescription>
           </DialogHeader>
 
           {selectedType && (
@@ -576,12 +576,12 @@ export default function WithholdingTypes() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {isEditMode ? 'Edit Withholding Type' : 'Add Withholding Type'}
+              {isEditMode ? 'Edit Deduction Types' : 'Add Deduction Types'}
             </DialogTitle>
             <DialogDescription>
               {isEditMode
-                ? 'Update the details of this withholding type'
-                : 'Add a new withholding type to the system'}
+                ? 'Update the details of this deduction type'
+                : 'Add a new deduction type to the system'}
             </DialogDescription>
           </DialogHeader>
 
@@ -611,7 +611,7 @@ export default function WithholdingTypes() {
                     setFormData({ ...formData, notes: e.target.value });
                     if (fieldErrors.notes) setFieldErrors(prev => ({ ...prev, notes: '' }));
                   }}
-                  placeholder="Optional notes about this withholding type..."
+                  placeholder="Optional notes about this Deduction Types..."
                   rows={3}
                   className={fieldErrors.notes ? 'border-red-500' : ''}
                 />
