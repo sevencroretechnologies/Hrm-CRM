@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { settingsService } from '../../services/api';
 import { showAlert } from '../../lib/sweetalert';
 import { Card, CardContent } from '../../components/ui/card';
@@ -36,19 +35,18 @@ interface WorkingDayConfig {
 
 interface PaginationMeta {
   current_page: number;
-  last_page: number;
+  total_pages: number;
   per_page: number;
   total: number;
 }
 
 export default function WorkingDays() {
-  const navigate = useNavigate();
   const [configs, setConfigs] = useState<WorkingDayConfig[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  const perPage = 10;
 
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -76,8 +74,8 @@ export default function WorkingDays() {
     setIsLoading(true);
     try {
       const response = await settingsService.getWorkingDays({ page, per_page: perPage });
-      setConfigs(response.data.data.data || []);
-      setMeta(response.data.data.meta);
+      setConfigs(response.data.data || []);
+      setMeta(response.data.meta);
     } catch (error) {
       console.error('Failed to fetch working days:', error);
       showAlert('error', 'Error', 'Failed to fetch working days configurations');
@@ -128,7 +126,7 @@ export default function WorkingDays() {
     setIsSaving(true);
     try {
       if (editingConfig?.id) {
-        await settingsService.updateWorkingDay(editingConfig.id, formData);
+        await settingsService.updateWorkingDay(editingConfig.id, formData as any);
         showAlert('success', 'Success', 'Working days configuration updated successfully');
       } else {
         await settingsService.createWorkingDay(formData);
@@ -277,7 +275,7 @@ export default function WorkingDays() {
       </Card>
 
       {/* Pagination */}
-      {meta && meta.last_page > 1 && (
+      {meta && meta.total_pages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-solarized-base01">
             Showing {(meta.current_page - 1) * meta.per_page + 1} to{' '}
@@ -293,13 +291,13 @@ export default function WorkingDays() {
               Previous
             </Button>
             <span className="text-sm text-solarized-base01 px-3 py-1 bg-solarized-base3 rounded">
-              Page {meta.current_page} of {meta.last_page}
+              Page {meta.current_page} of {meta.total_pages}
             </span>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setPage(page + 1)}
-              disabled={page === meta.last_page}
+              disabled={page === meta.total_pages}
             >
               Next
             </Button>
