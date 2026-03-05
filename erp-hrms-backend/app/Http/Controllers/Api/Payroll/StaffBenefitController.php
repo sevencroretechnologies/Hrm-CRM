@@ -37,7 +37,7 @@ class StaffBenefitController extends Controller
         $validated = $request->validate([
             'staff_member_id' => 'required|exists:staff_members,id',
             'benefit_type_id' => 'required|exists:benefit_types,id',
-            'description' => 'required|string|max:255',
+            'description' => 'nullable|string|max:255',
             'calculation_type' => 'required|in:fixed,percentage',
             'amount' => 'required|numeric|min:0',
             'effective_from' => 'nullable|date',

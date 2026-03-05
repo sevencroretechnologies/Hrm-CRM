@@ -112,6 +112,8 @@ use App\Http\Controllers\Api\Recruitment\OfferController;
 use App\Http\Controllers\Api\Recruitment\OfferTemplateController;
 use App\Http\Controllers\Api\Reports\DashboardController as ReportsDashboardController;
 use App\Http\Controllers\Api\Reports\DataExportController;
+use App\Http\Controllers\Api\Recruitment\CandidateSourceController;
+use App\Http\Controllers\Api\Settings\WorkingDayController;
 // Assets Controllers
 use App\Http\Controllers\Api\Reports\DataImportController;
 use App\Http\Controllers\Api\Reports\DataTableController;
@@ -144,6 +146,7 @@ use App\Http\Controllers\DocumentConfigController;
 // Settings Controllers
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentTypeController;
+
 // Travel Controllers
 use App\Http\Controllers\OrganizationController;
 
@@ -204,8 +207,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('lost-reasons', OpportunityLostReasonController::class);
     // Route::apiResource('competitors', CompetitorController::class)->only(['index', 'store', 'destroy']);
     Route::apiResource('territories', TerritoryController::class);
-    Route::apiResource('contacts', ContactController::class);
-
+    Route::apiResource('contract-types', ContractTypeController::class);
+    Route::apiResource('contracts', ContractController::class);
+    Route::post('/contracts/{contract}/renew', [ContractController::class, 'renew']);
+    Route::post('/contracts/{contract}/terminate', [ContractController::class, 'terminate']);
+    Route::get('/contracts-expiring', [ContractController::class, 'expiring']);
+    Route::get('/contracts/employee/{staffMemberId}', [ContractController::class, 'byEmployee']);
     // Master Data
     Route::apiResource('customers', CustomerController::class);
     Route::apiResource('customer-groups', CustomerGroupController::class);
@@ -250,11 +257,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // ============================================
     // Dashboard
     // ============================================
-    Route::get('/dashboard', [ReportsDashboardController::class, 'index']);
-    Route::get('/dashboard/employee-stats', [ReportsDashboardController::class, 'employeeStats']);
-    Route::get('/dashboard/attendance-summary', [ReportsDashboardController::class, 'attendanceSummary']);
-    Route::get('/dashboard/employee-growth', [ReportsDashboardController::class, 'employeeGrowth']);
-    Route::get('/dashboard/department-distribution', [ReportsDashboardController::class, 'departmentDistribution']);
+ Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/dashboard/employee-stats', [DashboardController::class, 'employeeStats']);
+    Route::get('/dashboard/attendance-summary', [DashboardController::class, 'attendanceSummary']);
+    Route::get('/dashboard/employee-growth', [DashboardController::class, 'employeeGrowth']);
+    Route::get('/dashboard/department-distribution', [DashboardController::class, 'departmentDistribution']);
 
     // ============================================
     // PROMPT SET 2: Organization Structure
@@ -326,6 +333,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('time-off-requests', TimeOffRequestController::class);
     Route::post('/time-off-requests/{timeOffRequest}/cancel', [TimeOffRequestController::class, 'cancel']);
     Route::post('/time-off-requests/{timeOffRequest}/process', [TimeOffRequestController::class, 'processApproval'])->middleware('permission:approve_time_off');
+    Route::get('/time-off-stats', [TimeOffRequestController::class, 'statistics'])->middleware('permission:view_time_off');
     Route::get('/time-off-balance', [TimeOffRequestController::class, 'getBalance'])->middleware('permission:view_time_off');
     Route::get('/leave/my-balance', [TimeOffRequestController::class, 'myBalance']);
 
@@ -375,6 +383,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ============================================
     Route::apiResource('salary-slips', SalarySlipController::class)->except(['store', 'update'])->middleware('permission:view_payslips');
     Route::get('/payroll/my-slips', [SalarySlipController::class, 'mySlips']); // No permission needed - for own slips
+    Route::post('/salary-slips/calculate', [SalarySlipController::class, 'calculate'])->middleware('permission:generate_payslips');
     Route::post('/salary-slips/generate', [SalarySlipController::class, 'generate'])->middleware('permission:generate_payslips');
     Route::post('/salary-slips/bulk-generate', [SalarySlipController::class, 'bulkGenerate'])->middleware('permission:generate_payslips');
     Route::post('/salary-slips/{salarySlip}/mark-paid', [SalarySlipController::class, 'markPaid'])->middleware('permission:generate_payslips');
@@ -426,6 +435,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/system-configurations/category/{category}', [SystemConfigurationController::class, 'getByCategory']);
     Route::delete('/system-configurations/{systemConfiguration}', [SystemConfigurationController::class, 'destroy']);
 
+    // Working Days Configuration
+    Route::apiResource('working-days', WorkingDayController::class);
+    Route::get('/working-days/count', [WorkingDayController::class, 'getWorkingDaysCount']);
+    Route::get('/working-days/active', [WorkingDayController::class, 'getActiveConfig']);
+
     // ============================================
     // PROMPT SET 18: Reports & Dashboard
     // ============================================
@@ -434,6 +448,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/leave', [ReportController::class, 'leaveReport']);
         Route::get('/payroll', [ReportController::class, 'payrollReport']);
         Route::get('/headcount', [ReportController::class, 'headcountReport']);
+        Route::get('/attendance/export', [ReportController::class, 'exportAttendanceReport']);
+        Route::get('/leave/export', [ReportController::class, 'exportLeaveReport']);
+        Route::get('/payroll/export', [ReportController::class, 'exportPayrollReport']);
     });
     Route::get('/dashboard', [ReportController::class, 'dashboard']);
 
@@ -519,11 +536,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/jobs/{job}/close', [JobController::class, 'close']);
     Route::get('/jobs/{job}/questions', [JobController::class, 'questions']);
     Route::post('/jobs/{job}/questions', [JobController::class, 'addQuestion']);
+    Route::put('/custom-questions/{question}', [JobController::class, 'updateQuestion']);
+    Route::delete('/custom-questions/{question}', [JobController::class, 'deleteQuestion']);
 
     // ============================================
     // PROMPT SET 26: Recruitment - Candidates
     // ============================================
+    Route::apiResource('candidate-sources', CandidateSourceController::class);
     Route::apiResource('candidates', CandidateController::class);
+    Route::get('/candidates/{candidate}/resume', [CandidateController::class, 'downloadResume']);
     Route::post('/candidates/{candidate}/archive', [CandidateController::class, 'archive']);
     Route::post('/candidates/{candidate}/convert-to-employee', [CandidateController::class, 'convertToEmployee']);
 
@@ -559,11 +580,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // PROMPT SET 29: Contract Management
     // ============================================
     Route::apiResource('contract-types', ContractTypeController::class);
-    Route::apiResource('staff-contracts', StaffContractController::class);
-    Route::post('/contracts/{contract}/renew', [StaffContractController::class, 'renew']);
-    Route::post('/contracts/{contract}/terminate', [StaffContractController::class, 'terminate']);
-    Route::get('/contracts-expiring', [StaffContractController::class, 'expiring']);
-    Route::get('/contracts/employee/{staffMemberId}', [StaffContractController::class, 'byEmployee']);
+    Route::apiResource('contracts', ContractController::class);
+    Route::post('/contracts/{contract}/renew', [ContractController::class, 'renew']);
+    Route::post('/contracts/{contract}/terminate', [ContractController::class, 'terminate']);
+    Route::get('/contracts-expiring', [ContractController::class, 'expiring']);
+    Route::get('/contracts/employee/{staffMemberId}', [ContractController::class, 'byEmployee']);
 
     // ============================================
     // PROMPT SET 30: Meeting Management
@@ -755,9 +776,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('users')->group(function () {
         Route::get('/', [UserRoleController::class, 'index'])->middleware('permission:view_roles');
         Route::get('/{id}', [UserRoleController::class, 'show'])->middleware('permission:view_roles');
+        Route::put('/{id}', [UserRoleController::class, 'update'])->middleware('permission:edit_users');
+        Route::delete('/{id}', [UserRoleController::class, 'destroy'])->middleware('permission:edit_users');
         Route::get('/{id}/roles', [UserRoleController::class, 'getUserRoles'])->middleware('permission:view_roles');
-        Route::post('/{id}/roles', [UserRoleController::class, 'assignRoles'])->middleware('permission:edit_roles');
-        Route::post('/{id}/roles/add', [UserRoleController::class, 'addRole'])->middleware('permission:edit_roles');
-        Route::post('/{id}/roles/remove', [UserRoleController::class, 'removeRole'])->middleware('permission:edit_roles');
+        Route::post('/{id}/roles', [UserRoleController::class, 'assignRoles'])->middleware('permission:assign_roles');
+        Route::post('/{id}/roles/add', [UserRoleController::class, 'addRole'])->middleware('permission:assign_roles');
+        Route::post('/{id}/roles/remove', [UserRoleController::class, 'removeRole'])->middleware('permission:assign_roles');
     });
+
+    // Users by Organization
+    Route::get('/users-by-org', [UsersController::class, 'getUsersByOrgId'])->middleware('permission:view_roles');
+    // Users by Company
+    Route::get('/users-by-company', [UsersController::class, 'getUsersByCompanyId'])->middleware('permission:view_roles');
 });
