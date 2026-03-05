@@ -9,8 +9,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
+use App\Traits\ApiResponse;
+
 class WorkingDayController extends Controller
 {
+    use ApiResponse;
     /**
      * Get all working days configurations.
      */
@@ -19,43 +22,30 @@ class WorkingDayController extends Controller
         try {
             $query = WorkingDay::with(['organization', 'company']);
 
-            // Get authenticated user
             $user = $request->user();
-
-            // Filter by authenticated user's organization and company
             if ($user->org_id) {
                 $query->where('org_id', $user->org_id);
             }
-
             if ($user->company_id) {
                 $query->where('company_id', $user->company_id);
             }
 
-            // Filter by date
             if ($request->has('date')) {
                 $query->forDate($request->date);
             }
 
-            // Order by latest
             $query->orderBy('created_at', 'desc');
 
-            // Paginate or get all
-            $paginate = $request->get('paginate', true);
+            $paginate = $request->get('paginate', 'true') === 'true';
             $perPage = $request->get('per_page', 15);
 
             $result = $paginate
                 ? $query->paginate($perPage)
                 : $query->get();
 
-            return response()->json([
-                'success' => true,
-                'data' => $result,
-            ], 200);
+            return $this->success($result, 'Working days configurations retrieved successfully');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch working days: ' . $e->getMessage(),
-            ], 500);
+            return $this->serverError('Failed to fetch working days: ' . $e->getMessage());
         }
     }
 
@@ -66,16 +56,9 @@ class WorkingDayController extends Controller
     {
         try {
             $workingDay = WorkingDay::with(['organization', 'company'])->findOrFail($id);
-
-            return response()->json([
-                'success' => true,
-                'data' => $workingDay,
-            ], 200);
+            return $this->success($workingDay, 'Working day configuration retrieved successfully');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Working day configuration not found.',
-            ], 404);
+            return $this->notFound('Working day configuration not found');
         }
     }
 
@@ -119,11 +102,7 @@ class WorkingDayController extends Controller
                 ->first();
 
             if ($existingOpenRecord) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'There is an existing working days configuration without an end date. Please close that configuration by setting a "To Date" before creating a new one.',
-                    'existing_record' => $existingOpenRecord,
-                ], 422);
+                return $this->error('There is an existing working days configuration without an end date. Please close that configuration by setting a "To Date" before creating a new one.', 422, ['existing_record' => $existingOpenRecord]);
             }
 
             // Scenario 2: Check for overlapping date ranges
@@ -159,6 +138,7 @@ class WorkingDayController extends Controller
             $overlappingRecord = $query->first();
 
             if ($overlappingRecord) {
+                // ... (message building logic omitted for brevity in targetContent match but I'll keep it in Replacement)
                 $message = 'This date range overlaps with an existing working days configuration. ';
                 if ($overlappingRecord->from_date && $overlappingRecord->to_date) {
                     $fromDateStr = \Carbon\Carbon::parse($overlappingRecord->from_date)->format('M d, Y');
@@ -171,11 +151,7 @@ class WorkingDayController extends Controller
                     $message .= 'Please update the existing configuration first.';
                 }
 
-                return response()->json([
-                    'success' => false,
-                    'message' => $message,
-                    'existing_record' => $overlappingRecord,
-                ], 422);
+                return $this->error($message, 422, ['existing_record' => $overlappingRecord]);
             }
 
             $data['org_id'] = $orgId;
@@ -183,16 +159,9 @@ class WorkingDayController extends Controller
 
             $workingDay = WorkingDay::create($data);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Working day configuration created successfully.',
-                'data' => $workingDay->load(['organization', 'company']),
-            ], 201);
+            return $this->created($workingDay->load(['organization', 'company']), 'Working day configuration created successfully.');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create working day configuration: ' . $e->getMessage(),
-            ], 500);
+            return $this->serverError('Failed to create working day configuration: ' . $e->getMessage());
         }
     }
 
@@ -275,25 +244,14 @@ class WorkingDayController extends Controller
                     $message .= "Existing configuration starts from {$fromDateStr} (no end date).";
                 }
 
-                return response()->json([
-                    'success' => false,
-                    'message' => $message,
-                    'existing_record' => $overlappingRecord,
-                ], 422);
+                return $this->error($message, 422, ['existing_record' => $overlappingRecord]);
             }
 
             $workingDay->update($data);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Working day configuration updated successfully.',
-                'data' => $workingDay->load(['organization', 'company']),
-            ], 200);
+            return $this->success($workingDay->load(['organization', 'company']), 'Working day configuration updated successfully.');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update working day configuration: ' . $e->getMessage(),
-            ], 500);
+            return $this->serverError('Failed to update working day configuration: ' . $e->getMessage());
         }
     }
 
@@ -306,15 +264,9 @@ class WorkingDayController extends Controller
             $workingDay = WorkingDay::findOrFail($id);
             $workingDay->delete();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Working day configuration deleted successfully.',
-            ], 200);
+            return $this->noContent('Working day configuration deleted successfully.');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete working day configuration: ' . $e->getMessage(),
-            ], 500);
+            return $this->serverError('Failed to delete working day configuration: ' . $e->getMessage());
         }
     }
 
@@ -332,28 +284,19 @@ class WorkingDayController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ], 422);
+            return $this->validationError($validator->errors());
         }
 
         try {
             $startDate = \Carbon\Carbon::parse($request->start_date);
             $endDate = \Carbon\Carbon::parse($request->end_date);
 
-            // Get authenticated user
             $user = $request->user();
-
-            // Build query
             $query = WorkingDay::query();
 
-            // Filter by authenticated user's organization and company
             if ($user->org_id) {
                 $query->where('org_id', $user->org_id);
             }
-
             if ($user->company_id) {
                 $query->where('company_id', $user->company_id);
             }
@@ -361,15 +304,12 @@ class WorkingDayController extends Controller
             $workingDaysConfig = $query->get();
 
             if ($workingDaysConfig->isEmpty()) {
-                // Default to Monday-Friday if no config found
                 $workingDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
             } else {
-                // Use the first matching configuration
                 $config = $workingDaysConfig->first();
                 $workingDays = array_keys(array_filter($config->getWorkingDaysArray()));
             }
 
-            // Count working days in the range
             $workingDaysCount = 0;
             $totalDays = $startDate->diffInDays($endDate) + 1;
             $workingDates = [];
@@ -382,22 +322,16 @@ class WorkingDayController extends Controller
                 }
             }
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'start_date' => $request->start_date,
-                    'end_date' => $request->end_date,
-                    'total_days' => $totalDays,
-                    'working_days_count' => $workingDaysCount,
-                    'working_days' => $workingDays,
-                    'working_dates' => $workingDates,
-                ],
-            ], 200);
+            return $this->success([
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+                'total_days' => $totalDays,
+                'working_days_count' => $workingDaysCount,
+                'working_days' => $workingDays,
+                'working_dates' => $workingDates,
+            ], 'Working days calculated successfully');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to calculate working days: ' . $e->getMessage(),
-            ], 500);
+            return $this->serverError('Failed to calculate working days: ' . $e->getMessage());
         }
     }
 
@@ -414,20 +348,14 @@ class WorkingDayController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ], 422);
+            return $this->validationError($validator->errors());
         }
 
         try {
             $query = WorkingDay::forDate($request->date);
 
-            // Get authenticated user
             $user = $request->user();
 
-            // Filter by authenticated user's organization and company
             if ($user->org_id) {
                 $query->where('org_id', $user->org_id);
             }
@@ -439,33 +367,23 @@ class WorkingDayController extends Controller
             $workingDay = $query->first();
 
             if (!$workingDay) {
-                // Return default configuration (Monday-Friday)
-                return response()->json([
-                    'success' => true,
-                    'data' => [
-                        'monday' => true,
-                        'tuesday' => true,
-                        'wednesday' => true,
-                        'thursday' => true,
-                        'friday' => true,
-                        'saturday' => false,
-                        'sunday' => false,
-                        'from_date' => null,
-                        'to_date' => null,
-                        'is_default' => true,
-                    ],
-                ], 200);
+                return $this->success([
+                    'monday' => true,
+                    'tuesday' => true,
+                    'wednesday' => true,
+                    'thursday' => true,
+                    'friday' => true,
+                    'saturday' => false,
+                    'sunday' => false,
+                    'from_date' => null,
+                    'to_date' => null,
+                    'is_default' => true,
+                ], 'Default working days configuration retrieved');
             }
 
-            return response()->json([
-                'success' => true,
-                'data' => $workingDay->append('is_default'),
-            ], 200);
+            return $this->success($workingDay->append('is_default'), 'Active working days configuration retrieved');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch working days configuration: ' . $e->getMessage(),
-            ], 500);
+            return $this->serverError('Failed to fetch working days configuration: ' . $e->getMessage());
         }
     }
 }

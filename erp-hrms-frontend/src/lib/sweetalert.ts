@@ -79,7 +79,29 @@ export const showLogoutDialog = async () => {
 
 export const getErrorMessage = (error: unknown, fallbackMessage: string): string => {
   if (error && typeof error === "object" && "response" in error) {
-    const axiosError = error as { response?: { data?: { message?: string } } };
+    const axiosError = error as {
+      response?: {
+        data?: {
+          message?: string;
+          errors?: Record<string, string[] | string>;
+        }
+      }
+    };
+
+    // If there are specific validation errors, prioritize the first one
+    if (axiosError.response?.data?.errors) {
+      const errors = axiosError.response.data.errors;
+      const firstErrorKey = Object.keys(errors)[0];
+      if (firstErrorKey) {
+        const errorVal = errors[firstErrorKey];
+        if (Array.isArray(errorVal) && errorVal.length > 0) {
+          return errorVal[0];
+        } else if (typeof errorVal === 'string') {
+          return errorVal;
+        }
+      }
+    }
+
     return axiosError.response?.data?.message || fallbackMessage;
   }
   return fallbackMessage;

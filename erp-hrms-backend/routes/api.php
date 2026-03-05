@@ -118,6 +118,7 @@ use App\Http\Controllers\Api\Reports\DataTableController;
 // Company Controllers
 use App\Http\Controllers\Api\Reports\ReportController;
 use App\Http\Controllers\Api\Settings\AllowedIpAddressController;
+use App\Http\Controllers\Api\Settings\WorkingDayController;
 use App\Http\Controllers\Api\Settings\SystemConfigurationController;
 use App\Http\Controllers\Api\Staff\ContractController as StaffContractController;
 use App\Http\Controllers\Api\Staff\ContractTypeController;
@@ -419,6 +420,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // ============================================
     Route::apiResource('allowed-ip-addresses', AllowedIpAddressController::class);
     Route::get('/check-ip', [AllowedIpAddressController::class, 'check']);
+    
+    // Working Days
+    Route::get('working-days/count', [WorkingDayController::class, 'getWorkingDaysCount']);
+    Route::get('working-days/active', [WorkingDayController::class, 'getActiveConfig']);
+    Route::apiResource('working-days', WorkingDayController::class);
+
     Route::get('/system-configurations', [SystemConfigurationController::class, 'index']);
     Route::post('/system-configurations/get', [SystemConfigurationController::class, 'getValue']);
     Route::post('/system-configurations/set', [SystemConfigurationController::class, 'setValue']);
