@@ -207,6 +207,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('lost-reasons', OpportunityLostReasonController::class);
     // Route::apiResource('competitors', CompetitorController::class)->only(['index', 'store', 'destroy']);
     Route::apiResource('territories', TerritoryController::class);
+    Route::apiResource('contacts', ContactController::class);
     Route::apiResource('contract-types', ContractTypeController::class);
     Route::apiResource('contracts', ContractController::class);
     Route::post('/contracts/{contract}/renew', [ContractController::class, 'renew']);
