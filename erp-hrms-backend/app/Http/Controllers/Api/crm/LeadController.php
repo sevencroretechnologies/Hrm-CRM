@@ -19,7 +19,7 @@ class LeadController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Lead::query();
+            $query = Lead::without(['status', 'source', 'requestType', 'industry']);
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -51,9 +51,13 @@ class LeadController extends Controller
                 ->paginate($perPage)
                 ->appends($queryParameters);
 
+            $data->getCollection()->transform(function ($item) {
+                return $item->makeHidden(['created_at', 'updated_at', 'deleted_at']);
+            });
+
             return response()->json([
                 'message' => 'All leads retrieved successfully.',
-                'data' => $data,
+                'data' => $data->items(),
                 'pagination' => [
                     'current_page' => $data->currentPage(),
                     'total_pages' => $data->lastPage(),

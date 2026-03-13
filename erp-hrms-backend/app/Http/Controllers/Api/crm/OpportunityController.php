@@ -16,7 +16,10 @@ class OpportunityController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Opportunity::with(['status', 'lead', 'customer']);
+            $query = Opportunity::without([
+                'opportunityType', 'opportunityStage', 'source', 'status', 'industry', 
+                'owner', 'lead', 'customer', 'contact', 'prospect', 'items'
+            ]);
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -45,9 +48,13 @@ class OpportunityController extends Controller
                 ->paginate($perPage)
                 ->appends($queryParameters);
 
+            $data->getCollection()->transform(function ($item) {
+                return $item->makeHidden(['created_at', 'updated_at', 'deleted_at']);
+            });
+
             return response()->json([
                 'message' => 'All opportunities retrieved successfully.',
-                'data' => $data,
+                'data' => $data->items(),
                 'pagination' => [
                     'current_page' => $data->currentPage(),
                     'total_pages' => $data->lastPage(),
