@@ -65,6 +65,16 @@ class OpportunityController extends Controller
         }
     }
 
+    public function getOpportunity(): JsonResponse
+    {
+        $opportunity = Opportunity::get();
+
+        return response()->json([
+            'message' => 'All Opportunities retrieved successfully.',
+            'data' => $opportunity,
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
