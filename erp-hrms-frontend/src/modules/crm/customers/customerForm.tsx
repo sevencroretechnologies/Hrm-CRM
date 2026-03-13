@@ -106,8 +106,8 @@ export default function CustomerForm() {
                 ] = await Promise.all([
                     fetchResilient(() => customerGroupApi.list()),
                     fetchResilient(() => territoryApi.list()),
-                    fetchResilient(() => leadApi.list()),
-                    fetchResilient(() => opportunityApi.list()),
+                    fetchResilient(() => leadApi.getLead()),
+                    fetchResilient(() => opportunityApi.getOpportunity()),
                     fetchResilient(() => industryTypeApi.list()),
                     fetchResilient(() => priceListApi.list()),
                     fetchResilient(() => paymentTermApi.list()),

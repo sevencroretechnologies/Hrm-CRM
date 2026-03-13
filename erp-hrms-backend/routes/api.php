@@ -177,15 +177,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('dashboard/lead-conversion-funnel', [DashboardController::class , 'leadConversionFunnel']);
         Route::get('dashboard/opportunity-pipeline', [DashboardController::class , 'opportunityPipeline']);
 
-        Route::apiResource('leads', LeadController::class);
-        Route::post('leads/{id}/convert-to-opportunity', [LeadController::class , 'convertToOpportunity']);
-        Route::post('leads/{id}/add-to-prospect', [LeadController::class , 'addToProspect']);
-        Route::post('leads/{id}/create-prospect', [LeadController::class , 'createProspect']);
-
-        Route::apiResource('opportunities', OpportunityController::class);
-        Route::post('opportunities/{id}/declare-lost', [OpportunityController::class , 'declareLost']);
-        Route::get('opportunities/{id}/products', [OpportunityController::class , 'getProducts']);
-        Route::post('opportunities/set-multiple-status', [OpportunityController::class , 'setMultipleStatus']);
+    Route::get('leads/get-lead', [LeadController::class, 'getLead']);
+    Route::apiResource('leads', LeadController::class);
+    Route::post('leads/{id}/convert-to-opportunity', [LeadController::class, 'convertToOpportunity']);
+    Route::post('leads/{id}/add-to-prospect', [LeadController::class, 'addToProspect']);
+    Route::post('leads/{id}/create-prospect', [LeadController::class, 'createProspect']);
+  
+    Route::get('opportunity/get-opportunity', [OpportunityController::class, 'getOpportunity']);
+    Route::apiResource('opportunities', OpportunityController::class);
+    Route::post('opportunities/{id}/declare-lost', [OpportunityController::class, 'declareLost']);
+    Route::get('opportunities/{id}/products', [OpportunityController::class, 'getProducts']);
+    Route::post('opportunities/set-multiple-status', [OpportunityController::class, 'setMultipleStatus']);
 
         Route::apiResource('prospects', ProspectController::class);
 

@@ -75,6 +75,16 @@ class LeadController extends Controller
         }
     }
 
+    public function getLead(): JsonResponse
+    {
+        $lead = Lead::get();
+
+        return response()->json([
+            'message' => 'All Leads retrieved successfully.',
+            'data' => $lead,
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
