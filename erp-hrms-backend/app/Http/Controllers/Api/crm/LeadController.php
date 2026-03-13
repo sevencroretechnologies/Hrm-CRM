@@ -19,7 +19,7 @@ class LeadController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Lead::without(['status', 'source', 'requestType', 'industry']);
+            $query = Lead::with(['status:id,status_name', 'source:id,name'])->without(['requestType', 'industry']);
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -52,6 +52,13 @@ class LeadController extends Controller
                 ->appends($queryParameters);
 
             $data->getCollection()->transform(function ($item) {
+                if ($item->status) {
+                    $item->status_name = $item->status->status_name;
+                }
+                if ($item->source) {
+                    $item->source_name = $item->source->name;
+                }
+                unset($item->status, $item->source);
                 return $item->makeHidden(['created_at', 'updated_at', 'deleted_at']);
             });
 

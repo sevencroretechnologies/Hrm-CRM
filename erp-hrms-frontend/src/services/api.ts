@@ -91,7 +91,12 @@ export const industryTypeApi = {
 };
 
 export const leadApi = {
-  list: (params?: Record<string, any>) => api.get<WrappedPaginatedResponse<Lead>>('/leads', { params }).then(res => res.data.data),
+  list: (params?: Record<string, any>) => api.get<WrappedPaginatedResponse<Lead>>('/leads', { params }).then(res => {
+      const data = res.data;
+      if (Array.isArray(data)) return data as any;
+      if (data && typeof data === 'object' && Array.isArray((data as any).data)) return data as any;
+      return (data as any).data || data;
+  }),
   getLead: () => api.get('/leads/get-lead').then(res => res.data.data || res.data),
   get: (id: number) => api.get(`/leads/${id}`).then(res => res.data.data || res.data),
   create: (data: any) => api.post('/leads', data).then(res => res.data),
@@ -152,7 +157,12 @@ export const lostReasonApi = {
 
 export const customerApi = {
   list: (params?: Record<string, string | number>) =>
-    api.get<WrappedPaginatedResponse<Customer>>("/customers", { params }).then((r) => r.data.data),
+    api.get<WrappedPaginatedResponse<Customer>>("/customers", { params }).then((r) => {
+      const data = r.data;
+      if (Array.isArray(data)) return data as any;
+      if (data && typeof data === 'object' && Array.isArray((data as any).data)) return data as any;
+      return (data as any).data || data;
+    }),
   get: (id: number) => api.get<Customer>(`/customers/${id}`).then((r) => r.data),
   create: (data: Partial<Customer>) =>
     api.post<Customer>("/customers", data).then((r) => r.data),

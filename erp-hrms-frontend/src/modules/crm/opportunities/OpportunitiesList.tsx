@@ -6,7 +6,7 @@ import {
   crmOpportunityLostReasonService
 } from '../../../services/api';
 import { showAlert, showConfirmDialog, getErrorMessage } from '../../../lib/sweetalert';
-import { Card, CardContent, CardHeader } from '../../../components/ui/card';
+import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
@@ -41,8 +41,10 @@ interface Opportunity {
   company_name: string | null;
   to_discuss: string | null;
   status_id: number | null;
+  status_name?: string;
   status: OppStatus | null;
   opportunity_stage_id: number | null;
+  stage_name?: string;
   opportunity_stage: OppStage | null;
   created_at: string;
   items?: { amount: string | number }[];
@@ -81,6 +83,13 @@ function extractList<T>(raw: any): T[] {
 
 function extractTotal(raw: any): number {
   if (!raw) return 0;
+  
+  // Directly check the raw response first for pagination
+  if (raw.pagination && typeof raw.pagination.total_items === 'number') {
+    return raw.pagination.total_items;
+  }
+  if (typeof raw.total === 'number') return raw.total;
+
   const body = raw.data || raw;
 
   if (body && typeof body === 'object') {
@@ -88,7 +97,6 @@ function extractTotal(raw: any): number {
     if (body.data && typeof body.data === 'object' && typeof body.data.total === 'number') {
       return body.data.total;
     }
-    // Also check for the "pagination" object if present
     if (body.pagination && typeof body.pagination.total_items === 'number') {
       return body.pagination.total_items;
     }
@@ -227,29 +235,30 @@ export default function OpportunitiesList() {
 
   // ── DataTable columns — mirrors crm-frontend Table columns ────────────────────
   const columns: TableColumn<Opportunity>[] = [
-    // {
-    //   name: 'Party Name',
-    //   cell: (row) => <span className="font-medium text-solarized-blue">{row.party_name || `#${row.id}`}</span>,
-    //   minWidth: '200px',
-    // },
     {
-      name: 'Party',
+      name: 'Opportunity Code',
+      cell: (row) => (
+        <span className="font-medium text-solarized-blue">
+          {row.naming_series || `#${row.id}`}
+        </span>
+      ),
+      width: '180px',
+    },
+    {
+      name: 'Party Name',
       cell: (row) => {
         let party = '-';
 
         if (row.opportunity_from === 'lead' && row.lead) {
           party = [row.lead.first_name, row.lead.last_name]
             .filter(Boolean)
-            .join(' ');
+            .join(' ') || '-';
         }
         else if (row.opportunity_from === 'customer' && row.customer) {
           party = row.customer.name || '-';
         }
         else if (row.party_name) {
           party = row.party_name;
-        }
-        else if (row.naming_series) {
-          party = row.naming_series;
         }
 
         return <span className="font-medium">{party}</span>;
@@ -263,12 +272,12 @@ export default function OpportunitiesList() {
     },
     {
       name: 'Status',
-      cell: (row) => row.status?.status_name ? statusBadge(row.status.status_name) : <span className="text-muted-foreground">—</span>,
+      cell: (row) => row.status_name ? statusBadge(row.status_name) : <span className="text-muted-foreground">—</span>,
       width: '130px',
     },
     {
       name: 'Stage',
-      selector: (row) => row.opportunity_stage?.name || '-',
+      selector: (row) => row.stage_name || '-',
     },
     {
       name: 'Amount',
@@ -402,15 +411,20 @@ export default function OpportunitiesList() {
           </DialogHeader>
           {selected && (
             <div className="space-y-6 py-4">
+              <div className="space-y-1 block mb-4">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Opportunity Code</Label>
+                <p className="text-xl font-bold text-solarized-blue">{selected.naming_series || `#${selected.id}`}</p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Customer / Party</Label>
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Customer / Party Name</Label>
                   <p className="text-base font-semibold text-solarized-blue">
                     {(() => {
                       if (selected.opportunity_from === 'lead' && selected.lead) {
-                        return [selected.lead.first_name, selected.lead.last_name].filter(Boolean).join(' ');
+                        return [selected.lead.first_name, selected.lead.last_name].filter(Boolean).join(' ') || '—';
                       } else if (selected.opportunity_from === 'customer' && selected.customer) {
-                        return selected.customer.name;
+                        return selected.customer.name || '—';
                       }
                       return selected.party_name || '—';
                     })()}
@@ -430,7 +444,7 @@ export default function OpportunitiesList() {
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Status</Label>
                   <div>
-                    {selected.status?.status_name ? statusBadge(selected.status.status_name) : '—'}
+                    {selected?.status_name ? statusBadge(selected.status_name) : '—'}
                   </div>
                 </div>
               </div>
@@ -438,7 +452,7 @@ export default function OpportunitiesList() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Stage</Label>
-                  <p className="text-sm font-medium">{selected.opportunity_stage?.name || '—'}</p>
+                  <p className="text-sm font-medium">{selected?.stage_name || '—'}</p>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Amount</Label>

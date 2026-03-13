@@ -16,16 +16,14 @@ class CustomerController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Customer::without([
-                'customerGroup',
-                'territory',
-                'lead',
-                'opportunity',
-                'industry',
-                'priceList',
-                'paymentTerm',
-                'primaryContact'
-            ]);
+            $query = Customer::with(['customerGroup:id,name', 'territory:id,territory_name', 'industry:id,name'])
+                ->without([
+                    'lead',
+                    'opportunity',
+                    'priceList',
+                    'paymentTerm',
+                    'primaryContact'
+                ]);
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -50,6 +48,16 @@ class CustomerController extends Controller
             $data = $query->latest()->paginate($perPage)->appends($queryParameters);
 
             $data->getCollection()->transform(function ($item) {
+                if ($item->customerGroup) {
+                    $item->customer_group_name = $item->customerGroup->name;
+                }
+                if ($item->territory) {
+                    $item->territory_name = $item->territory->territory_name;
+                }
+                if ($item->industry) {
+                    $item->industry_name = $item->industry->name;
+                }
+                unset($item->customerGroup, $item->territory, $item->industry);
                 return $item->makeHidden(['created_at', 'updated_at', 'deleted_at']);
             });
 

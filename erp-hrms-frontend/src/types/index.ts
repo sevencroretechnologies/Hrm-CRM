@@ -8,8 +8,10 @@ export interface Lead {
   job_title: string | null;
   gender: string | null;
   status_id: number | null;
+  status_name?: string;
   status: Status | null;
   source_id: number | null;
+  source_name?: string;
   source: Source | null;
   request_type_id: number | null;
   request_type: RequestType | null;
@@ -58,7 +60,9 @@ export interface Opportunity {
   owner: { id: number; name: string; email: string } | null;
   probability: number | null;
   status_id: number | null;
+  status_name?: string;
   status: Status | null;
+  stage_name?: string;
   company_name: string | null;
   industry_id: number | null;
   industry: IndustryType | null;
@@ -432,14 +436,17 @@ export interface Customer {
   name: string;
   customer_type: string | null;
   customer_group_id: number | null;
+  customer_group_name?: string;
   customer_group: CustomerGroup | null;
   territory_id: number | null;
+  territory_name?: string;
   territory: Territory | null;
   lead_id: number | null;
   lead: Lead | null;
   opportunity_id: number | null;
   opportunity: Opportunity | null;
   industry_id: number | null;
+  industry_name?: string;
   industry: IndustryType | null;
   default_price_list_id: number | null;
   price_list: PriceList | null;

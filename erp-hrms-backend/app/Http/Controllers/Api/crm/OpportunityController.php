@@ -16,10 +16,16 @@ class OpportunityController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Opportunity::without([
-                'opportunityType', 'opportunityStage', 'source', 'status', 'industry', 
-                'owner', 'lead', 'customer', 'contact', 'prospect', 'items'
-            ]);
+            $query = Opportunity::with([
+                'status:id,status_name', 
+                'opportunityStage:id,name',
+                'customer:id,name',
+                'lead:id,first_name,last_name'
+            ])
+                ->without([
+                    'opportunityType', 'source', 'industry', 
+                    'owner', 'contact', 'prospect', 'items'
+                ]);
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -49,6 +55,13 @@ class OpportunityController extends Controller
                 ->appends($queryParameters);
 
             $data->getCollection()->transform(function ($item) {
+                if ($item->status) {
+                    $item->status_name = $item->status->status_name;
+                }
+                if ($item->opportunityStage) {
+                    $item->stage_name = $item->opportunityStage->name;
+                }
+                unset($item->status, $item->opportunityStage);
                 return $item->makeHidden(['created_at', 'updated_at', 'deleted_at']);
             });
 
