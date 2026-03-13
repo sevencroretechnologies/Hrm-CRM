@@ -237,7 +237,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('enums/genders', [EnumController::class , 'genders']);
 
     // Route::get('settings', [CrmSettingController::class, 'show']);
-    // Route::put('settings', [CrmSettingController::class, 'update']);    });
+    // Route::put('settings', [CrmSettingController::class, 'update']);
+});
 
 
 
@@ -806,4 +807,5 @@ Route::middleware('auth:sanctum')->group(function () {
         // Users by Organization
         Route::get('/users-by-org', [UsersController::class , 'getUsersByOrgId'])->middleware('permission:view_roles');
         // Users by Company
-        Route::get('/users-by-company', [UsersController::class , 'getUsersByCompanyId'])->middleware('permission:view_roles');    });
+        Route::get('/users-by-company', [UsersController::class , 'getUsersByCompanyId'])->middleware('permission:view_roles');
+});
