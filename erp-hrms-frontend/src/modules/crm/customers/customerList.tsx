@@ -279,7 +279,7 @@ export default function CustomerList() {
                                 {selectedCustomer.industry_id && (
                                     <div className="space-y-1">
                                         <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Industry</Label>
-                                        <p className="text-sm font-medium">Industry ID: {selectedCustomer.industry_id}</p>
+                                        <p className="text-sm font-medium">{selectedCustomer.industry_name}</p>
                                     </div>
                                 )}
                             </div>

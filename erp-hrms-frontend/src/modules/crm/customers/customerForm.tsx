@@ -43,6 +43,7 @@ import {
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Loader2, ChevronLeft } from "lucide-react";
+import { set } from "date-fns";
 
 const CUSTOMER_TYPES = ['Company', 'Individual', 'Partnership'];
 
@@ -86,6 +87,7 @@ export default function CustomerForm() {
     useEffect(() => {
         const loadOptions = async () => {
             try {
+                setLoading(true);
                 const fetchResilient = async (apiCall: () => Promise<any>) => {
                     try {
                         return await apiCall();
@@ -124,6 +126,9 @@ export default function CustomerForm() {
                 setContacts(Array.isArray(contactsRes) ? contactsRes : (contactsRes as any).data || []);
             } catch (error) {
                 console.error("Critical error in loadOptions:", error);
+            }
+            finally {
+                setLoading(false);
             }
         };
 
