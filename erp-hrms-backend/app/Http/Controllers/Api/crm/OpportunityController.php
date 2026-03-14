@@ -20,12 +20,10 @@ class OpportunityController extends Controller
                 'status:id,status_name', 
                 'opportunityStage:id,name',
                 'customer:id,name',
-                'lead:id,first_name,last_name'
-            ])
-                ->without([
-                    'opportunityType', 'source', 'industry', 
-                    'owner', 'contact', 'prospect', 'items'
-                ]);
+                'lead:id,first_name,last_name',
+                'opportunityType', 'source', 'industry', 
+                'owner', 'contact', 'prospect', 'items'
+            ]);
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -166,12 +164,12 @@ class OpportunityController extends Controller
             }
         }
 
-        return response()->json($opportunity->fresh('items', 'lostReasons'), 201);
+        return response()->json($opportunity->fresh(['items', 'lostReasons', 'opportunityType', 'opportunityStage', 'source', 'status', 'industry']), 201);
     }
 
     public function show(int $id): JsonResponse
     {
-        $opportunity = Opportunity::with('items')->findOrFail($id);
+        $opportunity = Opportunity::with(['items', 'opportunityType', 'opportunityStage', 'source', 'status', 'industry'])->findOrFail($id);
         return response()->json($opportunity);
     }
 
@@ -251,7 +249,7 @@ class OpportunityController extends Controller
             }
         }
 
-        return response()->json($opportunity->fresh('items', 'lostReasons'));
+        return response()->json($opportunity->fresh(['items', 'lostReasons', 'opportunityType', 'opportunityStage', 'source', 'status', 'industry']));
     }
 
     public function destroy(int $id): JsonResponse

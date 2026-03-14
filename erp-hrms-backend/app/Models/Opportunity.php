@@ -84,8 +84,6 @@ class Opportunity extends Model
         'with_items' => 'boolean',
     ];
 
-    protected $with = ['opportunityType', 'opportunityStage', 'source', 'status', 'industry'];
-
     public function opportunityType(): BelongsTo
     {
         return $this->belongsTo(OpportunityType::class);

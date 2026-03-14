@@ -19,7 +19,7 @@ class LeadController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Lead::with(['status:id,status_name', 'source:id,name'])->without(['requestType', 'industry']);
+            $query = Lead::with(['status', 'source', 'requestType', 'industry']);
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -125,13 +125,13 @@ class LeadController extends Controller
         return DB::transaction(function () use ($validated) {
             $lead = Lead::create($validated);
             $this->syncProspect($lead);
-            return response()->json($lead->fresh(), 201);
+            return response()->json($lead->fresh(['status', 'source', 'requestType', 'industry']), 201);
         });
     }
 
     public function show(int $id): JsonResponse
     {
-        $lead = Lead::findOrFail($id);
+        $lead = Lead::with(['status', 'source', 'requestType', 'industry'])->findOrFail($id);
         return response()->json($lead);
     }
 
@@ -169,7 +169,7 @@ class LeadController extends Controller
             $lead = Lead::findOrFail($id);
             $lead->update($validated);
             $this->syncProspect($lead);
-            return response()->json($lead->fresh());
+            return response()->json($lead->fresh(['status', 'source', 'requestType', 'industry']));
         });
     }
 

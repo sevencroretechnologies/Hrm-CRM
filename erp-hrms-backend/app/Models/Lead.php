@@ -74,8 +74,6 @@ class Lead extends Model
         'gender' => Gender::class,
     ];
 
-    protected $with = ['status', 'source', 'requestType', 'industry'];
-
     public function status(): BelongsTo
     {
         return $this->belongsTo(Status::class);
