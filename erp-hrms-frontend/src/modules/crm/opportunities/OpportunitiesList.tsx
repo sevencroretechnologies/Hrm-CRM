@@ -321,7 +321,8 @@ export default function OpportunitiesList() {
             <DropdownMenuItem onClick={() => navigate(`/crm/opportunities/${row.id}/edit`)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
             </DropdownMenuItem>
-            {row.status?.status_name?.toLowerCase() !== 'lost' && (
+            {/* Only show Mark as Lost if status is NOT 'lost' */}
+            {row.status_name?.toLowerCase() !== 'lost' && (
               <DropdownMenuItem onClick={() => handleMarkAsLostClick(row)}>
                 <XCircle className="mr-2 h-4 w-4 text-orange-600" /> Mark as Lost
               </DropdownMenuItem>
@@ -441,10 +442,10 @@ export default function OpportunitiesList() {
                     })()}
                   </p>
                 </div>
-                <div className="space-y-1">
+                {/* <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Company</Label>
                   <p className="text-base font-medium">{selected.company_name || '—'}</p>
-                </div>
+                </div> */}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
