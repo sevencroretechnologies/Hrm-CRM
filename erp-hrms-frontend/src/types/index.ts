@@ -44,6 +44,7 @@ export interface Lead {
 
 export interface Opportunity {
   id: number;
+  name: string | null;
   naming_series: string | null;
   opportunity_type_id: number | null;
   opportunity_type: OpportunityType | null;
