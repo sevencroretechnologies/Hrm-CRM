@@ -509,7 +509,7 @@ const navigation: NavItem[] = [
     children: [
       { name: "Dashboard", href: "/crm/dashboard" },
       { name: "Leads", href: "/crm/leads" },
-      { name: "Customers", href: "/crm/customers" },
+      { name: "Customers from Leads or Opportunities", href: "/crm/customers" },
       { name: "Opportunities", href: "/crm/opportunities" },
       { name: "Campaigns", href: "/crm/campaigns" },
       { name: "Sources", href: "/crm/sources" },

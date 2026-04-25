@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
     customerApi,
+    customerBankDetailApi,
     customerGroupApi,
     territoryApi,
     leadApi,
@@ -61,6 +62,13 @@ interface EmailRow {
     is_primary: boolean;
 }
 
+interface BankRow {
+    id?: number;
+    bank_name: string;
+    account_no: string;
+    ifsc_code: string;
+}
+
 export default function CustomerForm() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -84,13 +92,15 @@ export default function CustomerForm() {
         website: "",
         tax_id: "",
         billing_currency: "",
-        bank_account_details: "",
         print_language: "",
         customer_details: "",
     });
 
+    // Bank Details State
+    const [bankRows, setBankRows] = useState<BankRow[]>([{ bank_name: "", account_no: "", ifsc_code: "" }]);
+
     // Contact Details State
-    const [includeContact, setIncludeContact] = useState(false);
+    const [includeContact, setIncludeContact] = useState(true);
     const [genders, setGenders] = useState<EnumOption[]>([]);
     const [contactForm, setContactForm] = useState({
         salutation: "",
@@ -190,10 +200,25 @@ export default function CustomerForm() {
                         website: customer.website || "",
                         tax_id: customer.tax_id || "",
                         billing_currency: customer.billing_currency || "",
-                        bank_account_details: customer.bank_account_details || "",
                         print_language: customer.print_language || "",
                         customer_details: customer.customer_details || "",
                     });
+
+                    // Load existing bank details for edit mode
+                    try {
+                        const res = await customerBankDetailApi.list(Number(id)) as any;
+                        const banks = res.data || res;
+                        if (Array.isArray(banks) && banks.length > 0) {
+                            setBankRows(banks.map((b: any) => ({
+                                id: b.id,
+                                bank_name: b.bank_name || "",
+                                account_no: b.account_no || "",
+                                ifsc_code: b.ifsc_code || "",
+                            })));
+                        }
+                    } catch (error) {
+                        console.error("Error loading bank details:", error);
+                    }
 
                     if (customer.customer_contact_id && customer.primary_contact) {
                         setIncludeContact(true);
@@ -238,39 +263,7 @@ export default function CustomerForm() {
             };
             fetchCustomer();
         }
-        if (!id) return;
-        const fetchCustomer = async () => {
-            setLoading(true);
-            try {
-                const customer = await customerApi.get(Number(id));
-                setForm({
-                    name: customer.name || "",
-                    customer_type: customer.customer_type || "",
-                    customer_group_id: customer.customer_group_id?.toString() || "",
-                    territory_id: customer.territory_id?.toString() || "",
-                    lead_id: customer.lead_id?.toString() || "",
-                    opportunity_id: customer.opportunity_id?.toString() || "",
-                    industry_id: customer.industry_id?.toString() || "",
-                    default_price_list_id: customer.default_price_list_id?.toString() || "",
-                    payment_term_id: customer.payment_term_id?.toString() || "",
-                    customer_contact_id: customer.customer_contact_id?.toString() || "",
-                    email: customer.email || "",
-                    phone: customer.phone || "",
-                    website: customer.website || "",
-                    tax_id: customer.tax_id || "",
-                    billing_currency: customer.billing_currency || "",
-                    bank_account_details: customer.bank_account_details || "",
-                    print_language: customer.print_language || "",
-                    customer_details: customer.customer_details || "",
-                });
-            } catch (error) {
-                showAlert("error", "Error", getErrorMessage(error, "Failed to fetch customer details"));
-                navigate("/crm/customers");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchCustomer();
+        // (secondary fetch block removed — handled in the first useEffect above)
     }, [id, navigate]);
 
     const setField = (key: string, value: any) => setForm((p) => ({ ...p, [key]: value }));
@@ -330,6 +323,12 @@ export default function CustomerForm() {
         return o.naming_series || `Opportunity #${o.id}`;
     };
 
+    // ─── Bank Row Handlers ────────────────────────────────────────────────────
+    const addBankRow = () => setBankRows((r) => [...r, { bank_name: "", account_no: "", ifsc_code: "" }]);
+    const removeBankRow = (index: number) => setBankRows((r) => r.filter((_, i) => i !== index));
+    const updateBankRow = (index: number, key: keyof BankRow, value: string) =>
+        setBankRows((r) => r.map((row, i) => (i === index ? { ...row, [key]: value } : row)));
+
     // Phone Handlers
     const addContactPhone = () => setContactPhones((p) => [...p, { phone_no: "", is_primary: false }]);
     const removeContactPhone = (index: number) => {
@@ -386,55 +385,40 @@ export default function CustomerForm() {
                 if (payload[key] === "" || payload[key] === null) payload[key] = null;
             });
 
-            // Reusable contact payload base
-            const getContactPayload = (customerIdStr: string | number) => ({
-                ...contactForm,
-                salutation: contactForm.salutation || null,
-                middle_name: contactForm.middle_name || null,
-                last_name: contactForm.last_name || null,
-                designation: contactForm.designation || null,
-                gender: contactForm.gender || null,
-                company_name: form.name || null,
-                status: 'Open',
-                customer_id: Number(customerIdStr),
-                phones: contactPhones
-                    .filter((p) => p.phone_no.trim() !== "")
-                    .map((p) => ({ phone_no: p.phone_no.trim(), is_primary: p.is_primary })),
-                emails: contactEmails
-                    .filter((e) => e.email.trim() !== "")
-                    .map((e) => ({ email: e.email.trim(), is_primary: e.is_primary })),
-            });
+            // Build unified payload for nested storage
+            const unifiedPayload = {
+                ...payload,
+                contact: (includeContact && contactForm.first_name) ? {
+                    ...contactForm,
+                    salutation: contactForm.salutation || null,
+                    middle_name: contactForm.middle_name || null,
+                    last_name: contactForm.last_name || null,
+                    designation: contactForm.designation || null,
+                    gender: contactForm.gender || null,
+                    company_name: form.name || null,
+                    status: 'Open',
+                    phones: contactPhones
+                        .filter((p) => p.phone_no.trim() !== "")
+                        .map((p) => ({ phone_no: p.phone_no.trim(), is_primary: p.is_primary })),
+                    emails: contactEmails
+                        .filter((e) => e.email.trim() !== "")
+                        .map((e) => ({ email: e.email.trim(), is_primary: e.is_primary })),
+                } : null,
+                bank_details: bankRows
+                    .filter(b => b.bank_name.trim() || b.account_no.trim())
+                    .map(b => ({
+                        bank_name: b.bank_name.trim(),
+                        account_no: b.account_no.trim(),
+                        ifsc_code: b.ifsc_code.trim()
+                    })),
+            };
 
             if (isEdit) {
-                let contactId = payload.customer_contact_id;
-                if (includeContact && contactForm.first_name) {
-                    const contactPayload = getContactPayload(id as string);
-                    if (contactId) {
-                        await contactApi.update(Number(contactId), contactPayload);
-                    } else {
-                        const newContact = await contactApi.create(contactPayload);
-                        contactId = newContact.id;
-                        payload.customer_contact_id = contactId;
-                    }
-                }
-                await customerApi.update(Number(id), payload);
-                showAlert("success", "Updated!", "Customer has been updated.");
+                await customerApi.update(Number(id), unifiedPayload);
+                showAlert("success", "Updated!", "Customer and all related details have been updated.");
             } else {
-                // For a new customer, we create the customer first to get the ID
-                const createdCustomer = await customerApi.create(payload) as any;
-                const newCustomerId = createdCustomer.id || createdCustomer.data?.id;
-
-                if (newCustomerId && includeContact && contactForm.first_name) {
-                    const contactPayload = getContactPayload(newCustomerId);
-                    const newContact = await contactApi.create(contactPayload) as any;
-                    
-                    // Update customer with the new contact's ID
-                    await customerApi.update(newCustomerId, { 
-                        ...payload, 
-                        customer_contact_id: newContact.id || newContact.data?.id 
-                    });
-                }
-                showAlert("success", "Created!", "Customer has been created.");
+                await customerApi.create(unifiedPayload);
+                showAlert("success", "Created!", "Customer and all related details have been created.");
             }
             
             navigate("/crm/customers");
@@ -715,22 +699,12 @@ export default function CustomerForm() {
                 </Card> */}
 
                 {/* Primary Contact (Embedded Form) */}
-                <Card >
-                    <CardHeader className="flex flex-row items-center space-y-0 gap-3 pb-4">
-                        <Checkbox 
-                            id="include-contact" 
-                            checked={includeContact} 
-                            onCheckedChange={(checked) => setIncludeContact(checked === true)}
-                            className="h-5 w-5 rounded-sm data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                        />
-                        <div className="space-y-1">
-                            <CardTitle>Manage Primary Contact Details</CardTitle>
-                            <CardDescription>Include rich contact details (multiple emails, phones, salutation)</CardDescription>
-                        </div>
+                <Card>
+                    <CardHeader className="pb-4">
+                        <CardTitle>Manage Primary Contact Details</CardTitle>
                     </CardHeader>
-                    {includeContact && (
-                        <CardContent className="grid gap-6">
-                            <div className="grid gap-6 md:grid-cols-4 p-4 border rounded-md bg-background">
+                    <CardContent className="grid gap-6">
+                            {/* <div className="grid gap-6 md:grid-cols-4 p-4 border rounded-md bg-background">
                                 <div className="space-y-2">
                                     <Label>Salutation</Label>
                                     <Select
@@ -792,7 +766,7 @@ export default function CustomerForm() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                            </div>
+                            </div> */}
                             
                             <div className="grid gap-6 md:grid-cols-2">
                                 {/* Phones */}
@@ -889,8 +863,7 @@ export default function CustomerForm() {
                                     </div>
                                 </div>
                             </div>
-                        </CardContent>
-                    )}
+                    </CardContent>
                 </Card>
 
                 {/* Legacy General Details */}
@@ -991,14 +964,54 @@ export default function CustomerForm() {
                                 />
                             </div>
                         </div>
-                        <div className="space-y-2 md:col-span-2">
-                            <Label>Bank Account Details</Label>
-                            <Textarea
-                                value={form.bank_account_details}
-                                onChange={(e) => setField("bank_account_details", e.target.value)}
-                                placeholder="Bank name, Account number, IFSC, etc."
-                                className="min-h-[100px]"
-                            />
+                        <div className="space-y-3 md:col-span-2">
+                            <div className="flex items-center justify-between">
+                                <Label className="font-semibold text-base">Bank Details</Label>
+                                <Button type="button" variant="outline" size="sm" onClick={addBankRow}>
+                                    <Plus className="mr-2 h-4 w-4" /> Add Bank
+                                </Button>
+                            </div>
+                            {bankRows.map((bank, idx) => (
+                                <div key={idx} className="grid grid-cols-3 gap-3 p-3 border rounded-md bg-background items-end">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">Bank Name</Label>
+                                        <Input
+                                            placeholder="e.g. HDFC Bank"
+                                            value={bank.bank_name}
+                                            onChange={(e) => updateBankRow(idx, "bank_name", e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">Account No</Label>
+                                        <Input
+                                            placeholder="Account number"
+                                            value={bank.account_no}
+                                            onChange={(e) => updateBankRow(idx, "account_no", e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="flex gap-2 items-end">
+                                        <div className="flex-1 space-y-1">
+                                            <Label className="text-xs">IFSC Code</Label>
+                                            <Input
+                                                placeholder="e.g. HDFC0001234"
+                                                value={bank.ifsc_code}
+                                                onChange={(e) => updateBankRow(idx, "ifsc_code", e.target.value)}
+                                            />
+                                        </div>
+                                        {bankRows.length > 1 && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => removeBankRow(idx)}
+                                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </CardContent>
                 </Card>
