@@ -26,6 +26,16 @@ import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Target, XCircle } from
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface OppStatus { id: number; status_name: string; }
 interface OppStage { id: number; name: string; }
+interface Contact {
+  full_name?: string;
+  salutation?: string;
+  first_name?: string;
+  middle_name?: string;
+  last_name?: string;
+  emails?: { email: string; is_primary?: boolean }[];
+  phones?: { phone_no: string; is_primary?: boolean }[];
+}
+
 interface Opportunity {
   id: number;
   naming_series?: string;
@@ -50,6 +60,7 @@ interface Opportunity {
   items?: { amount: string | number }[];
   lead?: Lead | null;
   customer?: Customer | null;
+  contact?: Contact | null;
 }
 
 interface Lead {
@@ -83,7 +94,7 @@ function extractList<T>(raw: any): T[] {
 
 function extractTotal(raw: any): number {
   if (!raw) return 0;
-  
+
   // Directly check the raw response first for pagination
   if (raw.pagination && typeof raw.pagination.total_items === 'number') {
     return raw.pagination.total_items;
@@ -310,7 +321,8 @@ export default function OpportunitiesList() {
             <DropdownMenuItem onClick={() => navigate(`/crm/opportunities/${row.id}/edit`)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
             </DropdownMenuItem>
-            {row.status?.status_name?.toLowerCase() !== 'lost' && (
+            {/* Only show Mark as Lost if status is NOT 'lost' */}
+            {row.status_name?.toLowerCase() !== 'lost' && (
               <DropdownMenuItem onClick={() => handleMarkAsLostClick(row)}>
                 <XCircle className="mr-2 h-4 w-4 text-orange-600" /> Mark as Lost
               </DropdownMenuItem>
@@ -405,9 +417,9 @@ export default function OpportunitiesList() {
               <Target className="h-5 w-5 text-solarized-blue" />
               Opportunity Details
             </DialogTitle>
-            <DialogDescription>
+            {/* <DialogDescription>
               {selected?.naming_series || `ID #${selected?.id}`}
-            </DialogDescription>
+            </DialogDescription> */}
           </DialogHeader>
           {selected && (
             <div className="space-y-6 py-4">
@@ -430,10 +442,10 @@ export default function OpportunitiesList() {
                     })()}
                   </p>
                 </div>
-                <div className="space-y-1">
+                {/* <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Company</Label>
                   <p className="text-base font-medium">{selected.company_name || '—'}</p>
-                </div>
+                </div> */}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -483,23 +495,58 @@ export default function OpportunitiesList() {
                 </div>
               )}
 
-              <div className="border-t pt-4">
-                <Label className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-3 block">Primary Contact</Label>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <Label className="text-[10px] uppercase text-muted-foreground">Person</Label>
-                    <p className="text-sm font-medium truncate">{selected.contact_person || '—'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-[10px] uppercase text-muted-foreground">Email</Label>
-                    <p className="text-xs font-medium truncate">{selected.contact_email || '—'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-[10px] uppercase text-muted-foreground">Mobile</Label>
-                    <p className="text-sm font-medium truncate">{selected.contact_mobile || '—'}</p>
+              {selected && selected.contact && (
+                <div className="border-t pt-4">
+                  <Label className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-3 block">Primary Contact</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground">Person</Label>
+                      <p className="text-sm font-medium truncate">
+                        {selected.contact.full_name ||
+                          [selected.contact.salutation, selected.contact.first_name, selected.contact.middle_name, selected.contact.last_name]
+                            .filter(Boolean)
+                            .join(' ') || '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground">Email</Label>
+                      <p className="text-sm font-medium truncate">
+                        {selected.contact.emails?.find(email => email.is_primary)?.email ||
+                          selected.contact.emails?.[0]?.email ||
+                          selected.contact_email || '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground">Mobile</Label>
+                      <p className="text-sm font-medium truncate">
+                        {selected.contact.phones?.find(phone => phone.is_primary)?.phone_no ||
+                          selected.contact.phones?.[0]?.phone_no ||
+                          selected.contact_mobile || '—'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {selected && !selected.contact && (
+                <div className="border-t pt-4">
+                  <Label className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-3 block">Primary Contact</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground">Person</Label>
+                      <p className="text-sm font-medium truncate">{selected.contact_person || '—'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground">Email</Label>
+                      <p className="text-xs font-medium truncate">{selected.contact_email || '—'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground">Mobile</Label>
+                      <p className="text-sm font-medium truncate">{selected.contact_mobile || '—'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>

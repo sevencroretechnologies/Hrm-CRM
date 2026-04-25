@@ -401,7 +401,19 @@ export default function CrmDashboard() {
                               {status}
                             </span>
                           </td>
-                          <td className="px-5 py-3.5 text-sm font-semibold text-gray-700">₹{(row.opportunity_amount || 0).toLocaleString()}</td>
+                          <td className="px-5 py-3.5 text-sm font-semibold text-gray-700">
+                            ₹{(() => {
+                              if (row.with_items && row.items && row.items.length > 0) {
+                                // Sum up all item amounts
+                                const totalAmount = row.items.reduce((sum, item) => {
+                                  return sum + (typeof item.amount === 'string' ? parseFloat(item.amount) : item.amount || 0);
+                                }, 0);
+                                return totalAmount.toLocaleString();
+                              }
+                              // Use opportunity_amount if no items
+                              return (row.opportunity_amount || 0).toLocaleString();
+                            })()}
+                          </td>
                           <td className="px-5 py-3.5 text-sm text-gray-500">{row.expected_closing || 'N/A'}</td>
                         </tr>
                       );
