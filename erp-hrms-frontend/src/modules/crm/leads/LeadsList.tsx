@@ -37,10 +37,13 @@ export default function LeadsList() {
     try {
       const params: Record<string, unknown> = { page: currentPage, per_page: perPage, search };
       const response = await leadApi.list(params);
-      const { data, total } = response;
+      const data = response.data || response;
+      const pagination = response.pagination;
+      const total = response.total ?? pagination?.total_items ?? 0;
+      
       if (Array.isArray(data)) {
         setLeads(data);
-        setTotalRows(total ?? 0);
+        setTotalRows(total);
       } else {
         setLeads([]);
         setTotalRows(0);
@@ -90,8 +93,15 @@ export default function LeadsList() {
     },
     { name: 'Email', selector: (row) => row.email || '-' },
     { name: 'Company', selector: (row) => row.company_name || '-' },
-    { name: 'Status', cell: (row) => <StatusBadge status={row.status?.status_name} /> },
-    { name: 'Source', selector: (row) => row.source?.name || '-' },
+    {
+      name: 'Status',
+      cell: (row) => row.status_name ? <StatusBadge status={row.status_name} /> : <span className="text-muted-foreground">—</span>,
+      width: '130px',
+    },
+    {
+      name: 'Source',
+      selector: (row) => row.source_name || '-',
+    },
     {
       name: 'Actions',
       cell: (row) => (

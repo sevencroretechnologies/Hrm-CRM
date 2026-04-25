@@ -19,7 +19,9 @@ class LeadController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Lead::query();
+            $query = Lead::forCurrentOrganization()
+                ->forCurrentCompany()
+                ->with(['status', 'source', 'requestType', 'industry']);
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -51,9 +53,20 @@ class LeadController extends Controller
                 ->paginate($perPage)
                 ->appends($queryParameters);
 
+            $data->getCollection()->transform(function ($item) {
+                if ($item->status) {
+                    $item->status_name = $item->status->status_name;
+                }
+                if ($item->source) {
+                    $item->source_name = $item->source->name;
+                }
+                unset($item->status, $item->source);
+                return $item->makeHidden(['created_at', 'updated_at', 'deleted_at']);
+            });
+
             return response()->json([
                 'message' => 'All leads retrieved successfully.',
-                'data' => $data,
+                'data' => $data->items(),
                 'pagination' => [
                     'current_page' => $data->currentPage(),
                     'total_pages' => $data->lastPage(),
@@ -69,6 +82,16 @@ class LeadController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function getLead(): JsonResponse
+    {
+        $lead = Lead::forCurrentOrganization()->forCurrentCompany()->get();
+
+        return response()->json([
+            'message' => 'All Leads retrieved successfully.',
+            'data' => $lead,
+        ]);
     }
 
     public function store(Request $request): JsonResponse
@@ -104,13 +127,16 @@ class LeadController extends Controller
         return DB::transaction(function () use ($validated) {
             $lead = Lead::create($validated);
             $this->syncProspect($lead);
-            return response()->json($lead->fresh(), 201);
+            return response()->json($lead->fresh(['status', 'source', 'requestType', 'industry']), 201);
         });
     }
 
     public function show(int $id): JsonResponse
     {
-        $lead = Lead::findOrFail($id);
+        $lead = Lead::forCurrentOrganization()
+            ->forCurrentCompany()
+            ->with(['status', 'source', 'requestType', 'industry'])
+            ->findOrFail($id);
         return response()->json($lead);
     }
 
@@ -145,10 +171,10 @@ class LeadController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated, $id) {
-            $lead = Lead::findOrFail($id);
+            $lead = Lead::forCurrentOrganization()->forCurrentCompany()->findOrFail($id);
             $lead->update($validated);
             $this->syncProspect($lead);
-            return response()->json($lead->fresh());
+            return response()->json($lead->fresh(['status', 'source', 'requestType', 'industry']));
         });
     }
 
@@ -200,7 +226,7 @@ class LeadController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
-        $lead = Lead::findOrFail($id);
+        $lead = Lead::forCurrentOrganization()->forCurrentCompany()->findOrFail($id);
         $lead->delete();
         return response()->json(null, 204);
     }

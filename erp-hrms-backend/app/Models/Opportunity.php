@@ -11,12 +11,16 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Modules\CRM\Models\CrmNote;
 
+use App\Traits\HasOrgAndCompany;
+
 class Opportunity extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasOrgAndCompany;
 
     protected static function booted()
     {
+        static::bootHasOrgAndCompany();
+        
         static::creating(function ($opportunity) {
             $year = now()->year;
             $prefix = "CRM-OPP-{$year}-";
@@ -73,6 +77,8 @@ class Opportunity extends Model
         'customer_id',
         'customer_contact_id',
         'prospect_id',
+        'org_id',
+        'company_id',
     ];
 
     protected $casts = [
@@ -83,8 +89,6 @@ class Opportunity extends Model
         'next_contact_date' => 'date:Y-m-d',
         'with_items' => 'boolean',
     ];
-
-    protected $with = ['opportunityType', 'opportunityStage', 'source', 'status', 'industry', 'owner', 'lead', 'customer', 'contact', 'prospect', 'items'];
 
     public function opportunityType(): BelongsTo
     {

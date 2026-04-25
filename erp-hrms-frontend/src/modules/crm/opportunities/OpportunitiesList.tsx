@@ -6,7 +6,7 @@ import {
   crmOpportunityLostReasonService
 } from '../../../services/api';
 import { showAlert, showConfirmDialog, getErrorMessage } from '../../../lib/sweetalert';
-import { Card, CardContent, CardHeader } from '../../../components/ui/card';
+import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
@@ -26,6 +26,16 @@ import { Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Target, XCircle } from
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface OppStatus { id: number; status_name: string; }
 interface OppStage { id: number; name: string; }
+interface Contact {
+  full_name?: string;
+  salutation?: string;
+  first_name?: string;
+  middle_name?: string;
+  last_name?: string;
+  emails?: { email: string; is_primary?: boolean }[];
+  phones?: { phone_no: string; is_primary?: boolean }[];
+}
+
 interface Opportunity {
   id: number;
   naming_series?: string;
@@ -41,13 +51,16 @@ interface Opportunity {
   company_name: string | null;
   to_discuss: string | null;
   status_id: number | null;
+  status_name?: string;
   status: OppStatus | null;
   opportunity_stage_id: number | null;
+  stage_name?: string;
   opportunity_stage: OppStage | null;
   created_at: string;
   items?: { amount: string | number }[];
   lead?: Lead | null;
   customer?: Customer | null;
+  contact?: Contact | null;
 }
 
 interface Lead {
@@ -81,6 +94,13 @@ function extractList<T>(raw: any): T[] {
 
 function extractTotal(raw: any): number {
   if (!raw) return 0;
+
+  // Directly check the raw response first for pagination
+  if (raw.pagination && typeof raw.pagination.total_items === 'number') {
+    return raw.pagination.total_items;
+  }
+  if (typeof raw.total === 'number') return raw.total;
+
   const body = raw.data || raw;
 
   if (body && typeof body === 'object') {
@@ -88,7 +108,6 @@ function extractTotal(raw: any): number {
     if (body.data && typeof body.data === 'object' && typeof body.data.total === 'number') {
       return body.data.total;
     }
-    // Also check for the "pagination" object if present
     if (body.pagination && typeof body.pagination.total_items === 'number') {
       return body.pagination.total_items;
     }
@@ -227,29 +246,30 @@ export default function OpportunitiesList() {
 
   // ── DataTable columns — mirrors crm-frontend Table columns ────────────────────
   const columns: TableColumn<Opportunity>[] = [
-    // {
-    //   name: 'Party Name',
-    //   cell: (row) => <span className="font-medium text-solarized-blue">{row.party_name || `#${row.id}`}</span>,
-    //   minWidth: '200px',
-    // },
     {
-      name: 'Party',
+      name: 'Opportunity Code',
+      cell: (row) => (
+        <span className="font-medium text-solarized-blue">
+          {row.naming_series || `#${row.id}`}
+        </span>
+      ),
+      width: '180px',
+    },
+    {
+      name: 'Party Name',
       cell: (row) => {
         let party = '-';
 
         if (row.opportunity_from === 'lead' && row.lead) {
           party = [row.lead.first_name, row.lead.last_name]
             .filter(Boolean)
-            .join(' ');
+            .join(' ') || '-';
         }
         else if (row.opportunity_from === 'customer' && row.customer) {
           party = row.customer.name || '-';
         }
         else if (row.party_name) {
           party = row.party_name;
-        }
-        else if (row.naming_series) {
-          party = row.naming_series;
         }
 
         return <span className="font-medium">{party}</span>;
@@ -263,12 +283,12 @@ export default function OpportunitiesList() {
     },
     {
       name: 'Status',
-      cell: (row) => row.status?.status_name ? statusBadge(row.status.status_name) : <span className="text-muted-foreground">—</span>,
+      cell: (row) => row.status_name ? statusBadge(row.status_name) : <span className="text-muted-foreground">—</span>,
       width: '130px',
     },
     {
       name: 'Stage',
-      selector: (row) => row.opportunity_stage?.name || '-',
+      selector: (row) => row.stage_name || '-',
     },
     {
       name: 'Amount',
@@ -301,7 +321,8 @@ export default function OpportunitiesList() {
             <DropdownMenuItem onClick={() => navigate(`/crm/opportunities/${row.id}/edit`)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
             </DropdownMenuItem>
-            {row.status?.status_name?.toLowerCase() !== 'lost' && (
+            {/* Only show Mark as Lost if status is NOT 'lost' */}
+            {row.status_name?.toLowerCase() !== 'lost' && (
               <DropdownMenuItem onClick={() => handleMarkAsLostClick(row)}>
                 <XCircle className="mr-2 h-4 w-4 text-orange-600" /> Mark as Lost
               </DropdownMenuItem>
@@ -396,30 +417,35 @@ export default function OpportunitiesList() {
               <Target className="h-5 w-5 text-solarized-blue" />
               Opportunity Details
             </DialogTitle>
-            <DialogDescription>
+            {/* <DialogDescription>
               {selected?.naming_series || `ID #${selected?.id}`}
-            </DialogDescription>
+            </DialogDescription> */}
           </DialogHeader>
           {selected && (
             <div className="space-y-6 py-4">
+              <div className="space-y-1 block mb-4">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Opportunity Code</Label>
+                <p className="text-xl font-bold text-solarized-blue">{selected.naming_series || `#${selected.id}`}</p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Customer / Party</Label>
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Customer / Party Name</Label>
                   <p className="text-base font-semibold text-solarized-blue">
                     {(() => {
                       if (selected.opportunity_from === 'lead' && selected.lead) {
-                        return [selected.lead.first_name, selected.lead.last_name].filter(Boolean).join(' ');
+                        return [selected.lead.first_name, selected.lead.last_name].filter(Boolean).join(' ') || '—';
                       } else if (selected.opportunity_from === 'customer' && selected.customer) {
-                        return selected.customer.name;
+                        return selected.customer.name || '—';
                       }
                       return selected.party_name || '—';
                     })()}
                   </p>
                 </div>
-                <div className="space-y-1">
+                {/* <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Company</Label>
                   <p className="text-base font-medium">{selected.company_name || '—'}</p>
-                </div>
+                </div> */}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -430,7 +456,7 @@ export default function OpportunitiesList() {
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Status</Label>
                   <div>
-                    {selected.status?.status_name ? statusBadge(selected.status.status_name) : '—'}
+                    {selected?.status_name ? statusBadge(selected.status_name) : '—'}
                   </div>
                 </div>
               </div>
@@ -438,7 +464,7 @@ export default function OpportunitiesList() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Stage</Label>
-                  <p className="text-sm font-medium">{selected.opportunity_stage?.name || '—'}</p>
+                  <p className="text-sm font-medium">{selected?.stage_name || '—'}</p>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Amount</Label>
@@ -469,23 +495,58 @@ export default function OpportunitiesList() {
                 </div>
               )}
 
-              <div className="border-t pt-4">
-                <Label className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-3 block">Primary Contact</Label>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <Label className="text-[10px] uppercase text-muted-foreground">Person</Label>
-                    <p className="text-sm font-medium truncate">{selected.contact_person || '—'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-[10px] uppercase text-muted-foreground">Email</Label>
-                    <p className="text-xs font-medium truncate">{selected.contact_email || '—'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-[10px] uppercase text-muted-foreground">Mobile</Label>
-                    <p className="text-sm font-medium truncate">{selected.contact_mobile || '—'}</p>
+              {selected && selected.contact && (
+                <div className="border-t pt-4">
+                  <Label className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-3 block">Primary Contact</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground">Person</Label>
+                      <p className="text-sm font-medium truncate">
+                        {selected.contact.full_name ||
+                          [selected.contact.salutation, selected.contact.first_name, selected.contact.middle_name, selected.contact.last_name]
+                            .filter(Boolean)
+                            .join(' ') || '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground">Email</Label>
+                      <p className="text-sm font-medium truncate">
+                        {selected.contact.emails?.find(email => email.is_primary)?.email ||
+                          selected.contact.emails?.[0]?.email ||
+                          selected.contact_email || '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground">Mobile</Label>
+                      <p className="text-sm font-medium truncate">
+                        {selected.contact.phones?.find(phone => phone.is_primary)?.phone_no ||
+                          selected.contact.phones?.[0]?.phone_no ||
+                          selected.contact_mobile || '—'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {selected && !selected.contact && (
+                <div className="border-t pt-4">
+                  <Label className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-3 block">Primary Contact</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground">Person</Label>
+                      <p className="text-sm font-medium truncate">{selected.contact_person || '—'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground">Email</Label>
+                      <p className="text-xs font-medium truncate">{selected.contact_email || '—'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground">Mobile</Label>
+                      <p className="text-sm font-medium truncate">{selected.contact_mobile || '—'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>

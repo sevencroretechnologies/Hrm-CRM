@@ -61,11 +61,11 @@ const navigation: NavItem[] = [
     children: [
       { name: "All Staff", href: "/staff", permission: "view_staff" },
       { name: "Add Staff", href: "/staff/create", permission: "create_staff" },
-      {
-        name: "Departments",
-        href: "/staff/departments",
-        permission: "view_settings",
-      },
+      // {
+      //   name: "Departments",
+      //   href: "/staff/departments",
+      //   permission: "view_settings",
+      // },
     ],
   },
   {

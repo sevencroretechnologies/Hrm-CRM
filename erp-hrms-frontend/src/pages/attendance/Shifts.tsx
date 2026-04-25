@@ -30,6 +30,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { AssignShiftDialog } from '../../pages/attendance/AssisgnShiftDialog';
 import { ShiftRoster } from './ShiftRoster';
@@ -115,28 +122,17 @@ export default function Shifts() {
       isValid = false;
     }
 
-// With this night-shift aware validation:
-if (formData.start_time && formData.end_time) {
-  const startHour = parseInt(formData.start_time.split(':')[0]);
-  const endHour = parseInt(formData.end_time.split(':')[0]);
-  
-  // For night shifts (end hour < start hour), add 24 hours to end time
-  const start = new Date(`2000-01-01T${formData.start_time}`);
-  let end = new Date(`2000-01-01T${formData.end_time}`);
-  
-  // If end time appears to be earlier (night shift crossing midnight),
-  // add 24 hours to the end time for comparison
-  if (end <= start) {
-    // Check if this is really a night shift (end time is much earlier than start)
-    if (endHour < startHour && (startHour - endHour) > 4) {
-      // This is likely a night shift, so it's valid
-      // No error, it's a valid night shift
-    } else {
-      errors.end_time = 'End time must be after start time. For night shifts, ensure end time is on the next day.';
-      isValid = false;
+    // With this night-shift aware validation:
+    if (formData.start_time && formData.end_time) {
+      const start = new Date(`2000-01-01T${formData.start_time}`);
+      const end = new Date(`2000-01-01T${formData.end_time}`);
+
+      if (end <= start) {
+        // If end time is earlier than or equal to start time, it means the shift crosses midnight
+        // We implicitly allow this as a night shift.
+        // Ensure the duration makes sense, but we won't strictly block it here.
+      }
     }
-  }
-}
 
     // Break duration validation
     const breakMinutes = parseInt(formData.break_duration_minutes);
@@ -198,7 +194,7 @@ if (formData.start_time && formData.end_time) {
       fetchShifts();
     } catch (error: any) {
       console.error('Failed to save shift:', error);
-      
+
       // Handle backend validation errors (status 422)
       if (error.response?.status === 422 && error.response?.data?.errors) {
         const apiErrors: Record<string, string> = {};
@@ -268,6 +264,35 @@ if (formData.start_time && formData.end_time) {
     });
     setFieldErrors({});
     setEditingShift(null);
+  };
+
+  const parseTime = (time24: string) => {
+    if (!time24) return { h: '', m: '', ampm: 'AM' };
+    const [hours, minutes] = time24.split(':');
+    let h = parseInt(hours, 10);
+    if (isNaN(h)) return { h: '', m: '', ampm: 'AM' };
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return { h: h.toString(), m: minutes || '', ampm };
+  };
+
+  const toTime24 = (h: string, m: string, ampm: string) => {
+    if (!h) h = '12';
+    if (!m) m = '00';
+    let hour = parseInt(h, 10);
+    if (isNaN(hour)) hour = 12;
+    if (ampm === 'PM' && hour < 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    return `${hour.toString().padStart(2, '0')}:${m.padStart(2, '0')}`;
+  };
+
+  const handleTimeChange = (field: 'start_time' | 'end_time', part: 'h' | 'm' | 'ampm', value: string) => {
+    const current = parseTime(formData[field]);
+    const updated = { ...current, [part]: value };
+    const time24 = toTime24(updated.h, updated.m, updated.ampm);
+
+    setFormData((prev) => ({ ...prev, [field]: time24 }));
+    if (fieldErrors[field]) setFieldErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
   const formatTime = (time: string) => {
@@ -355,20 +380,48 @@ if (formData.start_time && formData.end_time) {
                         <Label htmlFor="start_time" className={fieldErrors.start_time ? 'text-red-500' : ''}>
                           Start Time *
                         </Label>
-                        <Input
-                          id="start_time"
-                          type="time"
-                          value={formData.start_time}
-                          onChange={(e) => {
-                            setFormData({
-                              ...formData,
-                              start_time: e.target.value,
-                            });
-                            if (fieldErrors.start_time) setFieldErrors(prev => ({ ...prev, start_time: '' }));
-                            if (fieldErrors.end_time) setFieldErrors(prev => ({ ...prev, end_time: '' }));
-                          }}
-                          className={fieldErrors.start_time ? 'border-red-500' : ''}
-                        />
+                        <div className="flex gap-2">
+                          <Select
+                            value={parseTime(formData.start_time).h || undefined}
+                            onValueChange={(val) => handleTimeChange('start_time', 'h', val)}
+                          >
+                            <SelectTrigger className={`w-[70px] ${fieldErrors.start_time ? 'border-red-500' : ''}`}>
+                              <SelectValue placeholder="HH" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                                <SelectItem key={h} value={h.toString()}>
+                                  {h.toString().padStart(2, '0')}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={parseTime(formData.start_time).m || undefined}
+                            onValueChange={(val) => handleTimeChange('start_time', 'm', val)}
+                          >
+                            <SelectTrigger className={`w-[70px] ${fieldErrors.start_time ? 'border-red-500' : ''}`}>
+                              <SelectValue placeholder="MM" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[200px]">
+                              {Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0')).map((m) => (
+                                <SelectItem key={m} value={m}>{m}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={parseTime(formData.start_time).ampm || 'AM'}
+                            onValueChange={(val) => handleTimeChange('start_time', 'ampm', val)}
+                          >
+                            <SelectTrigger className={`w-[80px] ${fieldErrors.start_time ? 'border-red-500' : ''}`}>
+                              <SelectValue placeholder="AM/PM" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="AM">AM</SelectItem>
+                              <SelectItem value="PM">PM</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                         {renderError('start_time')}
                       </div>
 
@@ -376,19 +429,48 @@ if (formData.start_time && formData.end_time) {
                         <Label htmlFor="end_time" className={fieldErrors.end_time ? 'text-red-500' : ''}>
                           End Time *
                         </Label>
-                        <Input
-                          id="end_time"
-                          type="time"
-                          value={formData.end_time}
-                          onChange={(e) => {
-                            setFormData({
-                              ...formData,
-                              end_time: e.target.value,
-                            });
-                            if (fieldErrors.end_time) setFieldErrors(prev => ({ ...prev, end_time: '' }));
-                          }}
-                          className={fieldErrors.end_time ? 'border-red-500' : ''}
-                        />
+                        <div className="flex gap-2">
+                          <Select
+                            value={parseTime(formData.end_time).h || undefined}
+                            onValueChange={(val) => handleTimeChange('end_time', 'h', val)}
+                          >
+                            <SelectTrigger className={`w-[70px] ${fieldErrors.end_time ? 'border-red-500' : ''}`}>
+                              <SelectValue placeholder="HH" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                                <SelectItem key={h} value={h.toString()}>
+                                  {h.toString().padStart(2, '0')}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={parseTime(formData.end_time).m || undefined}
+                            onValueChange={(val) => handleTimeChange('end_time', 'm', val)}
+                          >
+                            <SelectTrigger className={`w-[70px] ${fieldErrors.end_time ? 'border-red-500' : ''}`}>
+                              <SelectValue placeholder="MM" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[200px]">
+                              {Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0')).map((m) => (
+                                <SelectItem key={m} value={m}>{m}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={parseTime(formData.end_time).ampm || 'AM'}
+                            onValueChange={(val) => handleTimeChange('end_time', 'ampm', val)}
+                          >
+                            <SelectTrigger className={`w-[80px] ${fieldErrors.end_time ? 'border-red-500' : ''}`}>
+                              <SelectValue placeholder="AM/PM" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="AM">AM</SelectItem>
+                              <SelectItem value="PM">PM</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                         {renderError('end_time')}
                       </div>
                     </div>
@@ -428,8 +510,8 @@ if (formData.start_time && formData.end_time) {
                     >
                       Cancel
                     </Button>
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="bg-solarized-blue hover:bg-solarized-blue/90"
                       disabled={isSubmitting}
                     >

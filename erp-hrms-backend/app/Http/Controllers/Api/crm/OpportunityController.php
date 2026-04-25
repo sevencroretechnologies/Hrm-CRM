@@ -16,7 +16,14 @@ class OpportunityController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Opportunity::with(['status', 'lead', 'customer']);
+            $query = Opportunity::with([
+                'status:id,status_name', 
+                'opportunityStage:id,name',
+                'customer:id,name',
+                'lead:id,first_name,last_name',
+                'opportunityType', 'source', 'industry', 
+                'owner', 'contact', 'prospect', 'items'
+            ]);
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -45,9 +52,20 @@ class OpportunityController extends Controller
                 ->paginate($perPage)
                 ->appends($queryParameters);
 
+            $data->getCollection()->transform(function ($item) {
+                if ($item->status) {
+                    $item->status_name = $item->status->status_name;
+                }
+                if ($item->opportunityStage) {
+                    $item->stage_name = $item->opportunityStage->name;
+                }
+                unset($item->status, $item->opportunityStage);
+                return $item->makeHidden(['created_at', 'updated_at', 'deleted_at']);
+            });
+
             return response()->json([
                 'message' => 'All opportunities retrieved successfully.',
-                'data' => $data,
+                'data' => $data->items(),
                 'pagination' => [
                     'current_page' => $data->currentPage(),
                     'total_pages' => $data->lastPage(),
@@ -63,6 +81,16 @@ class OpportunityController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function getOpportunity(): JsonResponse
+    {
+        $opportunity = Opportunity::get();
+
+        return response()->json([
+            'message' => 'All Opportunities retrieved successfully.',
+            'data' => $opportunity,
+        ]);
     }
 
     public function store(Request $request): JsonResponse
@@ -136,12 +164,12 @@ class OpportunityController extends Controller
             }
         }
 
-        return response()->json($opportunity->fresh('items', 'lostReasons'), 201);
+        return response()->json($opportunity->fresh(['items', 'lostReasons', 'opportunityType', 'opportunityStage', 'source', 'status', 'industry']), 201);
     }
 
     public function show(int $id): JsonResponse
     {
-        $opportunity = Opportunity::with('items')->findOrFail($id);
+        $opportunity = Opportunity::with(['items', 'opportunityType', 'opportunityStage', 'source', 'status', 'industry'])->findOrFail($id);
         return response()->json($opportunity);
     }
 
@@ -221,7 +249,7 @@ class OpportunityController extends Controller
             }
         }
 
-        return response()->json($opportunity->fresh('items', 'lostReasons'));
+        return response()->json($opportunity->fresh(['items', 'lostReasons', 'opportunityType', 'opportunityStage', 'source', 'status', 'industry']));
     }
 
     public function destroy(int $id): JsonResponse
@@ -272,6 +300,7 @@ class OpportunityController extends Controller
         $products = \Illuminate\Support\Facades\DB::table('opportunity_products')
             ->join('products', 'opportunity_products.product_id', '=', 'products.id')
             ->where('opportunity_products.opportunity_id', $id)
+            ->where('opportunity_products.org_id', auth()->user()->org_id)
             ->whereNull('opportunity_products.deleted_at')
             ->select(
                 'opportunity_products.id as id',

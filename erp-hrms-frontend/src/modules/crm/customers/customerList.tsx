@@ -36,10 +36,13 @@ export default function CustomerList() {
             const params: Record<string, any> = { page: currentPage, per_page: perPage };
             if (search) params.search = search;
 
-            const response = await customerApi.list(params);
-            // Based on lead list pattern where response is already the data or has data.data
-            setCustomers(response.data || []);
-            setTotalRows(response.total || 0);
+            const response = await customerApi.list(params) as any;
+            const data = response.data || response;
+            const pagination = response.pagination;
+            const total = response.total ?? pagination?.total_items ?? 0;
+
+            setCustomers(Array.isArray(data) ? data : []);
+            setTotalRows(total);
         } catch (error) {
             console.error('Failed to fetch customers:', error);
             setCustomers([]);
@@ -113,7 +116,12 @@ export default function CustomerList() {
         },
         {
             name: 'Customer Group',
-            selector: (row) => row.customer_group?.name || '-',
+            selector: (row) => row.customer_group_name || '-',
+            sortable: true,
+        },
+        {
+            name: 'Territory',
+            selector: (row) => row.territory_name || '-',
             sortable: true,
         },
         {
@@ -244,12 +252,12 @@ export default function CustomerList() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Customer Group</Label>
-                                    <p className="text-sm font-medium">{selectedCustomer.customer_group?.name || '—'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Territory</Label>
-                                    <p className="text-sm font-medium">{selectedCustomer.territory?.territory_name || '—'}</p>
-                                </div>
+                                        <p className="text-sm font-medium">{selectedCustomer.customer_group_name || '—'}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Territory</Label>
+                                        <p className="text-sm font-medium">{selectedCustomer.territory_name || '—'}</p>
+                                    </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -268,10 +276,10 @@ export default function CustomerList() {
                                     <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Website</Label>
                                     <p className="text-sm font-medium truncate">{selectedCustomer.website || '—'}</p>
                                 </div>
-                                {selectedCustomer.industry && (
+                                {selectedCustomer.industry_id && (
                                     <div className="space-y-1">
                                         <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Industry</Label>
-                                        <p className="text-sm font-medium">{selectedCustomer.industry.name || '—'}</p>
+                                        <p className="text-sm font-medium">{selectedCustomer.industry_name}</p>
                                     </div>
                                 )}
                             </div>

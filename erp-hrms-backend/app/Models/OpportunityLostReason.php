@@ -7,13 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Traits\HasOrgAndCompany;
+
 class OpportunityLostReason extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasOrgAndCompany;
 
     protected $fillable = [
         'opportunity_id',
         'opportunity_lost_reasons',
+        'org_id',
+        'company_id',
     ];
 
     public function opportunity(): BelongsTo

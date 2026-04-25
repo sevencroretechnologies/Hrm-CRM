@@ -12,15 +12,30 @@ trait HasOrgAndCompany
     public static function bootHasOrgAndCompany(): void
     {
         static::creating(function ($model) {
-            $user = Auth::user();
+            if (Auth::check()) {
+                $user = Auth::user();
 
-            if ($user) {
                 if (empty($model->org_id) && ! is_null($user->org_id)) {
                     $model->org_id = $user->org_id;
                 }
 
                 if (empty($model->company_id) && ! is_null($user->company_id)) {
                     $model->company_id = $user->company_id;
+                }
+            }
+        });
+
+        static::addGlobalScope('org_company_scope', function ($builder) {
+            if (Auth::check()) {
+                $user = Auth::user();
+                $table = $builder->getModel()->getTable();
+
+                if ($user->org_id) {
+                    $builder->where($table . '.org_id', $user->org_id);
+                }
+
+                if ($user->company_id) {
+                    $builder->where($table . '.company_id', $user->company_id);
                 }
             }
         });

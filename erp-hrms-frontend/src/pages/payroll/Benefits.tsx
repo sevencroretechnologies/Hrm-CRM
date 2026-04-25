@@ -138,7 +138,6 @@ export default function Benefits() {
     }
 
     // Description validation
-    validateRequired('description', 'Description');
     if (formData.description && formData.description.trim().length > 255) {
       errors.description = 'Description must be less than 255 characters';
       isValid = false;
@@ -573,7 +572,7 @@ export default function Benefits() {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              
+
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="benefit_type_id" className={formErrors.benefit_type_id ? 'text-red-500' : ''}>
@@ -587,8 +586,8 @@ export default function Benefits() {
                       onValueChange={(value) => handleSelectChange('benefit_type_id', value)}
                       required
                     >
-                      <SelectTrigger 
-                        id="benefit_type_id" 
+                      <SelectTrigger
+                        id="benefit_type_id"
                         className={formErrors.benefit_type_id ? 'border-red-500' : ''}
                         aria-invalid={!!formErrors.benefit_type_id}
                       >
@@ -615,7 +614,7 @@ export default function Benefits() {
 
                 <div className="space-y-2">
                   <Label htmlFor="description" className={formErrors.description ? 'text-red-500' : ''}>
-                    Description *
+                    Description
                   </Label>
                   <Textarea
                     id="description"
@@ -640,8 +639,8 @@ export default function Benefits() {
                       onValueChange={(value) => handleSelectChange('calculation_type', value)}
                       required
                     >
-                      <SelectTrigger 
-                        id="calculation_type" 
+                      <SelectTrigger
+                        id="calculation_type"
                         className={formErrors.calculation_type ? 'border-red-500' : ''}
                         aria-invalid={!!formErrors.calculation_type}
                       >
@@ -819,7 +818,7 @@ export default function Benefits() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            
+
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="edit_benefit_type_id" className={formErrors.benefit_type_id ? 'text-red-500' : ''}>
@@ -833,8 +832,8 @@ export default function Benefits() {
                     onValueChange={(value) => handleSelectChange('benefit_type_id', value)}
                     required
                   >
-                    <SelectTrigger 
-                      id="edit_benefit_type_id" 
+                    <SelectTrigger
+                      id="edit_benefit_type_id"
                       className={formErrors.benefit_type_id ? 'border-red-500' : ''}
                       aria-invalid={!!formErrors.benefit_type_id}
                     >
@@ -861,7 +860,7 @@ export default function Benefits() {
 
               <div className="space-y-2">
                 <Label htmlFor="edit_description" className={formErrors.description ? 'text-red-500' : ''}>
-                  Description *
+                  Description
                 </Label>
                 <Textarea
                   id="edit_description"
@@ -869,7 +868,6 @@ export default function Benefits() {
                   value={formData.description}
                   onChange={handleChange}
                   placeholder="Describe this benefit..."
-                  required
                   rows={2}
                   className={formErrors.description ? 'border-red-500' : ''}
                   aria-invalid={!!formErrors.description}
@@ -887,8 +885,8 @@ export default function Benefits() {
                     onValueChange={(value) => handleSelectChange('calculation_type', value)}
                     required
                   >
-                    <SelectTrigger 
-                      id="edit_calculation_type" 
+                    <SelectTrigger
+                      id="edit_calculation_type"
                       className={formErrors.calculation_type ? 'border-red-500' : ''}
                       aria-invalid={!!formErrors.calculation_type}
                     >
@@ -1218,7 +1216,7 @@ export default function Benefits() {
                   <p className="text-sm font-medium">{selectedBenefit.description}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-solarized-base01">Calculation Type</Label>
+                  <Label className="text-solarized-base01 mr-2">Calculation Type</Label>
                   <StatusBadge status={selectedBenefit.calculation_type} />
                 </div>
                 <div className="space-y-2">
@@ -1230,7 +1228,7 @@ export default function Benefits() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-solarized-base01">Taxable</Label>
+                  <Label className="text-solarized-base01 mr-2">Taxable</Label>
                   <StatusBadge status={selectedBenefit.benefit_type?.is_taxable ? 'yes' : 'no'} />
                 </div>
                 <div className="space-y-2">
@@ -1250,13 +1248,13 @@ export default function Benefits() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-solarized-base01">Status</Label>
+                  <Label className="text-solarized-base01 mr-2">Status</Label>
                   <StatusBadge status={selectedBenefit.is_active ? 'active' : 'inactive'} />
                 </div>
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label className="text-solarized-base01">Created By</Label>
                   <p className="text-sm font-medium">{selectedBenefit.author?.name || 'N/A'}</p>
-                </div>
+                </div> */}
               </div>
             </div>
           )}

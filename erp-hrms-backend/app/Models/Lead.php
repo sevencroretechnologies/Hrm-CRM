@@ -11,12 +11,16 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Modules\CRM\Models\CrmNote;
 
+use App\Traits\HasOrgAndCompany;
+
 class Lead extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasOrgAndCompany;
 
     protected static function booted()
     {
+        static::bootHasOrgAndCompany(); // Call trait boot manually if needed, but trait does it via bootHasOrgAndCompany if defined correctly. Laravel auto-boots traits if they follow naming convention.
+        
         static::creating(function ($lead) {
             $year = now()->year;
             $prefix = "CRM-LEAD-{$year}-";
@@ -65,6 +69,8 @@ class Lead extends Model
         'qualification_status',
         'qualified_by',
         'qualified_on',
+        'org_id',
+        'company_id',
     ];
 
     protected $casts = [
@@ -73,8 +79,6 @@ class Lead extends Model
         'qualification_status' => QualificationStatus::class,
         'gender' => Gender::class,
     ];
-
-    protected $with = ['status', 'source', 'requestType', 'industry'];
 
     public function status(): BelongsTo
     {

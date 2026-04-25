@@ -100,29 +100,36 @@ export default function OpportunityForm() {
 
     // ── Load all dropdowns on mount ───────────────────────────────────────────────
     useEffect(() => {
-        Promise.all([
-            crmStatusService.getAll({ per_page: 200 }),
-            crmSourceService.getAll({ per_page: 200 }),
-            crmOpportunityTypeService.getAll({ per_page: 200 }),
-            crmOpportunityStageService.getAll({ per_page: 200 }),
-            crmLeadService.getAll({ per_page: 500 }),
-            crmTerritoryService.getAll({ per_page: 200 }),
-            crmCustomerService.getAll({ per_page: 500 }),
-            crmContactService.getAll({ per_page: 500 }),
-            crmProductService.getAll({ per_page: 1000 }),
-            crmProductCategoryService.getAll({ per_page: 200 }),
-        ]).then(([sR, srcR, tpR, stR, lR, terR, custR, ctR, pdR, catR]) => {
-            setStatuses(extractList(sR));
-            setSources(extractList(srcR));
-            setOpportunityTypes(extractList(tpR));
-            setOpportunityStages(extractList(stR));
-            setLeads(extractList(lR));
-            setTerritories(extractList(terR));
-            setCustomers(extractList(custR));
-            setContacts(extractList(ctR));
-            setProducts(extractList(pdR));
-            setCategories(extractList(catR));
-        }).catch(() => null);
+        const fetchAll = async () => {
+            const results = await Promise.allSettled([
+                crmStatusService.getAll({ per_page: 200 }),
+                crmSourceService.getAll({ per_page: 200 }),
+                crmOpportunityTypeService.getAll({ per_page: 200 }),
+                crmOpportunityStageService.getAll({ per_page: 200 }),
+                crmLeadService.getAll({ per_page: 500 }),
+                crmTerritoryService.getAll({ per_page: 200 }),
+                crmCustomerService.getAll({ per_page: 500 }),
+                crmContactService.getAll({ per_page: 500 }),
+                crmProductService.getAll({ per_page: 1000 }),
+                crmProductCategoryService.getAll({ per_page: 200 }),
+            ]);
+
+            const setters = [
+                setStatuses, setSources, setOpportunityTypes, setOpportunityStages,
+                setLeads, setTerritories, setCustomers, setContacts, setProducts, setCategories
+            ];
+
+            results.forEach((res, idx) => {
+                const setter = setters[idx];
+                if (res.status === 'fulfilled') {
+                    setter(extractList(res.value));
+                } else {
+                    console.error(`Dropdown load failed at index ${idx}:`, res.reason);
+                }
+            });
+        };
+
+        fetchAll();
     }, []);
 
     // ── Load existing opportunity when editing ────────────────────────────────────

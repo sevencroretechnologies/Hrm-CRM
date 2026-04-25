@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+use App\Traits\HasOrgAndCompany;
+
 class CustomerContactPhone extends Model
 {
-    use HasFactory;
+    use HasFactory, HasOrgAndCompany;
 
     protected $table = 'customer_contact_phones';
 
@@ -16,6 +18,8 @@ class CustomerContactPhone extends Model
         'contact_id',
         'phone_no',
         'is_primary',
+        'org_id',
+        'company_id',
     ];
 
     protected $casts = [

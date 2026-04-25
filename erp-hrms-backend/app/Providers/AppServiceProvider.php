@@ -31,6 +31,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Load migrations from subdirectories
+        $this->loadMigrationsFrom(database_path('migrations/crm'));
+
         // Scramble API docs
         Scramble::configure()
             ->withDocumentTransformers(function (OpenApi $openApi) {

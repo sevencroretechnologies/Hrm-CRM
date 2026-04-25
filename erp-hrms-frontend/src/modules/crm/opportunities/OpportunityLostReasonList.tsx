@@ -296,64 +296,84 @@ export default function OpportunityLostReasonList() {
                 </CardContent>
             </Card>
 
-            {/* Add/Edit Dialog */}
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>{currentReason?.id ? "Edit Lost Reason" : "Add Lost Reason"}</DialogTitle>
-                        <DialogDescription>
-                            Select an opportunity and provide the reason why it was lost.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleModalSubmit} className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="opportunity" className="text-sm font-semibold">
-                                Opportunity <span className="text-destructive">*</span>
-                            </Label>
-                            <Select
-                                value={currentReason?.opportunity_id?.toString() || ""}
-                                onValueChange={(v) => setCurrentReason(p => ({ ...p, opportunity_id: Number(v) }))}
-                            >
-                                <SelectTrigger className="h-10">
-                                    <SelectValue placeholder="Select Opportunity" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {opportunities.map((o) => (
-                                        <SelectItem key={o.id} value={o.id.toString()}>
-                                            {o.party_name || o.naming_series || `Opp #${o.id}`}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="reason" className="text-sm font-semibold">
-                                Reason <span className="text-destructive">*</span>
-                            </Label>
-                            <Input
-                                id="reason"
-                                value={currentReason?.opportunity_lost_reasons || ""}
-                                onChange={(e) => setCurrentReason(p => ({ ...p, opportunity_lost_reasons: e.target.value }))}
-                                placeholder="e.g. Price too high"
-                                className="h-10"
-                                required
-                            />
-                        </div>
-                        <DialogFooter className="pt-4 gap-2 sm:gap-0">
-                            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button
-                                type="submit"
-                                className="bg-solarized-blue hover:bg-solarized-blue/90"
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? "Saving..." : "Save Reason"}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
+{/* Add/Edit Dialog */}
+<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+    <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+            <DialogTitle>{currentReason?.id ? "Edit Lost Reason" : "Add Lost Reason"}</DialogTitle>
+            <DialogDescription>
+                {currentReason?.id 
+                    ? "You can only edit the reason text. The opportunity cannot be changed." 
+                    : "Select an opportunity and provide the reason why it was lost."}
+            </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleModalSubmit} className="space-y-4 py-4">
+            <div className="space-y-2">
+                <Label htmlFor="opportunity" className="text-sm font-semibold">
+                    Opportunity <span className="text-destructive">*</span>
+                </Label>
+                {currentReason?.id ? (
+                    // Display mode for edit - opportunity is not editable
+                    <div className="h-10 px-3 py-2 rounded-md border border-input bg-muted text-muted-foreground flex items-center">
+                        {opportunities.find(o => o.id === currentReason.opportunity_id)?.party_name || 
+                         opportunities.find(o => o.id === currentReason.opportunity_id)?.naming_series || 
+                         `Opportunity #${currentReason.opportunity_id}`}
+                    </div>
+                ) : (
+                    // Select mode for add
+                    <Select
+                        value={currentReason?.opportunity_id?.toString() || ""}
+                        onValueChange={(v) => setCurrentReason(p => ({ ...p, opportunity_id: Number(v) }))}
+                    >
+                        <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Select Opportunity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {opportunities.map((o) => (
+                                <SelectItem key={o.id} value={o.id.toString()}>
+                                    {o.party_name || o.naming_series || `Opp #${o.id}`}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
+                {/* Hidden input to include opportunity_id in form submission */}
+                {currentReason?.id && (
+                    <input 
+                        type="hidden" 
+                        name="opportunity_id" 
+                        value={currentReason.opportunity_id} 
+                    />
+                )}
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="reason" className="text-sm font-semibold">
+                    Reason <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                    id="reason"
+                    value={currentReason?.opportunity_lost_reasons || ""}
+                    onChange={(e) => setCurrentReason(p => ({ ...p, opportunity_lost_reasons: e.target.value }))}
+                    placeholder="e.g. Price too high"
+                    className="h-10"
+                    required
+                />
+            </div>
+            <DialogFooter className="pt-4 gap-2 sm:gap-0">
+                <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
+                    Cancel
+                </Button>
+                <Button
+                    type="submit"
+                    className="bg-solarized-blue hover:bg-solarized-blue/90"
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? "Saving..." : "Save Reason"}
+                </Button>
+            </DialogFooter>
+        </form>
+    </DialogContent>
+</Dialog>
 
             <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
                 <DialogContent className="sm:max-w-[500px]">

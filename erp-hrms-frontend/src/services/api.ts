@@ -1,5 +1,6 @@
 import { Contact, Customer, CustomerGroup, Lead, Opportunity, OpportunityLostReason, PaymentTerm, PriceList, Prospect, SalesTask, SalesTaskDetail, Territory, WrappedPaginatedResponse } from '@/types';
 import axios from 'axios';
+import { get } from 'node:http';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
@@ -90,7 +91,13 @@ export const industryTypeApi = {
 };
 
 export const leadApi = {
-  list: (params?: Record<string, any>) => api.get<WrappedPaginatedResponse<Lead>>('/leads', { params }).then(res => res.data.data),
+  list: (params?: Record<string, any>) => api.get<WrappedPaginatedResponse<Lead>>('/leads', { params }).then(res => {
+      const data = res.data;
+      if (Array.isArray(data)) return data as any;
+      if (data && typeof data === 'object' && Array.isArray((data as any).data)) return data as any;
+      return (data as any).data || data;
+  }),
+  getLead: () => api.get('/leads/get-lead').then(res => res.data.data || res.data),
   get: (id: number) => api.get(`/leads/${id}`).then(res => res.data.data || res.data),
   create: (data: any) => api.post('/leads', data).then(res => res.data),
   update: (id: number, data: any) => api.put(`/leads/${id}`, data).then(res => res.data),
@@ -104,6 +111,7 @@ export const opportunityApi = {
       if (Array.isArray(data)) return data;
       return data.data || data;
     }),
+    getOpportunity: () => api.get('/opportunity/get-opportunity').then(res => res.data.data || res.data),
   get: (id: number) => api.get<Opportunity>(`/opportunities/${id}`).then((r) => r.data),
   create: (data: Partial<Opportunity>) =>
     api.post<Opportunity>("/opportunities", data).then((r) => r.data),
@@ -149,7 +157,12 @@ export const lostReasonApi = {
 
 export const customerApi = {
   list: (params?: Record<string, string | number>) =>
-    api.get<WrappedPaginatedResponse<Customer>>("/customers", { params }).then((r) => r.data.data),
+    api.get<WrappedPaginatedResponse<Customer>>("/customers", { params }).then((r) => {
+      const data = r.data;
+      if (Array.isArray(data)) return data as any;
+      if (data && typeof data === 'object' && Array.isArray((data as any).data)) return data as any;
+      return (data as any).data || data;
+    }),
   get: (id: number) => api.get<Customer>(`/customers/${id}`).then((r) => r.data),
   create: (data: Partial<Customer>) =>
     api.post<Customer>("/customers", data).then((r) => r.data),

@@ -15,6 +15,8 @@ class CandidateSource extends Model
         'title',
         'description',
         'status',
+        'org_id',
+        'company_id',
     ];
 
     public function candidates()
