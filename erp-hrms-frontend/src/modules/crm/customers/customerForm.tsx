@@ -9,7 +9,9 @@ import {
     industryTypeApi,
     priceListApi,
     paymentTermApi,
-    contactApi
+    contactApi,
+    enumApi,
+    EnumOption
 } from "@/services/api";
 import type {
     CustomerGroup,
@@ -22,11 +24,12 @@ import type {
     Contact,
 } from "@/types";
 import { showAlert, getErrorMessage } from "@/lib/sweetalert";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     Select,
     SelectContent,
@@ -42,10 +45,21 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Loader2, ChevronLeft } from "lucide-react";
+import { Loader2, ChevronLeft, Plus, Trash2, Star } from "lucide-react";
 import { set } from "date-fns";
 
 const CUSTOMER_TYPES = ['Company', 'Individual', 'Partnership'];
+const SALUTATIONS = ["Mr", "Mrs", "Ms", "Dr", "Prof"];
+
+interface PhoneRow {
+    phone_no: string;
+    is_primary: boolean;
+}
+
+interface EmailRow {
+    email: string;
+    is_primary: boolean;
+}
 
 export default function CustomerForm() {
     const { id } = useParams();
@@ -74,6 +88,24 @@ export default function CustomerForm() {
         customer_details: "",
     });
 
+    // Contact Details State
+    const [includeContact, setIncludeContact] = useState(false);
+    const [genders, setGenders] = useState<EnumOption[]>([]);
+    const [contactForm, setContactForm] = useState({
+        salutation: "",
+        first_name: "",
+        middle_name: "",
+        last_name: "",
+        designation: "",
+        gender: "",
+    });
+    const [contactPhones, setContactPhones] = useState<PhoneRow[]>([
+        { phone_no: "", is_primary: true },
+    ]);
+    const [contactEmails, setContactEmails] = useState<EmailRow[]>([
+        { email: "", is_primary: true },
+    ]);
+
     // Dropdown options
     const [customerGroups, setCustomerGroups] = useState<CustomerGroup[]>([]);
     const [territories, setTerritories] = useState<Territory[]>([]);
@@ -83,6 +115,10 @@ export default function CustomerForm() {
     const [priceLists, setPriceLists] = useState<PriceList[]>([]);
     const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
     const [contacts, setContacts] = useState<Contact[]>([]);
+
+    useEffect(() => {
+        enumApi.genders().then(setGenders).catch(() => setGenders([]));
+    }, []);
 
     useEffect(() => {
         const loadOptions = async () => {
@@ -175,6 +211,41 @@ export default function CustomerForm() {
                         print_language: customer.print_language || "",
                         customer_details: customer.customer_details || "",
                     });
+
+                    if (customer.customer_contact_id && customer.primary_contact) {
+                        setIncludeContact(true);
+                        const contact = customer.primary_contact;
+                        setContactForm({
+                            salutation: contact.salutation || "",
+                            first_name: contact.first_name || "",
+                            middle_name: contact.middle_name || "",
+                            last_name: contact.last_name || "",
+                            designation: contact.designation || "",
+                            gender: contact.gender || "",
+                        });
+                        
+                        if (contact.phones && contact.phones.length > 0) {
+                            setContactPhones(
+                                (contact.phones as any[]).map((p) => ({
+                                    phone_no: p.phone_no || "",
+                                    is_primary: p.is_primary,
+                                }))
+                            );
+                        } else {
+                            setContactPhones([{ phone_no: "", is_primary: true }]);
+                        }
+
+                        if (contact.emails && contact.emails.length > 0) {
+                            setContactEmails(
+                                (contact.emails as any[]).map((e) => ({
+                                    email: e.email || "",
+                                    is_primary: e.is_primary,
+                                }))
+                            );
+                        } else {
+                            setContactEmails([{ email: "", is_primary: true }]);
+                        }
+                    }
                 } catch (error) {
                     showAlert("error", "Error", getErrorMessage(error, "Failed to fetch customer details"));
                     navigate("/crm/customers");
@@ -187,6 +258,7 @@ export default function CustomerForm() {
     }, [id, navigate]);
 
     const setField = (key: string, value: any) => setForm((p) => ({ ...p, [key]: value }));
+    const setContactField = (key: string, value: any) => setContactForm((p) => ({ ...p, [key]: value }));
 
     const getOpportunityLabel = (o: Opportunity) => {
         if (o.party_name) return o.party_name;
@@ -196,12 +268,53 @@ export default function CustomerForm() {
         return o.naming_series || `ID: ${o.id}`;
     };
 
+    // Phone Handlers
+    const addContactPhone = () => setContactPhones((p) => [...p, { phone_no: "", is_primary: false }]);
+    const removeContactPhone = (index: number) => {
+        setContactPhones((p) => {
+            const updated = p.filter((_, i) => i !== index);
+            if (!updated.some((d) => d.is_primary) && updated.length > 0) {
+                updated[0].is_primary = true;
+            }
+            return updated;
+        });
+    };
+    const updateContactPhone = (index: number, key: keyof PhoneRow, value: string | boolean) => {
+        setContactPhones((p) =>
+            p.map((d, i) => {
+                if (i === index) return { ...d, [key]: value };
+                if (key === "is_primary" && value === true) return { ...d, is_primary: false };
+                return d;
+            })
+        );
+    };
+
+    // Email Handlers
+    const addContactEmail = () => setContactEmails((p) => [...p, { email: "", is_primary: false }]);
+    const removeContactEmail = (index: number) => {
+        setContactEmails((p) => {
+            const updated = p.filter((_, i) => i !== index);
+            if (!updated.some((d) => d.is_primary) && updated.length > 0) {
+                updated[0].is_primary = true;
+            }
+            return updated;
+        });
+    };
+    const updateContactEmail = (index: number, key: keyof EmailRow, value: string | boolean) => {
+        setContactEmails((p) =>
+            p.map((d, i) => {
+                if (i === index) return { ...d, [key]: value };
+                if (key === "is_primary" && value === true) return { ...d, is_primary: false };
+                return d;
+            })
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
             const payload = { ...form };
-            // Convert empty strings to null for foreign keys
             const nullableFields = [
                 'customer_group_id', 'territory_id', 'lead_id', 'opportunity_id',
                 'industry_id', 'default_price_list_id', 'payment_term_id', 'customer_contact_id'
@@ -211,6 +324,35 @@ export default function CustomerForm() {
                     payload[key] = null;
                 }
             });
+
+            // Handle Contact
+            let contactId = payload.customer_contact_id;
+            if (includeContact && contactForm.first_name) {
+                const contactPayload = {
+                    ...contactForm,
+                    salutation: contactForm.salutation || null,
+                    middle_name: contactForm.middle_name || null,
+                    last_name: contactForm.last_name || null,
+                    designation: contactForm.designation || null,
+                    gender: contactForm.gender || null,
+                    company_name: form.name || null,
+                    status: 'Open',
+                    phones: contactPhones
+                        .filter((p) => p.phone_no.trim() !== "")
+                        .map((p) => ({ phone_no: p.phone_no.trim(), is_primary: p.is_primary })),
+                    emails: contactEmails
+                        .filter((e) => e.email.trim() !== "")
+                        .map((e) => ({ email: e.email.trim(), is_primary: e.is_primary })),
+                };
+
+                if (contactId) {
+                    await contactApi.update(Number(contactId), contactPayload);
+                } else {
+                    const newContact = await contactApi.create(contactPayload);
+                    contactId = newContact.id;
+                    payload.customer_contact_id = contactId;
+                }
+            }
 
             if (isEdit) {
                 await customerApi.update(Number(id), payload);
@@ -399,15 +541,194 @@ export default function CustomerForm() {
                     </CardContent>
                 </Card>
 
-                {/* Contact Details */}
+                {/* Primary Contact (Embedded Form) */}
+                <Card className="border-primary/20 bg-primary/5">
+                    <CardHeader className="flex flex-row items-center space-y-0 gap-3 pb-4">
+                        <Checkbox 
+                            id="include-contact" 
+                            checked={includeContact} 
+                            onCheckedChange={(checked) => setIncludeContact(checked === true)}
+                            className="h-5 w-5 rounded-sm data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                        />
+                        <div className="space-y-1">
+                            <CardTitle>Manage Primary Contact Details</CardTitle>
+                            <CardDescription>Include rich contact details (multiple emails, phones, salutation)</CardDescription>
+                        </div>
+                    </CardHeader>
+                    {includeContact && (
+                        <CardContent className="grid gap-6">
+                            <div className="grid gap-6 md:grid-cols-4 p-4 border rounded-md bg-background">
+                                <div className="space-y-2">
+                                    <Label>Salutation</Label>
+                                    <Select
+                                        value={contactForm.salutation}
+                                        onValueChange={(v) => setContactField("salutation", v)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {SALUTATIONS.map((s) => (
+                                                <SelectItem key={s} value={s}>{s}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>First Name <span className="text-destructive">*</span></Label>
+                                    <Input
+                                        value={contactForm.first_name}
+                                        onChange={(e) => setContactField("first_name", e.target.value)}
+                                        required={includeContact}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Middle Name</Label>
+                                    <Input
+                                        value={contactForm.middle_name}
+                                        onChange={(e) => setContactField("middle_name", e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Last Name</Label>
+                                    <Input
+                                        value={contactForm.last_name}
+                                        onChange={(e) => setContactField("last_name", e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label>Designation</Label>
+                                    <Input
+                                        value={contactForm.designation}
+                                        onChange={(e) => setContactField("designation", e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Gender</Label>
+                                    <Select
+                                        value={contactForm.gender}
+                                        onValueChange={(v) => setContactField("gender", v)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {genders.map((g) => (
+                                                <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            
+                            <div className="grid gap-6 md:grid-cols-2">
+                                {/* Phones */}
+                                <div className="p-4 border rounded-md bg-background">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <Label className="font-semibold text-base">Contact Phones</Label>
+                                        <Button type="button" variant="outline" size="sm" onClick={addContactPhone}>
+                                            <Plus className="mr-2 h-4 w-4" /> Add Phone
+                                        </Button>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {contactPhones.map((phone, index) => (
+                                            <div key={index} className="flex items-end gap-4">
+                                                <div className="flex-1 space-y-2">
+                                                    <Label>Phone No</Label>
+                                                    <Input
+                                                        placeholder="Enter phone number"
+                                                        value={phone.phone_no}
+                                                        onChange={(e) => updateContactPhone(index, "phone_no", e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-2 pb-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant={phone.is_primary ? "default" : "outline"}
+                                                        size="icon"
+                                                        onClick={() => updateContactPhone(index, "is_primary", true)}
+                                                        title={phone.is_primary ? "Primary" : "Set as Primary"}
+                                                        className={phone.is_primary ? "bg-yellow-500 hover:bg-yellow-600" : ""}
+                                                    >
+                                                        <Star className={`h-4 w-4 ${phone.is_primary ? "fill-current" : ""}`} />
+                                                    </Button>
+                                                    {contactPhones.length > 1 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => removeContactPhone(index)}
+                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                {/* Emails */}
+                                <div className="p-4 border rounded-md bg-background">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <Label className="font-semibold text-base">Contact Emails</Label>
+                                        <Button type="button" variant="outline" size="sm" onClick={addContactEmail}>
+                                            <Plus className="mr-2 h-4 w-4" /> Add Email
+                                        </Button>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {contactEmails.map((emailRow, index) => (
+                                            <div key={index} className="flex items-end gap-4">
+                                                <div className="flex-1 space-y-2">
+                                                    <Label>Email</Label>
+                                                    <Input
+                                                        type="email"
+                                                        placeholder="Enter email address"
+                                                        value={emailRow.email}
+                                                        onChange={(e) => updateContactEmail(index, "email", e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-2 pb-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant={emailRow.is_primary ? "default" : "outline"}
+                                                        size="icon"
+                                                        onClick={() => updateContactEmail(index, "is_primary", true)}
+                                                        title={emailRow.is_primary ? "Primary" : "Set as Primary"}
+                                                        className={emailRow.is_primary ? "bg-yellow-500 hover:bg-yellow-600" : ""}
+                                                    >
+                                                        <Star className={`h-4 w-4 ${emailRow.is_primary ? "fill-current" : ""}`} />
+                                                    </Button>
+                                                    {contactEmails.length > 1 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => removeContactEmail(index)}
+                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    )}
+                </Card>
+
+                {/* Legacy General Details */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Contact Details</CardTitle>
+                        <CardTitle>Other Details</CardTitle>
                     </CardHeader>
                     <CardContent className="grid gap-6 md:grid-cols-2">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Email</Label>
+                                <Label>Legacy Email</Label>
                                 <Input
                                     type="email"
                                     value={form.email}
@@ -416,7 +737,7 @@ export default function CustomerForm() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>Phone</Label>
+                                <Label>Legacy Phone</Label>
                                 <Input
                                     value={form.phone}
                                     onChange={(e) => setField("phone", e.target.value)}
@@ -515,10 +836,10 @@ export default function CustomerForm() {
                     </CardContent>
                 </Card>
 
-                {/* Other Details */}
+                {/* Other Details Textarea */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Other Details</CardTitle>
+                        <CardTitle>Customer Description</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-2">

@@ -16,6 +16,7 @@ class Contact extends Model
     protected $table = 'customer_contacts';
 
     protected $fillable = [
+        'customer_id',
         'salutation',
         'first_name',
         'middle_name',
@@ -41,6 +42,11 @@ class Contact extends Model
             ($this->middle_name ? ' ' . $this->middle_name : '') .
             ($this->last_name ? ' ' . $this->last_name : '')
         );
+    }
+
+    public function customer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     public function phones(): HasMany

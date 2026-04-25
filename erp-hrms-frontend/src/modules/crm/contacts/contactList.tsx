@@ -198,7 +198,7 @@ export default function ContactList() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold">Contacts</h1>
+                    <h1 className="text-2xl font-bold">Customer</h1>
                     <p className="text-muted-foreground">Manage your CRM contacts</p>
                 </div>
                 <Link to="/crm/contacts/create">

@@ -73,6 +73,7 @@ class ContactController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'customer_id'         => 'nullable|integer|exists:customers,id',
             'salutation'          => 'nullable|string|max:50',
             'first_name'          => 'required|string|max:255',
             'middle_name'         => 'nullable|string|max:255',
@@ -132,6 +133,7 @@ class ContactController extends Controller
         $contact = Contact::findOrFail($id);
 
         $validated = $request->validate([
+            'customer_id'         => 'nullable|integer|exists:customers,id',
             'salutation'          => 'nullable|string|max:50',
             'first_name'          => 'sometimes|required|string|max:255',
             'middle_name'         => 'nullable|string|max:255',
