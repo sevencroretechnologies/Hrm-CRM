@@ -12,5 +12,5 @@ class CustomerGroup extends Model
 {
     use HasFactory, SoftDeletes, HasOrgAndCompany;
 
-    protected $fillable = ['name', 'org_id', 'company_id'];
+    protected $fillable = ['name'];
 }

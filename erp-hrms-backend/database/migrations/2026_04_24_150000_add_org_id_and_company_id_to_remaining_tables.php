@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Tables to add org_id and company_id columns to.
      */
@@ -17,7 +16,7 @@ return new class extends Migration
         'customer_contact_emails',
         'customer_contact_phones',
         'customer_contacts',
-        'customer_groups',
+        // 'customer_groups',
         'customers',
         // 'industry_types',
         'leads',
@@ -43,7 +42,7 @@ return new class extends Migration
         // 'statuses',
         // 'task_sources',
         // 'task_types',
-         'tasks',
+        'tasks',
         // 'territories',
     ];
 
