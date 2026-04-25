@@ -15,13 +15,14 @@ class DashboardService
         $thirtyDaysAgo = $now->copy()->subDays(30);
 
         // Leads stats
-        $leadsTotal = Lead::count();
-        $leadsNew30 = Lead::where('created_at', '>=', $thirtyDaysAgo)->count();
+        $leadsTotal = Lead::forCurrentOrganization()->forCurrentCompany()->count();
+        $leadsNew30 = Lead::forCurrentOrganization()->forCurrentCompany()->where('created_at', '>=', $thirtyDaysAgo)->count();
 
         // Leads by status (join with statuses table to get the status name)
         $leadsByStatus = DB::table('leads')
             ->leftJoin('statuses', 'leads.status_id', '=', 'statuses.id')
             ->where('leads.org_id', auth()->user()->org_id)
+            ->where('leads.company_id', auth()->user()->company_id)
             ->whereNull('leads.deleted_at')
             ->select('statuses.status_name as status', DB::raw('count(*) as count'))
             ->groupBy('statuses.status_name')
@@ -32,6 +33,7 @@ class DashboardService
         // Leads by qualification
         $leadsByQualification = DB::table('leads')
             ->where('org_id', auth()->user()->org_id)
+            ->where('company_id', auth()->user()->company_id)
             ->whereNull('deleted_at')
             ->select('qualification_status', DB::raw('count(*) as count'))
             ->whereNotNull('qualification_status')
@@ -41,19 +43,22 @@ class DashboardService
             ->toArray();
 
         // Opportunities stats (join with statuses table for status filtering)
-        $oppTotal = Opportunity::count();
+        $oppTotal = Opportunity::forCurrentOrganization()->forCurrentCompany()->count();
 
         // Open opportunities - use status relationship
-        $oppOpen = Opportunity::leftJoin('statuses', 'opportunities.status_id', '=', 'statuses.id')
+        $oppOpen = Opportunity::forCurrentOrganization()->forCurrentCompany()
+            ->leftJoin('statuses', 'opportunities.status_id', '=', 'statuses.id')
             ->where('statuses.status_name', 'Open')
             ->count();
 
-        $oppWon30 = Opportunity::leftJoin('statuses', 'opportunities.status_id', '=', 'statuses.id')
+        $oppWon30 = Opportunity::forCurrentOrganization()->forCurrentCompany()
+            ->leftJoin('statuses', 'opportunities.status_id', '=', 'statuses.id')
             ->where('statuses.status_name', 'Converted')
             ->where('opportunities.updated_at', '>=', $thirtyDaysAgo)
             ->count();
 
-        $oppTotalValue = Opportunity::leftJoin('statuses', 'opportunities.status_id', '=', 'statuses.id')
+        $oppTotalValue = Opportunity::forCurrentOrganization()->forCurrentCompany()
+            ->leftJoin('statuses', 'opportunities.status_id', '=', 'statuses.id')
             ->where('statuses.status_name', 'Open')
             ->sum('opportunities.opportunity_amount');
 
@@ -138,16 +143,20 @@ class DashboardService
                 'active' => $contractsActive,
                 'unsigned' => $contractsUnsigned,
             ],
+            'customers' => [
+                'total' => \App\Models\Customer::count(),
+            ],
         ];
     }
 
     public function getLeadConversionFunnel(): array
     {
-        $total = Lead::count();
-        $qualified = Lead::where('qualification_status', 'Qualified')->count();
+        $total = Lead::forCurrentOrganization()->forCurrentCompany()->count();
+        $qualified = Lead::forCurrentOrganization()->forCurrentCompany()->where('qualification_status', 'Qualified')->count();
 
         // Count opportunities that originated from leads
-        $withOpportunity = Opportunity::whereNotNull('lead_id')->distinct('lead_id')->count('lead_id');
+        $withOpportunity = Opportunity::forCurrentOrganization()->forCurrentCompany()
+            ->whereNotNull('lead_id')->distinct('lead_id')->count('lead_id');
 
         return [
             ['stage' => 'Total Leads', 'count' => $total],

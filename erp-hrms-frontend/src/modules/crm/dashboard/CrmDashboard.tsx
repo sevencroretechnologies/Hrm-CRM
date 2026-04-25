@@ -163,13 +163,16 @@ export default function CrmDashboard() {
       dashboardService.getSalesOverview().then(r => Array.isArray(r) ? r : r.data).catch(() => []),
       opportunityApi.list({ per_page: 5, sort_by: 'created_at', sort_order: 'desc' }).then(r => Array.isArray(r) ? r : r.data).catch(() => []),
       salesTaskDetailApi.list({ per_page: 100 }).then(r => Array.isArray(r) ? r : r.data).catch(() => []),
-      customerApi.list({ per_page: 1 }).then(r => r.total || 0).catch(() => 0)
+      customerApi.list({ per_page: 1 }).then(r => r.pagination?.total_items || 0).catch(() => 0)
     ]).then(([s, salesOvw, opps, tsks, custTotal]) => {
       setStats(s);
       setSalesOverviewData(salesOvw as any[]);
       setLatestOpportunities(opps as Opportunity[]);
       setTasks(tsks as SalesTaskDetail[]);
-      setTotalCustomers(custTotal as number);
+      
+      // Prioritize count from stats, fallback to separate API call result
+      const finalCustTotal = s?.customers?.total ?? custTotal;
+      setTotalCustomers(finalCustTotal as number);
     }).finally(() => setLoading(false));
   }, []);
 
