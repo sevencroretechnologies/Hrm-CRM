@@ -205,17 +205,21 @@ export default function LeadsList() {
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Source</Label>
                   <p className="text-sm">{selectedLead.source?.name || '-'}</p>
                 </div>
-                <div className="space-y-1">
+                {/* <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Territory</Label>
                   <p className="text-sm">{selectedLead.territory || '-'}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+                </div> */}
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Industry</Label>
                   <p className="text-sm">{selectedLead.industry?.name || '-'}</p>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Industry</Label>
+                  <p className="text-sm">{selectedLead.industry?.name || '-'}</p>
+                </div> */}
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Request Type</Label>
                   <p className="text-sm">{selectedLead.request_type?.name || '-'}</p>

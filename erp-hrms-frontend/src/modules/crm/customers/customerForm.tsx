@@ -114,14 +114,28 @@ export default function CustomerForm() {
                     fetchResilient(() => contactApi.list()),
                 ]);
 
+                const extractData = (res: any) => {
+                    if (!res) return [];
+                    if (Array.isArray(res)) return res;
+                    if (res.data && Array.isArray(res.data)) return res.data;
+                    if (res.data && res.data.data && Array.isArray(res.data.data)) return res.data.data;
+                    return [];
+                };
+
                 setCustomerGroups(groupsRes || []);
                 setTerritories(territoriesRes || []);
-                setLeads(Array.isArray(leadsRes) ? leadsRes : (leadsRes as any).data || []);
-                setOpportunities(Array.isArray(oppsRes) ? oppsRes : (oppsRes as any).data || []);
+                setLeads(extractData(leadsRes));
+                setOpportunities(extractData(oppsRes));
                 setIndustries(indRes || []);
                 setPriceLists(pricesRes || []);
                 setPaymentTerms(termsRes || []);
-                setContacts(Array.isArray(contactsRes) ? contactsRes : (contactsRes as any).data || []);
+                setContacts(extractData(contactsRes));
+
+                console.log("CRM Options Loaded:", {
+                    leads: extractData(leadsRes).length,
+                    opportunities: extractData(oppsRes).length,
+                    contacts: extractData(contactsRes).length
+                });
             } catch (error) {
                 console.error("Critical error in loadOptions:", error);
             }
@@ -168,6 +182,14 @@ export default function CustomerForm() {
     }, [id, navigate]);
 
     const setField = (key: string, value: any) => setForm((p) => ({ ...p, [key]: value }));
+
+    const getOpportunityLabel = (o: Opportunity) => {
+        if (o.party_name) return o.party_name;
+        if (o.opportunity_from === 'lead' && o.lead) {
+            return `${o.lead.first_name || ""} ${o.lead.last_name || ""}`.trim();
+        }
+        return o.naming_series || `ID: ${o.id}`;
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -341,9 +363,15 @@ export default function CustomerForm() {
                                     <SelectValue placeholder="Select Opportunity" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {opportunities.map(o => (
-                                        <SelectItem key={o.id} value={o.id.toString()}>{o.party_name}</SelectItem>
-                                    ))}
+                                    {opportunities.length === 0 ? (
+                                        <SelectItem value="none" disabled>No opportunities found</SelectItem>
+                                    ) : (
+                                        opportunities.map(o => (
+                                            <SelectItem key={o.id} value={o.id.toString()}>
+                                                {getOpportunityLabel(o)}
+                                            </SelectItem>
+                                        ))
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>
