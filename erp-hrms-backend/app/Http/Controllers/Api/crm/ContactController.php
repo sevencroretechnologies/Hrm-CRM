@@ -89,10 +89,14 @@ class ContactController extends Controller
             'emails'              => 'nullable|array',
             'emails.*.email'      => 'nullable|email|max:255',
             'emails.*.is_primary' => 'nullable|boolean',
+            'bank_details'        => 'nullable|array',
+            'bank_details.*.bank_name'  => 'nullable|string|max:255',
+            'bank_details.*.account_no' => 'nullable|string|max:255',
+            'bank_details.*.ifsc_code'  => 'nullable|string|max:50',
         ]);
 
         $contact = DB::transaction(function () use ($validated) {
-            $contactData = collect($validated)->except(['phones', 'emails'])->toArray();
+            $contactData = collect($validated)->except(['phones', 'emails', 'bank_details'])->toArray();
             $contact = Contact::create($contactData);
 
             // Save phones
@@ -113,6 +117,18 @@ class ContactController extends Controller
                     $contact->emails()->create([
                         'email'      => $email['email'],
                         'is_primary' => $email['is_primary'] ?? false,
+                    ]);
+                }
+            }
+
+            // Save bank details
+            if (!empty($validated['bank_details'])) {
+                foreach ($validated['bank_details'] as $bank) {
+                    if (empty($bank['bank_name']) && empty($bank['account_no'])) continue;
+                    $contact->bankDetails()->create([
+                        'bank_name'  => $bank['bank_name'] ?? null,
+                        'account_no' => $bank['account_no'] ?? null,
+                        'ifsc_code'  => $bank['ifsc_code']  ?? null,
                     ]);
                 }
             }
@@ -149,10 +165,14 @@ class ContactController extends Controller
             'emails'              => 'nullable|array',
             'emails.*.email'      => 'nullable|email|max:255',
             'emails.*.is_primary' => 'nullable|boolean',
+            'bank_details'        => 'nullable|array',
+            'bank_details.*.bank_name'  => 'nullable|string|max:255',
+            'bank_details.*.account_no' => 'nullable|string|max:255',
+            'bank_details.*.ifsc_code'  => 'nullable|string|max:50',
         ]);
 
         DB::transaction(function () use ($contact, $validated) {
-            $contactData = collect($validated)->except(['phones', 'emails'])->toArray();
+            $contactData = collect($validated)->except(['phones', 'emails', 'bank_details'])->toArray();
             $contact->update($contactData);
 
             // Replace phones
@@ -178,6 +198,21 @@ class ContactController extends Controller
                         $contact->emails()->create([
                             'email'      => $email['email'],
                             'is_primary' => $email['is_primary'] ?? false,
+                        ]);
+                    }
+                }
+            }
+
+            // Replace bank details
+            if (array_key_exists('bank_details', $validated)) {
+                $contact->bankDetails()->delete();
+                if (!empty($validated['bank_details'])) {
+                    foreach ($validated['bank_details'] as $bank) {
+                        if (empty($bank['bank_name']) && empty($bank['account_no'])) continue;
+                        $contact->bankDetails()->create([
+                            'bank_name'  => $bank['bank_name'] ?? null,
+                            'account_no' => $bank['account_no'] ?? null,
+                            'ifsc_code'  => $bank['ifsc_code']  ?? null,
                         ]);
                     }
                 }

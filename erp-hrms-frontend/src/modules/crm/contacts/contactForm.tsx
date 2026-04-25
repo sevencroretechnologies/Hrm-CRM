@@ -38,6 +38,13 @@ interface EmailRow {
     is_primary: boolean;
 }
 
+interface BankRow {
+    id?: number;
+    bank_name: string;
+    account_no: string;
+    ifsc_code: string;
+}
+
 export default function ContactForm() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -63,6 +70,10 @@ export default function ContactForm() {
 
     const [emails, setEmails] = useState<EmailRow[]>([
         { email: "", is_primary: true },
+    ]);
+
+    const [bankRows, setBankRows] = useState<BankRow[]>([
+        { bank_name: "", account_no: "", ifsc_code: "" }
     ]);
 
     const [genders, setGenders] = useState<EnumOption[]>([]);
@@ -109,6 +120,19 @@ export default function ContactForm() {
                         );
                     } else {
                         setEmails([{ email: "", is_primary: true }]);
+                    }
+
+                    if ((contact as any).bankDetails && (contact as any).bankDetails.length > 0) {
+                        setBankRows(
+                            (contact as any).bankDetails.map((b: any) => ({
+                                id: b.id,
+                                bank_name: b.bank_name || "",
+                                account_no: b.account_no || "",
+                                ifsc_code: b.ifsc_code || "",
+                            }))
+                        );
+                    } else {
+                        setBankRows([{ bank_name: "", account_no: "", ifsc_code: "" }]);
                     }
                 } catch (error) {
                     showAlert("error", "Error", getErrorMessage(error, "Failed to fetch contact details"));
@@ -172,6 +196,12 @@ export default function ContactForm() {
         );
     };
 
+    // Bank handlers
+    const addBankRow = () => setBankRows((r) => [...r, { bank_name: "", account_no: "", ifsc_code: "" }]);
+    const removeBankRow = (index: number) => setBankRows((r) => r.filter((_, i) => i !== index));
+    const updateBankRow = (index: number, key: keyof BankRow, value: string) =>
+        setBankRows((r) => r.map((row, i) => (i === index ? { ...row, [key]: value } : row)));
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -191,6 +221,13 @@ export default function ContactForm() {
             emails: emails
                 .filter((e) => e.email.trim() !== "")
                 .map((e) => ({ email: e.email.trim(), is_primary: e.is_primary })),
+            bank_details: bankRows
+                .filter(b => b.bank_name.trim() || b.account_no.trim())
+                .map(b => ({
+                    bank_name: b.bank_name.trim(),
+                    account_no: b.account_no.trim(),
+                    ifsc_code: b.ifsc_code.trim()
+                })),
         };
 
         try {
@@ -241,7 +278,7 @@ export default function ContactForm() {
                         </BreadcrumbList>
                     </Breadcrumb>
                     <h1 className="text-2xl font-bold tracking-tight">
-                        {isEdit ? "Edit Contact" : "New Contact"}
+                        {isEdit ? "Edit Contact" : "New Customer"}
                     </h1>
                 </div>
                 <Button variant="outline" onClick={() => navigate("/crm/contacts")}>
@@ -465,6 +502,61 @@ export default function ContactForm() {
                                 onChange={(e) => setField("address", e.target.value)}
                                 placeholder="Enter full address"
                             />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Bank Details */}
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                        <CardTitle>Bank Details</CardTitle>
+                        <Button type="button" variant="outline" size="sm" onClick={addBankRow}>
+                            <Plus className="mr-2 h-4 w-4" /> Add Bank
+                        </Button>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {bankRows.map((bank, idx) => (
+                                <div key={idx} className="grid grid-cols-3 gap-3 p-3 border rounded-md bg-background items-end">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">Bank Name</Label>
+                                        <Input
+                                            placeholder="e.g. HDFC Bank"
+                                            value={bank.bank_name}
+                                            onChange={(e) => updateBankRow(idx, "bank_name", e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">Account No</Label>
+                                        <Input
+                                            placeholder="Account number"
+                                            value={bank.account_no}
+                                            onChange={(e) => updateBankRow(idx, "account_no", e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="flex gap-2 items-end">
+                                        <div className="flex-1 space-y-1">
+                                            <Label className="text-xs">IFSC Code</Label>
+                                            <Input
+                                                placeholder="e.g. HDFC0001234"
+                                                value={bank.ifsc_code}
+                                                onChange={(e) => updateBankRow(idx, "ifsc_code", e.target.value)}
+                                            />
+                                        </div>
+                                        {bankRows.length > 1 && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => removeBankRow(idx)}
+                                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </CardContent>
                 </Card>

@@ -704,7 +704,7 @@ export default function CustomerForm() {
                         <CardTitle>Manage Primary Contact Details</CardTitle>
                     </CardHeader>
                     <CardContent className="grid gap-6">
-                            {/* <div className="grid gap-6 md:grid-cols-4 p-4 border rounded-md bg-background">
+                            <div className="grid gap-6 md:grid-cols-4 p-4 border rounded-md bg-background">
                                 <div className="space-y-2">
                                     <Label>Salutation</Label>
                                     <Select
@@ -766,7 +766,7 @@ export default function CustomerForm() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                            </div> */}
+                            </div>
                             
                             <div className="grid gap-6 md:grid-cols-2">
                                 {/* Phones */}

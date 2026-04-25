@@ -32,7 +32,7 @@ class Contact extends Model
 
     protected $appends = ['full_name'];
 
-    protected $with = ['phones', 'emails'];
+    protected $with = ['phones', 'emails', 'bankDetails'];
 
     public function getFullNameAttribute(): string
     {
@@ -57,5 +57,9 @@ class Contact extends Model
     public function emails(): HasMany
     {
         return $this->hasMany(CustomerContactEmail::class, 'contact_id');
+    }
+    public function bankDetails(): HasMany
+    {
+        return $this->hasMany(CustomerBankDetail::class, 'customer_contact_id');
     }
 }
