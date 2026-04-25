@@ -10,9 +10,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use App\Modules\CRM\Models\CrmNote;
 
+use App\Traits\HasOrgAndCompany;
+
 class Prospect extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasOrgAndCompany;
 
     protected $fillable = [
         'company_name',
@@ -35,6 +37,8 @@ class Prospect extends Model
         'zip_code',
         'email',
         'phone',
+        'org_id',
+        'company_id',
     ];
 
     protected $casts = [

@@ -300,6 +300,7 @@ class OpportunityController extends Controller
         $products = \Illuminate\Support\Facades\DB::table('opportunity_products')
             ->join('products', 'opportunity_products.product_id', '=', 'products.id')
             ->where('opportunity_products.opportunity_id', $id)
+            ->where('opportunity_products.org_id', auth()->user()->org_id)
             ->whereNull('opportunity_products.deleted_at')
             ->select(
                 'opportunity_products.id as id',

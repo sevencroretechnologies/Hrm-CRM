@@ -8,9 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Traits\HasOrgAndCompany;
+
 class Customer extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasOrgAndCompany;
 
     protected $fillable = [
         'name',
@@ -31,6 +33,8 @@ class Customer extends Model
         'bank_account_details',
         'print_language',
         'customer_details',
+        'org_id',
+        'company_id',
     ];
 
     protected $casts = [

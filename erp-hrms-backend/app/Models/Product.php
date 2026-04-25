@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+use App\Traits\HasOrgAndCompany;
+
 class Product extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasOrgAndCompany;
 
     protected $fillable = [
         'category_id',
@@ -21,6 +23,8 @@ class Product extends Model
         'stock',
         'rate',
         'amount',
+        'org_id',
+        'company_id',
     ];
 
     /**

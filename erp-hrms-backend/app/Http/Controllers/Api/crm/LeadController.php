@@ -19,7 +19,9 @@ class LeadController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Lead::with(['status', 'source', 'requestType', 'industry']);
+            $query = Lead::forCurrentOrganization()
+                ->forCurrentCompany()
+                ->with(['status', 'source', 'requestType', 'industry']);
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -84,7 +86,7 @@ class LeadController extends Controller
 
     public function getLead(): JsonResponse
     {
-        $lead = Lead::get();
+        $lead = Lead::forCurrentOrganization()->forCurrentCompany()->get();
 
         return response()->json([
             'message' => 'All Leads retrieved successfully.',
@@ -131,7 +133,10 @@ class LeadController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $lead = Lead::with(['status', 'source', 'requestType', 'industry'])->findOrFail($id);
+        $lead = Lead::forCurrentOrganization()
+            ->forCurrentCompany()
+            ->with(['status', 'source', 'requestType', 'industry'])
+            ->findOrFail($id);
         return response()->json($lead);
     }
 
@@ -166,7 +171,7 @@ class LeadController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated, $id) {
-            $lead = Lead::findOrFail($id);
+            $lead = Lead::forCurrentOrganization()->forCurrentCompany()->findOrFail($id);
             $lead->update($validated);
             $this->syncProspect($lead);
             return response()->json($lead->fresh(['status', 'source', 'requestType', 'industry']));
@@ -221,7 +226,7 @@ class LeadController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
-        $lead = Lead::findOrFail($id);
+        $lead = Lead::forCurrentOrganization()->forCurrentCompany()->findOrFail($id);
         $lead->delete();
         return response()->json(null, 204);
     }

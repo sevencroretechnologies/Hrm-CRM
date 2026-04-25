@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Traits\HasOrgAndCompany;
+
 class Task extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasOrgAndCompany;
 
     protected $fillable = [
         'title',
@@ -19,6 +21,8 @@ class Task extends Model
         'due_date',
         'status',
         'user_id',
+        'org_id',
+        'company_id',
     ];
 
     public function taskSource()

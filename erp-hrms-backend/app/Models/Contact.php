@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Traits\HasOrgAndCompany;
+
 class Contact extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasOrgAndCompany;
 
     protected $table = 'customer_contacts';
 
@@ -23,6 +25,8 @@ class Contact extends Model
         'company_name',
         'address',
         'status',
+        'org_id',
+        'company_id',
     ];
 
     protected $appends = ['full_name'];

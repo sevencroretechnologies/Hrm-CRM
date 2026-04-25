@@ -16,7 +16,9 @@ class CustomerController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Customer::with(['customerGroup:id,name', 'territory:id,territory_name', 'industry:id,name'])
+            $query = Customer::forCurrentOrganization()
+                ->forCurrentCompany()
+                ->with(['customerGroup:id,name', 'territory:id,territory_name', 'industry:id,name'])
                 ->without([
                     'lead',
                     'opportunity',

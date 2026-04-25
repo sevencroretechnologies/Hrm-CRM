@@ -7,15 +7,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Traits\HasOrgAndCompany;
+
 class SalesTask extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasOrgAndCompany;
 
     protected $fillable = [
         'task_source_id',
         'source_id',
         'task_type_id',
         'sales_assign_id',
+        'org_id',
+        'company_id',
     ];
 
     public function taskSource()

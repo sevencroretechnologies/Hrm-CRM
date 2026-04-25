@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Traits\HasOrgAndCompany;
+
 class SalesTaskDetail extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasOrgAndCompany;
 
     protected $fillable = [
         'sales_task_id',
@@ -17,6 +19,8 @@ class SalesTaskDetail extends Model
         'time',
         'description',
         'status',
+        'org_id',
+        'company_id',
     ];
 
     public function salesTask()

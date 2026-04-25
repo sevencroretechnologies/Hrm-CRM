@@ -21,6 +21,7 @@ class DashboardService
         // Leads by status (join with statuses table to get the status name)
         $leadsByStatus = DB::table('leads')
             ->leftJoin('statuses', 'leads.status_id', '=', 'statuses.id')
+            ->where('leads.org_id', auth()->user()->org_id)
             ->whereNull('leads.deleted_at')
             ->select('statuses.status_name as status', DB::raw('count(*) as count'))
             ->groupBy('statuses.status_name')
@@ -30,6 +31,7 @@ class DashboardService
 
         // Leads by qualification
         $leadsByQualification = DB::table('leads')
+            ->where('org_id', auth()->user()->org_id)
             ->whereNull('deleted_at')
             ->select('qualification_status', DB::raw('count(*) as count'))
             ->whereNotNull('qualification_status')
@@ -57,6 +59,7 @@ class DashboardService
 
         $oppByStatus = DB::table('opportunities')
             ->leftJoin('statuses', 'opportunities.status_id', '=', 'statuses.id')
+            ->where('opportunities.org_id', auth()->user()->org_id)
             ->whereNull('opportunities.deleted_at')
             ->select('statuses.status_name as status', DB::raw('count(*) as count'))
             ->groupBy('statuses.status_name')
@@ -67,6 +70,7 @@ class DashboardService
         // Opportunities by stage (use opportunity_stages table)
         $oppByStage = DB::table('opportunities')
             ->leftJoin('opportunity_stages', 'opportunities.opportunity_stage_id', '=', 'opportunity_stages.id')
+            ->where('opportunities.org_id', auth()->user()->org_id)
             ->whereNull('opportunities.deleted_at')
             ->select(
                 'opportunity_stages.name as stage_name',
@@ -82,8 +86,9 @@ class DashboardService
         $appointmentsTotal = 0;
         $appointmentsUpcoming = 0;
         if (Schema::hasTable('appointments')) {
-            $appointmentsTotal = DB::table('appointments')->count();
+            $appointmentsTotal = DB::table('appointments')->where('org_id', auth()->user()->org_id)->count();
             $appointmentsUpcoming = DB::table('appointments')
+                ->where('org_id', auth()->user()->org_id)
                 ->where('scheduled_time', '>=', $now)
                 ->where('status', 'Open')
                 ->count();
@@ -93,9 +98,13 @@ class DashboardService
         $contractsActive = 0;
         $contractsUnsigned = 0;
         if (Schema::hasTable('contracts')) {
-            $contractsActive = DB::table('contracts')->where('status', 'Active')->count();
+            $contractsActive = DB::table('contracts')
+                ->where('org_id', auth()->user()->org_id)
+                ->where('status', 'Active')->count();
             if (Schema::hasColumn('contracts', 'is_signed')) {
-                $contractsUnsigned = DB::table('contracts')->where('is_signed', false)->count();
+                $contractsUnsigned = DB::table('contracts')
+                    ->where('org_id', auth()->user()->org_id)
+                    ->where('is_signed', false)->count();
             }
         }
 
@@ -114,6 +123,7 @@ class DashboardService
                 'by_status' => $oppByStatus,
                 'by_stage' => $oppByStage,
                 'lost_reasons' => DB::table('opportunity_lost_reasons')
+                    ->where('org_id', auth()->user()->org_id)
                     ->whereNull('deleted_at')
                     ->select('opportunity_lost_reasons as reason', DB::raw('count(*) as count'))
                     ->groupBy('opportunity_lost_reasons')

@@ -6,8 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
+use App\Traits\HasOrgAndCompany;
+
 class RoleAuditLog extends Model
 {
+    use HasOrgAndCompany;
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -18,6 +22,8 @@ class RoleAuditLog extends Model
         'old_values',
         'new_values',
         'created_at',
+        'org_id',
+        'company_id',
     ];
 
     protected $casts = [

@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+use App\Traits\HasOrgAndCompany;
+
 class OpportunityProduct extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasOrgAndCompany;
 
     protected $table = 'opportunity_products';
 
@@ -19,6 +21,8 @@ class OpportunityProduct extends Model
         'quantity',
         'rate',
         'amount',
+        'org_id',
+        'company_id',
     ];
 
     public function opportunity(): BelongsTo
