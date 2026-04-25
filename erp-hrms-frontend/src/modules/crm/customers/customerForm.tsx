@@ -12,7 +12,6 @@ import {
     contactApi,
     enumApi,
     EnumOption
-    contactApi,
 } from "@/services/api";
 import type {
     CustomerGroup,
@@ -48,7 +47,6 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Loader2, ChevronLeft, Plus, Trash2, Star } from "lucide-react";
 import { set } from "date-fns";
-import { Loader2, ChevronLeft } from "lucide-react";
 
 const CUSTOMER_TYPES = ['Company', 'Individual', 'Partnership'];
 const SALUTATIONS = ["Mr", "Mrs", "Ms", "Dr", "Prof"];
@@ -62,7 +60,6 @@ interface EmailRow {
     email: string;
     is_primary: boolean;
 }
-const CUSTOMER_TYPES = ["Company", "Individual", "Partnership"];
 
 export default function CustomerForm() {
     const { id } = useParams();
@@ -389,42 +386,57 @@ export default function CustomerForm() {
                 if (payload[key] === "" || payload[key] === null) payload[key] = null;
             });
 
-            // Handle Contact
-            let contactId = payload.customer_contact_id;
-            if (includeContact && contactForm.first_name) {
-                const contactPayload = {
-                    ...contactForm,
-                    salutation: contactForm.salutation || null,
-                    middle_name: contactForm.middle_name || null,
-                    last_name: contactForm.last_name || null,
-                    designation: contactForm.designation || null,
-                    gender: contactForm.gender || null,
-                    company_name: form.name || null,
-                    status: 'Open',
-                    phones: contactPhones
-                        .filter((p) => p.phone_no.trim() !== "")
-                        .map((p) => ({ phone_no: p.phone_no.trim(), is_primary: p.is_primary })),
-                    emails: contactEmails
-                        .filter((e) => e.email.trim() !== "")
-                        .map((e) => ({ email: e.email.trim(), is_primary: e.is_primary })),
-                };
-
-                if (contactId) {
-                    await contactApi.update(Number(contactId), contactPayload);
-                } else {
-                    const newContact = await contactApi.create(contactPayload);
-                    contactId = newContact.id;
-                    payload.customer_contact_id = contactId;
-                }
-            }
+            // Reusable contact payload base
+            const getContactPayload = (customerIdStr: string | number) => ({
+                ...contactForm,
+                salutation: contactForm.salutation || null,
+                middle_name: contactForm.middle_name || null,
+                last_name: contactForm.last_name || null,
+                designation: contactForm.designation || null,
+                gender: contactForm.gender || null,
+                company_name: form.name || null,
+                status: 'Open',
+                customer_id: Number(customerIdStr),
+                phones: contactPhones
+                    .filter((p) => p.phone_no.trim() !== "")
+                    .map((p) => ({ phone_no: p.phone_no.trim(), is_primary: p.is_primary })),
+                emails: contactEmails
+                    .filter((e) => e.email.trim() !== "")
+                    .map((e) => ({ email: e.email.trim(), is_primary: e.is_primary })),
+            });
 
             if (isEdit) {
+                let contactId = payload.customer_contact_id;
+                if (includeContact && contactForm.first_name) {
+                    const contactPayload = getContactPayload(id as string);
+                    if (contactId) {
+                        await contactApi.update(Number(contactId), contactPayload);
+                    } else {
+                        const newContact = await contactApi.create(contactPayload);
+                        contactId = newContact.id;
+                        payload.customer_contact_id = contactId;
+                    }
+                }
                 await customerApi.update(Number(id), payload);
                 showAlert("success", "Updated!", "Customer has been updated.");
             } else {
-                await customerApi.create(payload);
+                // For a new customer, we create the customer first to get the ID
+                const createdCustomer = await customerApi.create(payload) as any;
+                const newCustomerId = createdCustomer.id || createdCustomer.data?.id;
+
+                if (newCustomerId && includeContact && contactForm.first_name) {
+                    const contactPayload = getContactPayload(newCustomerId);
+                    const newContact = await contactApi.create(contactPayload) as any;
+                    
+                    // Update customer with the new contact's ID
+                    await customerApi.update(newCustomerId, { 
+                        ...payload, 
+                        customer_contact_id: newContact.id || newContact.data?.id 
+                    });
+                }
                 showAlert("success", "Created!", "Customer has been created.");
             }
+            
             navigate("/crm/customers");
         } catch (error) {
             showAlert("error", "Error", getErrorMessage(error, "Failed to save customer"));
@@ -624,7 +636,7 @@ export default function CustomerForm() {
                 </Card>
 
                 {/* Classification & Relations */}
-                <Card>
+                {/* <Card>
                     <CardHeader>
                         <CardTitle>Classification & Relations</CardTitle>
                     </CardHeader>
@@ -700,10 +712,10 @@ export default function CustomerForm() {
                             </Select>
                         </div>
                     </CardContent>
-                </Card>
+                </Card> */}
 
                 {/* Primary Contact (Embedded Form) */}
-                <Card className="border-primary/20 bg-primary/5">
+                <Card >
                     <CardHeader className="flex flex-row items-center space-y-0 gap-3 pb-4">
                         <Checkbox 
                             id="include-contact" 
