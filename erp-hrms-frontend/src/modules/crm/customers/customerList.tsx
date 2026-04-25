@@ -97,11 +97,11 @@ export default function CustomerList() {
     };
 
     const columns: TableColumn<Customer>[] = [
-        {
-            name: 'ID',
-            selector: (_row, index) => (page - 1) * perPage + (index !== undefined ? index + 1 : 0),
-            width: '60px',
-        },
+        // {
+        //     name: 'ID',
+        //     selector: (_row, index) => (page - 1) * perPage + (index !== undefined ? index + 1 : 0),
+        //     width: '60px',
+        // },
         {
             name: 'Name',
             selector: (row) => row.name,
@@ -119,11 +119,11 @@ export default function CustomerList() {
             selector: (row) => row.customer_group_name || '-',
             sortable: true,
         },
-        {
+        /* {
             name: 'Territory',
             selector: (row) => row.territory_name || '-',
             sortable: true,
-        },
+        }, */
         {
             name: 'Email',
             selector: (row) => row.email || '-',
@@ -254,10 +254,10 @@ export default function CustomerList() {
                                     <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Customer Group</Label>
                                         <p className="text-sm font-medium">{selectedCustomer.customer_group_name || '—'}</p>
                                     </div>
-                                    <div className="space-y-1">
+                                    {/* <div className="space-y-1">
                                         <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Territory</Label>
                                         <p className="text-sm font-medium">{selectedCustomer.territory_name || '—'}</p>
-                                    </div>
+                                    </div> */}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">

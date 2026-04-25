@@ -737,7 +737,7 @@ export default function OpportunityForm() {
                                 <Label>Contact Mobile</Label>
                                 <Input value={form.contact_mobile || ''} onChange={(e) => setField('contact_mobile', e.target.value)} />
                             </div> */}
-                            <div className="space-y-1">
+                            {/* <div className="space-y-1">
                                 <Label>Territory</Label>
                                 <Select value={String(form.territory_id || 'none')} onValueChange={(v) => setField('territory_id', v === 'none' ? '' : v)}>
                                     <SelectTrigger><SelectValue placeholder="Select Territory" /></SelectTrigger>
@@ -746,7 +746,7 @@ export default function OpportunityForm() {
                                         {territories.map((t) => <SelectItem key={t.id} value={String(t.id)}>{lbl(t, 'territory_name', 'name')}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                            </div>
+                            </div> */}
                             {/* <div className="space-y-1">
                                 <Label>Company Name</Label>
                                 <Input value={form.company_name || ''} onChange={(e) => setField('company_name', e.target.value)} />

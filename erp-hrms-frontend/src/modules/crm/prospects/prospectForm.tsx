@@ -283,7 +283,7 @@ export default function ProspectForm() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-2">
+                        {/* <div className="space-y-2">
                             <Label>Territory</Label>
                             <Select
                                 value={form.territory}
@@ -298,7 +298,7 @@ export default function ProspectForm() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                        </div>
+                        </div> */}
                         <div className="space-y-2">
                             <Label>No of Employees</Label>
                             <Select

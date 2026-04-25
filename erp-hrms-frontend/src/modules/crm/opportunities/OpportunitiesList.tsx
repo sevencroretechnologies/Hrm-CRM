@@ -495,54 +495,41 @@ export default function OpportunitiesList() {
                 </div>
               )}
 
-              {selected && selected.contact && (
+              {selected && (
                 <div className="border-t pt-4">
                   <Label className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-3 block">Primary Contact</Label>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <Label className="text-[10px] uppercase text-muted-foreground">Person</Label>
                       <p className="text-sm font-medium truncate">
-                        {selected.contact.full_name ||
-                          [selected.contact.salutation, selected.contact.first_name, selected.contact.middle_name, selected.contact.last_name]
-                            .filter(Boolean)
-                            .join(' ') || '—'}
+                        {selected.contact?.full_name ||
+                          (selected.contact ? [selected.contact.salutation, selected.contact.first_name, selected.contact.middle_name, selected.contact.last_name].filter(Boolean).join(' ') : null) ||
+                          selected.contact_person ||
+                          (selected.lead ? [selected.lead.first_name, selected.lead.last_name].filter(Boolean).join(' ') : null) ||
+                          '—'}
                       </p>
                     </div>
                     <div>
                       <Label className="text-[10px] uppercase text-muted-foreground">Email</Label>
-                      <p className="text-sm font-medium truncate">
-                        {selected.contact.emails?.find(email => email.is_primary)?.email ||
-                          selected.contact.emails?.[0]?.email ||
-                          selected.contact_email || '—'}
+                      <p className="text-xs font-medium truncate">
+                        {selected.contact?.emails?.find(email => email.is_primary)?.email ||
+                          selected.contact?.emails?.[0]?.email ||
+                          selected.contact_email ||
+                          (selected.lead as any)?.email ||
+                          (selected.customer as any)?.email ||
+                          '—'}
                       </p>
                     </div>
                     <div>
                       <Label className="text-[10px] uppercase text-muted-foreground">Mobile</Label>
                       <p className="text-sm font-medium truncate">
-                        {selected.contact.phones?.find(phone => phone.is_primary)?.phone_no ||
-                          selected.contact.phones?.[0]?.phone_no ||
-                          selected.contact_mobile || '—'}
+                        {selected.contact?.phones?.find(phone => phone.is_primary)?.phone_no ||
+                          selected.contact?.phones?.[0]?.phone_no ||
+                          selected.contact_mobile ||
+                          (selected.lead as any)?.mobile_no ||
+                          (selected.customer as any)?.phone ||
+                          '—'}
                       </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {selected && !selected.contact && (
-                <div className="border-t pt-4">
-                  <Label className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-3 block">Primary Contact</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <Label className="text-[10px] uppercase text-muted-foreground">Person</Label>
-                      <p className="text-sm font-medium truncate">{selected.contact_person || '—'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-[10px] uppercase text-muted-foreground">Email</Label>
-                      <p className="text-xs font-medium truncate">{selected.contact_email || '—'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-[10px] uppercase text-muted-foreground">Mobile</Label>
-                      <p className="text-sm font-medium truncate">{selected.contact_mobile || '—'}</p>
                     </div>
                   </div>
                 </div>

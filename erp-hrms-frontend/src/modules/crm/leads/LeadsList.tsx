@@ -205,7 +205,7 @@ export default function LeadsList() {
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Status</Label>
                   <div>
-                    <StatusBadge status={selectedLead.status?.status_name} />
+                    <StatusBadge status={selectedLead.status_name || selectedLead.status?.status_name} />
                   </div>
                 </div>
               </div>
@@ -213,26 +213,18 @@ export default function LeadsList() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Source</Label>
-                  <p className="text-sm">{selectedLead.source?.name || '-'}</p>
+                  <p className="text-sm">{(selectedLead as any).source_name || selectedLead.source?.name || '-'}</p>
                 </div>
-                {/* <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Territory</Label>
-                  <p className="text-sm">{selectedLead.territory || '-'}</p>
-                </div> */}
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Industry</Label>
-                  <p className="text-sm">{selectedLead.industry?.name || '-'}</p>
+                  <p className="text-sm">{(selectedLead as any).industry_name || selectedLead.industry?.name || '-'}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                {/* <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Industry</Label>
-                  <p className="text-sm">{selectedLead.industry?.name || '-'}</p>
-                </div> */}
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Request Type</Label>
-                  <p className="text-sm">{selectedLead.request_type?.name || '-'}</p>
+                  <p className="text-sm">{(selectedLead as any).request_type_name || selectedLead.request_type?.name || '-'}</p>
                 </div>
               </div>
             </div>
