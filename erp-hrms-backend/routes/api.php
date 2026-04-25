@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\crm\CustomerGroupController;
 use App\Http\Controllers\Api\crm\PaymentTermController;
 use App\Http\Controllers\Api\crm\PriceListController;
 use App\Http\Controllers\Api\crm\CustomerController;
+use App\Http\Controllers\Api\crm\CustomerBankDetailController;
 use App\Http\Controllers\Api\crm\SalesTaskController;
 use App\Http\Controllers\Api\crm\SalesTaskDetailController;
 use App\Http\Controllers\Api\crm\TaskController;
@@ -222,6 +223,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/contracts/employee/{staffMemberId}', [ContractController::class , 'byEmployee']);
         // Master Data
         Route::apiResource('customers', CustomerController::class);
+        // Bank details nested under customers
+        Route::get('customers/{customerId}/bank-details', [CustomerBankDetailController::class, 'index']);
+        Route::post('customers/{customerId}/bank-details', [CustomerBankDetailController::class, 'store']);
+        Route::get('customers/{customerId}/bank-details/{bankDetail}', [CustomerBankDetailController::class, 'show']);
+        Route::put('customers/{customerId}/bank-details/{bankDetail}', [CustomerBankDetailController::class, 'update']);
+        Route::delete('customers/{customerId}/bank-details/{bankDetail}', [CustomerBankDetailController::class, 'destroy']);
         Route::apiResource('customer-groups', CustomerGroupController::class);
         Route::apiResource('payment-terms', PaymentTermController::class);
         Route::apiResource('price-lists', PriceListController::class);

@@ -171,6 +171,17 @@ export const customerApi = {
   delete: (id: number) => api.delete(`/customers/${id}`),
 };
 
+export const customerBankDetailApi = {
+  list: (customerId: number) =>
+    api.get(`/customers/${customerId}/bank-details`).then((r) => r.data.data || r.data),
+  create: (customerId: number, data: { bank_name: string; account_no: string; ifsc_code: string }) =>
+    api.post(`/customers/${customerId}/bank-details`, data).then((r) => r.data),
+  update: (customerId: number, bankDetailId: number, data: Partial<{ bank_name: string; account_no: string; ifsc_code: string }>) =>
+    api.put(`/customers/${customerId}/bank-details/${bankDetailId}`, data).then((r) => r.data),
+  delete: (customerId: number, bankDetailId: number) =>
+    api.delete(`/customers/${customerId}/bank-details/${bankDetailId}`),
+};
+
 export const customerGroupApi = {
   list: () => api.get<CustomerGroup[]>("/customer-groups").then((r) => r.data),
   create: (data: Partial<CustomerGroup>) =>

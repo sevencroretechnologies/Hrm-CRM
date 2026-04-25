@@ -6,6 +6,7 @@ use App\Enums\CustomerType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 use App\Traits\HasOrgAndCompany;
@@ -30,7 +31,6 @@ class Customer extends Model
         'website',
         'tax_id',
         'billing_currency',
-        'bank_account_details',
         'print_language',
         'customer_details',
         'org_id',
@@ -79,5 +79,10 @@ class Customer extends Model
     public function primaryContact(): BelongsTo
     {
         return $this->belongsTo(Contact::class, 'customer_contact_id');
+    }
+
+    public function bankDetails(): HasMany
+    {
+        return $this->hasMany(CustomerBankDetail::class);
     }
 }

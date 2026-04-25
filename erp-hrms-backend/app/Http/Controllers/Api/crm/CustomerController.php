@@ -101,12 +101,58 @@ class CustomerController extends Controller
             'website' => 'nullable|url',
             'tax_id' => 'nullable|string',
             'billing_currency' => 'nullable|string',
-            'bank_account_details' => 'nullable|string',
             'print_language' => 'nullable|string',
             'customer_details' => 'nullable|string',
+            
+            // Nested Contact Details
+            'contact' => 'nullable|array',
+            'contact.first_name' => 'required_with:contact|string|max:255',
+            'contact.phones' => 'nullable|array',
+            'contact.emails' => 'nullable|array',
+            
+            // Nested Bank Details
+            'bank_details' => 'nullable|array',
+            'bank_details.*.bank_name' => 'required|string|max:255',
+            'bank_details.*.account_no' => 'required|string|max:100',
+            'bank_details.*.ifsc_code' => 'required|string|max:20',
         ]);
 
-        $customer = Customer::create($validated);
+        $customer = \DB::transaction(function () use ($validated) {
+            $customerData = Arr::except($validated, ['contact', 'bank_details']);
+            $customer = Customer::create($customerData);
+
+            // 1. Handle Primary Contact
+            if (!empty($validated['contact'])) {
+                $contactData = Arr::except($validated['contact'], ['phones', 'emails']);
+                $contactData['customer_id'] = $customer->id;
+                $contact = \App\Models\Contact::create($contactData);
+
+                // Phones
+                if (!empty($validated['contact']['phones'])) {
+                    foreach ($validated['contact']['phones'] as $p) {
+                        $contact->phones()->create($p);
+                    }
+                }
+                // Emails
+                if (!empty($validated['contact']['emails'])) {
+                    foreach ($validated['contact']['emails'] as $e) {
+                        $contact->emails()->create($e);
+                    }
+                }
+
+                // Link back to customer
+                $customer->update(['customer_contact_id' => $contact->id]);
+            }
+
+            // 2. Handle Bank Details
+            if (!empty($validated['bank_details'])) {
+                foreach ($validated['bank_details'] as $bank) {
+                    $customer->bankDetails()->create($bank);
+                }
+            }
+
+            return $customer;
+        });
 
         $customer->load([
             'customerGroup',
@@ -116,7 +162,9 @@ class CustomerController extends Controller
             'industry',
             'priceList',
             'paymentTerm',
-            'primaryContact'
+            'primaryContact.phones',
+            'primaryContact.emails',
+            'bankDetails'
         ]);
 
         return response()->json($customer, 201);
@@ -132,7 +180,9 @@ class CustomerController extends Controller
             'industry',
             'priceList',
             'paymentTerm',
-            'primaryContact'
+            'primaryContact.phones',
+            'primaryContact.emails',
+            'bankDetails'
         ]);
 
         return response()->json($customer);
@@ -156,12 +206,64 @@ class CustomerController extends Controller
             'website' => 'nullable|url',
             'tax_id' => 'nullable|string',
             'billing_currency' => 'nullable|string',
-            'bank_account_details' => 'nullable|string',
             'print_language' => 'nullable|string',
             'customer_details' => 'nullable|string',
+
+            // Nested Contact Details
+            'contact' => 'nullable|array',
+            'contact.first_name' => 'required_with:contact|string|max:255',
+            'contact.phones' => 'nullable|array',
+            'contact.emails' => 'nullable|array',
+
+            // Nested Bank Details
+            'bank_details' => 'nullable|array',
+            'bank_details.*.bank_name' => 'required|string|max:255',
+            'bank_details.*.account_no' => 'required|string|max:100',
+            'bank_details.*.ifsc_code' => 'required|string|max:20',
         ]);
 
-        $customer->update($validated);
+        \DB::transaction(function () use ($customer, $validated) {
+            $customerData = Arr::except($validated, ['contact', 'bank_details']);
+            $customer->update($customerData);
+
+            // 1. Handle Primary Contact
+            if (isset($validated['contact'])) {
+                $contact = $customer->primaryContact;
+                $contactData = Arr::except($validated['contact'], ['phones', 'emails']);
+                $contactData['customer_id'] = $customer->id;
+
+                if ($contact) {
+                    $contact->update($contactData);
+                    // Sync phones
+                    $contact->phones()->delete();
+                    foreach ($validated['contact']['phones'] ?? [] as $p) {
+                        $contact->phones()->create($p);
+                    }
+                    // Sync emails
+                    $contact->emails()->delete();
+                    foreach ($validated['contact']['emails'] ?? [] as $e) {
+                        $contact->emails()->create($e);
+                    }
+                } else {
+                    $newContact = \App\Models\Contact::create($contactData);
+                    foreach ($validated['contact']['phones'] ?? [] as $p) {
+                        $newContact->phones()->create($p);
+                    }
+                    foreach ($validated['contact']['emails'] ?? [] as $e) {
+                        $newContact->emails()->create($e);
+                    }
+                    $customer->update(['customer_contact_id' => $newContact->id]);
+                }
+            }
+
+            // 2. Handle Bank Details Sync
+            if (isset($validated['bank_details'])) {
+                $customer->bankDetails()->delete();
+                foreach ($validated['bank_details'] as $bank) {
+                    $customer->bankDetails()->create($bank);
+                }
+            }
+        });
 
         $customer->load([
             'customerGroup',
@@ -171,7 +273,9 @@ class CustomerController extends Controller
             'industry',
             'priceList',
             'paymentTerm',
-            'primaryContact'
+            'primaryContact.phones',
+            'primaryContact.emails',
+            'bankDetails'
         ]);
 
         return response()->json($customer);
