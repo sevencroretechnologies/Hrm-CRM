@@ -268,7 +268,7 @@ export default function ContactForm() {
                             <BreadcrumbSeparator />
                             <BreadcrumbItem>
                                 <BreadcrumbLink asChild>
-                                    <Link to="/crm/contacts">Contacts</Link>
+                                    <Link to="/crm/contacts">Customer</Link>
                                 </BreadcrumbLink>
                             </BreadcrumbItem>
                             <BreadcrumbSeparator />
@@ -282,7 +282,7 @@ export default function ContactForm() {
                     </h1>
                 </div>
                 <Button variant="outline" onClick={() => navigate("/crm/contacts")}>
-                    <ChevronLeft className="mr-2 h-4 w-4" /> Back to Contacts
+                    <ChevronLeft className="mr-2 h-4 w-4" /> Back to Customer
                 </Button>
             </div>
 

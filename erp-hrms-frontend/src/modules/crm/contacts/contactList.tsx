@@ -203,7 +203,7 @@ export default function ContactList() {
                 </div>
                 <Link to="/crm/contacts/create">
                     <Button className="bg-solarized-blue hover:bg-solarized-blue/90">
-                        <Plus className="mr-2 h-4 w-4" /> Add Contact
+                        <Plus className="mr-2 h-4 w-4" /> Add Customer
                     </Button>
                 </Link>
             </div>
@@ -254,7 +254,7 @@ export default function ContactList() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <User className="h-5 w-5 text-solarized-blue" />
-                            Contact Details
+                            Customer Details
                         </DialogTitle>
                     </DialogHeader>
                     {selectedContact && (
