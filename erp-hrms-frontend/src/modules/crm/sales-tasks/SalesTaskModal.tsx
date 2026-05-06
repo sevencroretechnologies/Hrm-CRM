@@ -4,17 +4,18 @@ import {
     salesTaskApi,
     taskSourceApi,
     taskTypeApi,
-    userApi,
+    staffService,
     leadApi,
     opportunityApi,
     prospectApi,
-    User
+    User,
 } from "@/services/api";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,11 @@ interface SalesTaskModalProps {
     onSave: () => void;
     taskId?: number;
     readOnly?: boolean;
+}
+
+interface StaffMember {
+    id: number;
+    name: string;
 }
 
 const TASK_SOURCE_LEAD = 1;
@@ -50,7 +56,7 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
 
     const [sources, setSources] = useState<any[]>([]);
     const [types, setTypes] = useState<any[]>([]);
-    const [users, setUsers] = useState<User[]>([]);
+    const [users, setUsers] = useState<StaffMember[]>([]);
     const [sourceEntities, setSourceEntities] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string[]>>({});
@@ -87,16 +93,51 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
 
     const loadOptions = async () => {
         try {
-            const [sourcesData, typesData, usersData] = await Promise.all([
+            const [sourcesData, typesData, staffResponse] = await Promise.all([
                 taskSourceApi.list(),
                 taskTypeApi.list(),
-                userApi.list({ per_page: 500 }),
+                staffService.getAll({ per_page: 500 }),
             ]);
             setSources(sourcesData);
             setTypes(typesData);
-            setUsers(usersData);
+            
+            // staffResponse is the axios response object, we need to access response.data
+            console.log('Full staffResponse:', staffResponse);
+            
+            // Get the API response body from axios response
+            const apiResponse = staffResponse.data;
+            console.log('API response:', apiResponse);
+            
+            // Extract staff array - API returns { success: true, data: [...], message: "..." }
+            let staffArray = [];
+            if (apiResponse && apiResponse.data && Array.isArray(apiResponse.data)) {
+                staffArray = apiResponse.data;
+            } else if (Array.isArray(apiResponse)) {
+                staffArray = apiResponse;
+            }
+            
+            console.log('Staff array:', staffArray);
+            console.log('Number of staff:', staffArray.length);
+            
+            // Map staff members to StaffMember interface
+            const mappedStaff: StaffMember[] = staffArray.map((staff: any) => {
+                const name = (staff.full_name && staff.full_name.trim()) 
+                    ? staff.full_name 
+                    : (staff.user?.name || 'N/A');
+                
+                console.log(`Mapping staff: ID=${staff.id}, Name=${name}`);
+                
+                return {
+                    id: staff.id,
+                    name: name
+                };
+            });
+            
+            console.log('Final mapped staff:', mappedStaff);
+            setUsers(mappedStaff);
         } catch (error) {
             console.error("Failed to load options:", error);
+            setUsers([]);
         }
     };
 
@@ -223,6 +264,9 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
                         <CheckSquare className="h-5 w-5 text-solarized-blue" />
                         {readOnly ? "Sales Task Details" : taskId ? "Edit Sales Task" : "New Sales Task"}
                     </DialogTitle>
+                    <DialogDescription>
+                        {readOnly ? "View the details of this sales task." : taskId ? "Modify the sales task details below." : "Create a new sales task by filling in the form below."}
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="py-4">
@@ -252,7 +296,7 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
                             </div>
 
                             <div className="space-y-1">
-                                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Assigned User</Label>
+                                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Assigned Staff</Label>
                                 <p className="font-medium text-sm">
                                     {users.find(u => u.id === Number(formData.sales_assign_id))?.name || "Not Assigned"}
                                 </p>
@@ -351,14 +395,14 @@ export default function SalesTaskModal({ show, onHide, onSave, taskId, readOnly 
 
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="sales_assign_id">Assigned User</Label>
+                                    <Label htmlFor="sales_assign_id">Assigned Staff</Label>
                                     <select
                                         id="sales_assign_id"
                                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         value={formData.sales_assign_id}
                                         onChange={(e) => setFormData({ ...formData, sales_assign_id: e.target.value })}
                                     >
-                                        <option value="">Select User (Optional)</option>
+                                        <option value="">Select Staff (Optional)</option>
                                         {users.map((user) => (
                                             <option key={user.id} value={user.id}>
                                                 {user.name}

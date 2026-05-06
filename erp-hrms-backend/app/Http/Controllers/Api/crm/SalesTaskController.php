@@ -18,7 +18,7 @@ class SalesTaskController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = SalesTask::with(['taskSource', 'taskType', 'assignedUser', 'details']);
+            $query = SalesTask::with(['taskSource', 'taskType', 'assignedStaff', 'details']);
 
             // Filter by task_source_id (Lead=1, Prospect=2, Opportunity=3)
             if ($request->has('task_source_id')) {
@@ -76,7 +76,7 @@ class SalesTaskController extends Controller
             'task_source_id'  => 'required|exists:task_sources,id',
             'source_id'       => 'nullable|integer',
             'task_type_id'    => 'required|exists:task_types,id',
-            'sales_assign_id' => 'nullable|exists:users,id',
+            'sales_assign_id' => 'nullable|exists:staff_members,id',
             'date'            => 'required|date',
             'time'            => 'required',
             'description'     => 'nullable|string',
@@ -107,7 +107,7 @@ class SalesTaskController extends Controller
             return $task;
         });
 
-        $salesTask->load(['taskSource', 'taskType', 'assignedUser']);
+        $salesTask->load(['taskSource', 'taskType', 'assignedStaff']);
         $salesTask->source_detail = $this->getSourceDetail($salesTask);
 
         return response()->json($salesTask, Response::HTTP_CREATED);
@@ -115,7 +115,7 @@ class SalesTaskController extends Controller
 
     public function show(SalesTask $salesTask)
     {
-        $salesTask->load(['taskSource', 'taskType', 'assignedUser', 'details']);
+        $salesTask->load(['taskSource', 'taskType', 'assignedStaff', 'details']);
         $salesTask->source_detail = $this->getSourceDetail($salesTask);
         return response()->json($salesTask);
     }
@@ -126,7 +126,7 @@ class SalesTaskController extends Controller
             'task_source_id'  => 'exists:task_sources,id',
             'source_id'       => 'nullable|integer',
             'task_type_id'    => 'exists:task_types,id',
-            'sales_assign_id' => 'nullable|exists:users,id',
+            'sales_assign_id' => 'nullable|exists:staff_members,id',
             'date'            => 'nullable|date',
             'time'            => 'nullable',
             'description'     => 'nullable|string',
@@ -162,7 +162,7 @@ class SalesTaskController extends Controller
             }
         });
 
-        $salesTask->load(['taskSource', 'taskType', 'assignedUser', 'details']);
+        $salesTask->load(['taskSource', 'taskType', 'assignedStaff', 'details']);
         $salesTask->source_detail = $this->getSourceDetail($salesTask);
 
         return response()->json($salesTask);

@@ -32,9 +32,9 @@ class SalesTask extends Model
         return $this->belongsTo(TaskType::class);
     }
 
-    public function assignedUser()
+    public function assignedStaff()
     {
-        return $this->belongsTo(User::class, 'sales_assign_id');
+        return $this->belongsTo(StaffMember::class, 'sales_assign_id');
     }
 
     public function details()

@@ -165,12 +165,15 @@ export default function SalesTaskList() {
             name: 'Type',
             selector: (row) => row.task_type?.name || "-",
             sortable: true,
+            width: '120px',
         },
         {
             name: 'Assigned To',
-            selector: (row) => row.assigned_user?.name || "-",
+            selector: (row) => row.assigned_staff?.full_name || "Not Assigned",
             sortable: true,
+            width: '150px',
         },
+      
         {
             name: 'Date',
             selector: (row) => row.details?.[0]?.date || "-",
@@ -250,7 +253,7 @@ export default function SalesTaskList() {
             const searchLower = search.toLowerCase();
             const sourceName = task.task_source?.name?.toLowerCase() || "";
             const typeName = task.task_type?.name?.toLowerCase() || "";
-            const userName = task.assigned_user?.name?.toLowerCase() || "";
+            const userName = task.assigned_staff?.full_name?.toLowerCase() || "";
             const sourceEntity = getSourceEntityInfo(task).toLowerCase();
             return (
                 sourceName.includes(searchLower) ||

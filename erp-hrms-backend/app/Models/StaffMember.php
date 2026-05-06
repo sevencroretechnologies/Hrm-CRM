@@ -147,6 +147,11 @@ class StaffMember extends Model
         return $this->hasMany(BusinessTrip::class);
     }
 
+    public function salesTasks()
+    {
+        return $this->hasMany(SalesTask::class, 'sales_assign_id');
+    }
+
     public function grievancesFiled()
     {
         return $this->hasMany(Grievance::class, 'filed_by_staff_id');

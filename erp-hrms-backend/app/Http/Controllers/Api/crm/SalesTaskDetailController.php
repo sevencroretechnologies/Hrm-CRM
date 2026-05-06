@@ -14,7 +14,7 @@ class SalesTaskDetailController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = SalesTaskDetail::with(['salesTask.taskType', 'salesTask.taskSource', 'salesTask.assignedUser']);
+            $query = SalesTaskDetail::with(['salesTask.taskType', 'salesTask.taskSource', 'salesTask.assignedStaff']);
 
             if ($request->has('sales_task_id')) {
                 $query->where('sales_task_id', $request->sales_task_id);

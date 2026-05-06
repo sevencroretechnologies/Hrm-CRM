@@ -166,6 +166,7 @@ class StaffMemberService extends BaseService
             'disciplineNotes',
             'businessTrips',
             'voluntaryExits',
+            'salesTasks',
         ]);
     }
 
