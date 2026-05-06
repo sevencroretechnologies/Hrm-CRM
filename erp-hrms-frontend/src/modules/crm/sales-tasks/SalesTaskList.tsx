@@ -245,7 +245,7 @@ export default function SalesTaskList() {
                             <Eye className="mr-2 h-4 w-4" /> View
                         </DropdownMenuItem>
 
-                        {getLatestStatus(row)?.trim().toLowerCase() !== 'Closed' && (
+                        {getLatestStatus(row)?.trim().toLowerCase() !== 'closed' && (
                             <>
                                 <DropdownMenuItem onClick={() => openFollowUpModal(row.id)}>
                                     <MessageSquarePlus className="mr-2 h-4 w-4 text-solarized-blue" /> Add Follow-up
