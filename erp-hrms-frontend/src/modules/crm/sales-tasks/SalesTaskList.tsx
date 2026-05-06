@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import DataTable, { TableColumn } from 'react-data-table-component';
-import { Plus, Search, Eye, Edit, Trash2, LayoutGrid, MoreHorizontal } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, LayoutGrid, MoreHorizontal, CheckCircle, UserPlus } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -133,6 +133,18 @@ export default function SalesTaskList() {
         fetchSalesTasks(page);
     };
 
+    const handleCloseTask = async (id: number) => {
+        const result = await showConfirmDialog('Close Sales Task', 'Are you sure you want to close this sales task?', 'Yes, close it!');
+        if (!result.isConfirmed) return;
+        try {
+            await salesTaskApi.update(id, { status: 'Closed' });
+            showAlert('success', 'Closed!', 'Sales task closed successfully', 2000);
+            fetchSalesTasks(page);
+        } catch (error) {
+            showAlert('error', 'Error', getErrorMessage(error, 'Failed to close sales task'));
+        }
+    };
+
     const handleDelete = async (id: number) => {
         const result = await showConfirmDialog('Delete Sales Task', 'Are you sure you want to delete this sales task?');
         if (!result.isConfirmed) return;
@@ -213,8 +225,18 @@ export default function SalesTaskList() {
                         {/* <DropdownMenuItem onClick={() => navigate(`/crm/sales-tasks/${row.id}`)}>
                             <LayoutGrid className="mr-2 h-4 w-4 text-purple-600" /> View Progress
                         </DropdownMenuItem> */}
-                        <DropdownMenuItem onClick={() => openEditModal(row.id)}>
-                            <Edit className="mr-2 h-4 w-4 text-blue-600" /> Edit
+                        <DropdownMenuItem 
+                            onClick={() => openEditModal(row.id)}
+                            disabled={row.details?.[0]?.status === 'Closed'}
+                        >
+                            <UserPlus className="mr-2 h-4 w-4 text-blue-600" /> Assign Staff
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                            onClick={() => handleCloseTask(row.id)} 
+                            className="text-green-600 focus:text-green-600"
+                            disabled={row.details?.[0]?.status === 'Closed'}
+                        >
+                            <CheckCircle className="mr-2 h-4 w-4" /> Close Task
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDelete(row.id)} className="text-red-600 focus:text-red-600">
                             <Trash2 className="mr-2 h-4 w-4" /> Delete

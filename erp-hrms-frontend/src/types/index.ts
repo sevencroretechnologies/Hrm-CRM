@@ -490,6 +490,7 @@ export interface SalesTask {
   formatted_date?: string;
   task_source?: TaskSource;
   task_type?: TaskType;
+  status?: string;
   assigned_staff?: {
     id: number;
     full_name: string;
