@@ -126,6 +126,7 @@ class ContactController extends Controller
                 foreach ($validated['bank_details'] as $bank) {
                     if (empty($bank['bank_name']) && empty($bank['account_no'])) continue;
                     $contact->bankDetails()->create([
+                        'customer_id' => $contact->customer_id,
                         'bank_name'  => $bank['bank_name'] ?? null,
                         'account_no' => $bank['account_no'] ?? null,
                         'ifsc_code'  => $bank['ifsc_code']  ?? null,
@@ -210,6 +211,7 @@ class ContactController extends Controller
                     foreach ($validated['bank_details'] as $bank) {
                         if (empty($bank['bank_name']) && empty($bank['account_no'])) continue;
                         $contact->bankDetails()->create([
+                            'customer_id' => $contact->customer_id,
                             'bank_name'  => $bank['bank_name'] ?? null,
                             'account_no' => $bank['account_no'] ?? null,
                             'ifsc_code'  => $bank['ifsc_code']  ?? null,
