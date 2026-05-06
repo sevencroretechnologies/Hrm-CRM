@@ -16,6 +16,21 @@ class SalesTaskDetailController extends Controller
         try {
             $query = SalesTaskDetail::with(['salesTask.taskType', 'salesTask.taskSource', 'salesTask.assignedStaff']);
 
+            // Filter for staff members (user role)
+            /** @var \App\Models\User $user */
+            $user = auth()->user();
+            if ($user->hasRole('user')) {
+                $staffMember = $user->staffMember;
+                if ($staffMember) {
+                    $query->whereHas('salesTask', function($q) use ($staffMember) {
+                        $q->where('sales_assign_id', $staffMember->id);
+                    });
+                } else {
+                    // If no staff member record, show nothing
+                    $query->whereRaw('1 = 0');
+                }
+            }
+
             if ($request->has('sales_task_id')) {
                 $query->where('sales_task_id', $request->sales_task_id);
             }

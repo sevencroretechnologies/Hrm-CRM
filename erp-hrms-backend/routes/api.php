@@ -173,10 +173,10 @@ Route::middleware('auth:sanctum')->group(function () {
         // Users
         Route::get('users', [UsersController::class , 'index']);
 
-        Route::get('dashboard/stats', [DashboardController::class , 'stats']);
-        Route::get('dashboard/sales-overview', [DashboardController::class , 'salesOverview']);
-        Route::get('dashboard/lead-conversion-funnel', [DashboardController::class , 'leadConversionFunnel']);
-        Route::get('dashboard/opportunity-pipeline', [DashboardController::class , 'opportunityPipeline']);
+        Route::get('dashboard/stats', [DashboardController::class , 'stats'])->middleware('permission:view_crm_dashboard');
+        Route::get('dashboard/sales-overview', [DashboardController::class , 'salesOverview'])->middleware('permission:view_crm_dashboard');
+        Route::get('dashboard/lead-conversion-funnel', [DashboardController::class , 'leadConversionFunnel'])->middleware('permission:view_crm_dashboard');
+        Route::get('dashboard/opportunity-pipeline', [DashboardController::class , 'opportunityPipeline'])->middleware('permission:view_crm_dashboard');
 
     Route::get('leads/get-lead', [LeadController::class, 'getLead']);
     Route::apiResource('leads', LeadController::class);
@@ -235,8 +235,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('product-categories', ProductCategoryController::class);
         Route::apiResource('products', ProductController::class);
         Route::apiResource('opportunity-products', OpportunityProductController::class);
-        Route::apiResource('sales-tasks', SalesTaskController::class);
-        Route::apiResource('sales-task-details', SalesTaskDetailController::class);
+        Route::apiResource('sales-tasks', SalesTaskController::class)->middleware([
+            'index' => 'permission:view_sales_tasks',
+            'show' => 'permission:view_sales_tasks',
+            'store' => 'permission:create_sales_tasks',
+            'update' => 'permission:edit_sales_tasks',
+            'destroy' => 'permission:delete_sales_tasks',
+        ]);
+        Route::apiResource('sales-task-details', SalesTaskDetailController::class)->middleware('permission:view_sales_tasks');
         // Route::apiResource('tasks', TaskController::class);
         Route::apiResource('task-sources', TaskSourceController::class);
         Route::apiResource('task-types', TaskTypeController::class);

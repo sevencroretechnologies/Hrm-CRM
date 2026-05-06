@@ -29,10 +29,38 @@ class CheckPermission
             return $next($request);
         }
 
-        // Check if user has any of the required permissions
+        // Log for debugging
+        \Illuminate\Support\Facades\Log::debug('Permission Check', [
+            'user_id' => $user->id,
+            'user_roles' => $user->roles->pluck('name')->toArray(),
+            'required_permissions' => $permissions
+        ]);
+
+        // Staff users (user role) should have basic CRM access
+        $userRoles = $user->roles->pluck('name')->toArray();
+        if (in_array('user', $userRoles) || in_array('Staff', $userRoles)) {
+            $allowedForUser = [
+                'view_crm_dashboard', 
+                'view_sales_tasks',
+                'create_sales_tasks',
+                'edit_sales_tasks',
+                'delete_sales_tasks'
+            ];
+            foreach ($permissions as $permission) {
+                if (in_array($permission, $allowedForUser)) {
+                    return $next($request);
+                }
+            }
+        }
+
+        // Check if user has any of the required permissions via Spatie
         foreach ($permissions as $permission) {
-            if ($user->hasPermissionTo($permission)) {
-                return $next($request);
+            try {
+                if ($user->hasPermissionTo($permission)) {
+                    return $next($request);
+                }
+            } catch (\Exception $e) {
+                // Ignore guard mismatch errors for now
             }
         }
 

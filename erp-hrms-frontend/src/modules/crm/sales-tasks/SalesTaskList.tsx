@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import DataTable, { TableColumn } from 'react-data-table-component';
-import { Plus, Search, Eye, Edit, Trash2, LayoutGrid, MoreHorizontal, CheckCircle, UserPlus } from 'lucide-react';
+import { Plus, Search, Eye, Trash2, LayoutGrid, MoreHorizontal, CheckCircle, UserPlus, MessageSquarePlus } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -15,6 +15,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import SalesTaskModal from '@/modules/crm/sales-tasks/SalesTaskModal';
+import FollowUpModal from '@/modules/crm/sales-tasks/FollowUpModal';
 
 const TASK_SOURCE_OPTIONS = [
     { id: 1, name: "Lead" },
@@ -59,6 +60,12 @@ const getSourceEntityInfo = (task: SalesTask) => {
     return "-";
 };
 
+const getLatestStatus = (task: SalesTask) => {
+    if (!task.details || task.details.length === 0) return "Open";
+    // The last element in the array is the most recent follow-up
+    return task.details[task.details.length - 1].status || "Open";
+};
+
 export default function SalesTaskList() {
     const [salesTasks, setSalesTasks] = useState<SalesTask[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -69,6 +76,7 @@ export default function SalesTaskList() {
     const [totalRows, setTotalRows] = useState(0);
 
     const [showModal, setShowModal] = useState(false);
+    const [showFollowUpModal, setShowFollowUpModal] = useState(false);
     const [modalTaskId, setModalTaskId] = useState<number | undefined>(undefined);
     const [modalReadOnly, setModalReadOnly] = useState(false);
 
@@ -131,6 +139,16 @@ export default function SalesTaskList() {
     const handleModalSave = () => {
         setShowModal(false);
         fetchSalesTasks(page);
+    };
+
+    const handleFollowUpSave = () => {
+        setShowFollowUpModal(false);
+        fetchSalesTasks(page);
+    };
+
+    const openFollowUpModal = (id: number) => {
+        setModalTaskId(id);
+        setShowFollowUpModal(true);
     };
 
     const handleCloseTask = async (id: number) => {
@@ -199,14 +217,18 @@ export default function SalesTaskList() {
         },
         {
             name: 'Status',
-            cell: (row) => (
-                <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${row.details?.[0]?.status === 'Closed' ? 'bg-green-100 text-green-700' :
-                    row.details?.[0]?.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+            cell: (row) => {
+                const status = getLatestStatus(row);
+                return (
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${
+                        status?.trim().toLowerCase() === 'closed' ? 'bg-green-100 text-green-700' :
+                        status?.trim().toLowerCase() === 'in progress' ? 'bg-blue-100 text-blue-700' :
                         'bg-orange-100 text-orange-700'
                     }`}>
-                    {row.details?.[0]?.status || "-"}
-                </span>
-            ),
+                        {status}
+                    </span>
+                );
+            },
             width: '120px',
         },
         {
@@ -222,22 +244,23 @@ export default function SalesTaskList() {
                         <DropdownMenuItem onClick={() => openViewModal(row.id)}>
                             <Eye className="mr-2 h-4 w-4" /> View
                         </DropdownMenuItem>
-                        {/* <DropdownMenuItem onClick={() => navigate(`/crm/sales-tasks/${row.id}`)}>
-                            <LayoutGrid className="mr-2 h-4 w-4 text-purple-600" /> View Progress
-                        </DropdownMenuItem> */}
-                        <DropdownMenuItem 
-                            onClick={() => openEditModal(row.id)}
-                            disabled={row.details?.[0]?.status === 'Closed'}
-                        >
-                            <UserPlus className="mr-2 h-4 w-4 text-blue-600" /> Assign Staff
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                            onClick={() => handleCloseTask(row.id)} 
-                            className="text-green-600 focus:text-green-600"
-                            disabled={row.details?.[0]?.status === 'Closed'}
-                        >
-                            <CheckCircle className="mr-2 h-4 w-4" /> Close Task
-                        </DropdownMenuItem>
+
+                        {getLatestStatus(row)?.trim().toLowerCase() !== 'Closed' && (
+                            <>
+                                <DropdownMenuItem onClick={() => openFollowUpModal(row.id)}>
+                                    <MessageSquarePlus className="mr-2 h-4 w-4 text-solarized-blue" /> Add Follow-up
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openEditModal(row.id)}>
+                                    <UserPlus className="mr-2 h-4 w-4 text-blue-600" /> Assign Staff
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                    onClick={() => handleCloseTask(row.id)} 
+                                    className="text-green-600 focus:text-green-600"
+                                >
+                                    <CheckCircle className="mr-2 h-4 w-4" /> Close Task
+                                </DropdownMenuItem>
+                            </>
+                        )}
                         <DropdownMenuItem onClick={() => handleDelete(row.id)} className="text-red-600 focus:text-red-600">
                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
@@ -360,6 +383,15 @@ export default function SalesTaskList() {
                 taskId={modalTaskId}
                 readOnly={modalReadOnly}
             />
+
+            {modalTaskId && (
+                <FollowUpModal
+                    show={showFollowUpModal}
+                    onHide={() => setShowFollowUpModal(false)}
+                    onSave={handleFollowUpSave}
+                    taskId={modalTaskId}
+                />
+            )}
         </div>
     );
 }

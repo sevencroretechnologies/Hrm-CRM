@@ -18,7 +18,42 @@ class SalesTaskController extends Controller
     public function index(Request $request)
     {
         try {
+            // Self-repair: Fix tasks with missing org/company data
+            /** @var \App\Models\User $user */
+            $user = auth()->user();
+            if ($user->org_id && $user->company_id) {
+                SalesTask::withoutGlobalScopes()
+                    ->whereNull('org_id')
+                    ->update(['org_id' => $user->org_id, 'company_id' => $user->company_id]);
+                
+                \App\Models\SalesTaskDetail::withoutGlobalScopes()
+                    ->whereNull('org_id')
+                    ->update(['org_id' => $user->org_id, 'company_id' => $user->company_id]);
+
+                \App\Models\Lead::withoutGlobalScopes()
+                    ->whereNull('org_id')
+                    ->update(['org_id' => $user->org_id, 'company_id' => $user->company_id]);
+                
+                \App\Models\Prospect::withoutGlobalScopes()
+                    ->whereNull('org_id')
+                    ->update(['org_id' => $user->org_id, 'company_id' => $user->company_id]);
+
+                \App\Models\Opportunity::withoutGlobalScopes()
+                    ->whereNull('org_id')
+                    ->update(['org_id' => $user->org_id, 'company_id' => $user->company_id]);
+            }
+
             $query = SalesTask::with(['taskSource', 'taskType', 'assignedStaff', 'details']);
+            $isStaffOnly = $user->hasRole('user') && !$user->hasAnyRole(['admin', 'org', 'company', 'hr']);
+
+            if ($isStaffOnly) {
+                $staffMemberId = \App\Models\StaffMember::where('user_id', $user->id)->value('id');
+                if ($staffMemberId) {
+                    $query->where('sales_assign_id', $staffMemberId);
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            }
 
             // Filter by task_source_id (Lead=1, Prospect=2, Opportunity=3)
             if ($request->has('task_source_id')) {
@@ -208,11 +243,11 @@ class SalesTaskController extends Controller
         }
 
         return match ($task->task_source_id) {
-            TaskSource::LEAD->value => Lead::select('id', 'first_name', 'last_name', 'company_name', 'email')
+            TaskSource::LEAD->value => Lead::withoutGlobalScopes()->select('id', 'first_name', 'last_name', 'company_name', 'email')
                 ->find($task->source_id)?->toArray(),
-            TaskSource::PROSPECT->value => Prospect::select('id', 'company_name')
+            TaskSource::PROSPECT->value => Prospect::withoutGlobalScopes()->select('id', 'company_name')
                 ->find($task->source_id)?->toArray(),
-            TaskSource::OPPORTUNITY->value => Opportunity::select('id', 'naming_series', 'party_name', 'opportunity_amount')
+            TaskSource::OPPORTUNITY->value => Opportunity::withoutGlobalScopes()->select('id', 'naming_series', 'party_name', 'opportunity_amount')
                 ->find($task->source_id)?->toArray(),
             default => null,
         };

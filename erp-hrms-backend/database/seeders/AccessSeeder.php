@@ -31,9 +31,10 @@ class AccessSeeder extends Seeder
             ['name' => 'Recruitment', 'slug' => 'recruitment', 'icon' => 'UserPlus', 'description' => 'Manage job postings and candidates', 'sort_order' => 10],
             ['name' => 'Performance', 'slug' => 'performance', 'icon' => 'Target', 'description' => 'Manage performance, goals, and appraisals', 'sort_order' => 11],
             ['name' => 'Meetings', 'slug' => 'meetings', 'icon' => 'Calendar', 'description' => 'Schedule and manage meetings', 'sort_order' => 12],
-            ['name' => 'Reports', 'slug' => 'reports', 'icon' => 'BarChart', 'description' => 'View and export reports', 'sort_order' => 13],
-            ['name' => 'Settings', 'slug' => 'settings', 'icon' => 'Settings', 'description' => 'Configure system settings', 'sort_order' => 14],
-            ['name' => 'Role Management', 'slug' => 'roles', 'icon' => 'Shield', 'description' => 'Manage roles and permissions', 'sort_order' => 15],
+            ['name' => 'CRM', 'slug' => 'crm', 'icon' => 'Target', 'description' => 'Customer Relationship Management', 'sort_order' => 13],
+            ['name' => 'Reports', 'slug' => 'reports', 'icon' => 'BarChart', 'description' => 'View and export reports', 'sort_order' => 14],
+            ['name' => 'Settings', 'slug' => 'settings', 'icon' => 'Settings', 'description' => 'Configure system settings', 'sort_order' => 15],
+            ['name' => 'Role Management', 'slug' => 'roles', 'icon' => 'Shield', 'description' => 'Manage roles and permissions', 'sort_order' => 16],
         ];
 
         foreach ($resources as $resource) {
@@ -42,6 +43,44 @@ class AccessSeeder extends Seeder
 
         // Define permissions with resource and action - sorted by resource and action type
         $permissionDefinitions = [
+            // ============================================
+            // CRM (Customer Relationship Management)
+            // ============================================
+            ['name' => 'view_crm_dashboard', 'resource' => 'crm', 'action' => 'view_dashboard', 'description' => 'View CRM dashboard', 'sort_order' => 1],
+            // Leads
+            ['name' => 'view_leads', 'resource' => 'crm', 'action' => 'view_leads', 'description' => 'View leads', 'sort_order' => 2],
+            ['name' => 'create_leads', 'resource' => 'crm', 'action' => 'create_leads', 'description' => 'Create leads', 'sort_order' => 3],
+            ['name' => 'edit_leads', 'resource' => 'crm', 'action' => 'edit_leads', 'description' => 'Edit leads', 'sort_order' => 4],
+            ['name' => 'delete_leads', 'resource' => 'crm', 'action' => 'delete_leads', 'description' => 'Delete leads', 'sort_order' => 5],
+            ['name' => 'convert_leads', 'resource' => 'crm', 'action' => 'convert_leads', 'description' => 'Convert leads to opportunities', 'sort_order' => 6],
+            // Opportunities
+            ['name' => 'view_opportunities', 'resource' => 'crm', 'action' => 'view_opportunities', 'description' => 'View opportunities', 'sort_order' => 7],
+            ['name' => 'create_opportunities', 'resource' => 'crm', 'action' => 'create_opportunities', 'description' => 'Create opportunities', 'sort_order' => 8],
+            ['name' => 'edit_opportunities', 'resource' => 'crm', 'action' => 'edit_opportunities', 'description' => 'Edit opportunities', 'sort_order' => 9],
+            ['name' => 'delete_opportunities', 'resource' => 'crm', 'action' => 'delete_opportunities', 'description' => 'Delete opportunities', 'sort_order' => 10],
+            // Prospects
+            ['name' => 'view_prospects', 'resource' => 'crm', 'action' => 'view_prospects', 'description' => 'View prospects', 'sort_order' => 11],
+            ['name' => 'create_prospects', 'resource' => 'crm', 'action' => 'create_prospects', 'description' => 'Create prospects', 'sort_order' => 12],
+            ['name' => 'edit_prospects', 'resource' => 'crm', 'action' => 'edit_prospects', 'description' => 'Edit prospects', 'sort_order' => 13],
+            ['name' => 'delete_prospects', 'resource' => 'crm', 'action' => 'delete_prospects', 'description' => 'Delete prospects', 'sort_order' => 14],
+            // Customers
+            ['name' => 'view_customers', 'resource' => 'crm', 'action' => 'view_customers', 'description' => 'View customers', 'sort_order' => 15],
+            ['name' => 'create_customers', 'resource' => 'crm', 'action' => 'create_customers', 'description' => 'Create customers', 'sort_order' => 16],
+            ['name' => 'edit_customers', 'resource' => 'crm', 'action' => 'edit_customers', 'description' => 'Edit customers', 'sort_order' => 17],
+            ['name' => 'delete_customers', 'resource' => 'crm', 'action' => 'delete_customers', 'description' => 'Delete customers', 'sort_order' => 18],
+            // Sales Tasks
+            ['name' => 'view_sales_tasks', 'resource' => 'crm', 'action' => 'view_sales_tasks', 'description' => 'View sales tasks', 'sort_order' => 19],
+            ['name' => 'create_sales_tasks', 'resource' => 'crm', 'action' => 'create_sales_tasks', 'description' => 'Create sales tasks', 'sort_order' => 20],
+            ['name' => 'edit_sales_tasks', 'resource' => 'crm', 'action' => 'edit_sales_tasks', 'description' => 'Edit sales tasks', 'sort_order' => 21],
+            ['name' => 'delete_sales_tasks', 'resource' => 'crm', 'action' => 'delete_sales_tasks', 'description' => 'Delete sales tasks', 'sort_order' => 22],
+            // Campaigns
+            ['name' => 'view_campaigns', 'resource' => 'crm', 'action' => 'view_campaigns', 'description' => 'View campaigns', 'sort_order' => 23],
+            ['name' => 'create_campaigns', 'resource' => 'crm', 'action' => 'create_campaigns', 'description' => 'Create campaigns', 'sort_order' => 24],
+            ['name' => 'edit_campaigns', 'resource' => 'crm', 'action' => 'edit_campaigns', 'description' => 'Edit campaigns', 'sort_order' => 25],
+            ['name' => 'delete_campaigns', 'resource' => 'crm', 'action' => 'delete_campaigns', 'description' => 'Delete campaigns', 'sort_order' => 26],
+            // CRM Masters
+            ['name' => 'manage_crm_masters', 'resource' => 'crm', 'action' => 'manage_masters', 'description' => 'Manage CRM master data', 'sort_order' => 27],
+
             // ============================================
             // DOCUMENTS (Admin, Org, Company, HR)
             // ============================================
@@ -430,6 +469,35 @@ class AccessSeeder extends Seeder
             'assign_roles',
             'view_users',
             'edit_users',
+
+            // CRM (All access)
+            'view_crm_dashboard',
+            'view_leads',
+            'create_leads',
+            'edit_leads',
+            'delete_leads',
+            'convert_leads',
+            'view_opportunities',
+            'create_opportunities',
+            'edit_opportunities',
+            'delete_opportunities',
+            'view_prospects',
+            'create_prospects',
+            'edit_prospects',
+            'delete_prospects',
+            'view_customers',
+            'create_customers',
+            'edit_customers',
+            'delete_customers',
+            'view_sales_tasks',
+            'create_sales_tasks',
+            'edit_sales_tasks',
+            'delete_sales_tasks',
+            'view_campaigns',
+            'create_campaigns',
+            'edit_campaigns',
+            'delete_campaigns',
+            'manage_crm_masters',
         ]);
 
         // COMPANY: Company-level access
@@ -538,6 +606,28 @@ class AccessSeeder extends Seeder
             'view_roles',
             'assign_roles',
             'view_users',
+
+            // CRM (Company access)
+            'view_crm_dashboard',
+            'view_leads',
+            'create_leads',
+            'edit_leads',
+            'convert_leads',
+            'view_opportunities',
+            'create_opportunities',
+            'edit_opportunities',
+            'view_prospects',
+            'create_prospects',
+            'edit_prospects',
+            'view_customers',
+            'create_customers',
+            'edit_customers',
+            'view_sales_tasks',
+            'create_sales_tasks',
+            'edit_sales_tasks',
+            'view_campaigns',
+            'create_campaigns',
+            'edit_campaigns',
         ]);
 
         // HR: HR operations
@@ -643,6 +733,12 @@ class AccessSeeder extends Seeder
             'manage_staff_training',
             // Contracts (view)
             'view_staff_contracts',
+
+            // CRM (Basic view access)
+            'view_crm_dashboard',
+            'view_leads',
+            'view_opportunities',
+            'view_customers',
         ]);
 
         // USER: Self-service only
@@ -659,6 +755,13 @@ class AccessSeeder extends Seeder
             'view_announcements',
             // Meetings (view own meetings only - no access to types, rooms, minutes)
             'view_meetings',
+
+            // CRM Access for Staff (requested by user)
+            'view_crm_dashboard',
+            'view_sales_tasks',
+            'create_sales_tasks',
+            'edit_sales_tasks',
+            'delete_sales_tasks',
         ]);
 
         $this->command->info('Roles, resources, and permissions seeded successfully!');
