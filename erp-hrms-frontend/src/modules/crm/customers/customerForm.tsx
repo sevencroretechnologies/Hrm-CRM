@@ -46,7 +46,7 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Loader2, ChevronLeft, Plus, Trash2, Star } from "lucide-react";
+import { Loader2, ChevronLeft, Plus, Trash2, Star, X } from "lucide-react";
 import { set } from "date-fns";
 
 const CUSTOMER_TYPES = ['Company', 'Individual', 'Partnership'];
@@ -414,10 +414,10 @@ export default function CustomerForm() {
             };
 
             if (isEdit) {
-                await customerApi.update(Number(id), unifiedPayload);
+                await customerApi.update(Number(id), unifiedPayload as any);
                 showAlert("success", "Updated!", "Customer and all related details have been updated.");
             } else {
-                await customerApi.create(unifiedPayload);
+                await customerApi.create(unifiedPayload as any);
                 showAlert("success", "Created!", "Customer and all related details have been created.");
             }
             
@@ -497,16 +497,24 @@ export default function CustomerForm() {
                             </Select>
                         </div> */}
 
-                        {/* Lead — disabled when an Opportunity is selected */}
+                        {/* Lead — disabled when an Opportunity is already selected */}
                         <div className="space-y-2">
-                            <Label className={hasOpportunity ? "text-muted-foreground" : ""}>
-                                Lead
-                                {hasOpportunity && (
-                                    <span className="ml-2 text-xs font-normal text-muted-foreground">
-                                        (clear opportunity to enable)
-                                    </span>
+                            <div className="flex items-center justify-between">
+                                <Label className={hasOpportunity ? "text-muted-foreground" : ""}>
+                                    Lead
+                                </Label>
+                                {hasLead && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setForm((prev) => ({ ...prev, lead_id: "" }))}
+                                        className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 hover:bg-blue-200 transition-colors"
+                                        title="Clear lead selection"
+                                    >
+                                        <X className="h-3 w-3" />
+                                        Clear
+                                    </button>
                                 )}
-                            </Label>
+                            </div>
                             <Select
                                 value={form.lead_id}
                                 onValueChange={handleLeadChange}
@@ -514,7 +522,7 @@ export default function CustomerForm() {
                             >
                                 <SelectTrigger className={hasOpportunity ? "opacity-50 cursor-not-allowed" : ""}>
                                     <SelectValue
-                                        placeholder={hasOpportunity ? "Disabled — opportunity selected" : "Select Lead"}
+                                        placeholder={hasOpportunity ? "Disabled — clear opportunity first" : "Select Lead"}
                                     />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -527,16 +535,24 @@ export default function CustomerForm() {
                             </Select>
                         </div>
 
-                        {/* Opportunity — disabled when a Lead is selected */}
+                        {/* Opportunity — disabled when a Lead is already selected */}
                         <div className="space-y-2">
-                            <Label className={hasLead ? "text-muted-foreground" : ""}>
-                                Opportunity
-                                {hasLead && (
-                                    <span className="ml-2 text-xs font-normal text-muted-foreground">
-                                        (clear lead to enable)
-                                    </span>
+                            <div className="flex items-center justify-between">
+                                <Label className={hasLead ? "text-muted-foreground" : ""}>
+                                    Opportunity
+                                </Label>
+                                {hasOpportunity && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setForm((prev) => ({ ...prev, opportunity_id: "" }))}
+                                        className="flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 hover:bg-purple-200 transition-colors"
+                                        title="Clear opportunity selection"
+                                    >
+                                        <X className="h-3 w-3" />
+                                        Clear
+                                    </button>
                                 )}
-                            </Label>
+                            </div>
                             <Select
                                 value={form.opportunity_id}
                                 onValueChange={handleOpportunityChange}
@@ -544,7 +560,7 @@ export default function CustomerForm() {
                             >
                                 <SelectTrigger className={hasLead ? "opacity-50 cursor-not-allowed" : ""}>
                                     <SelectValue
-                                        placeholder={hasLead ? "Disabled — lead selected" : "Select Opportunity"}
+                                        placeholder={hasLead ? "Disabled — clear lead first" : "Select Opportunity"}
                                     />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -560,6 +576,7 @@ export default function CustomerForm() {
                                 </SelectContent>
                             </Select>
                         </div>
+
 
                         {/* Industry */}
                         <div className="space-y-2">

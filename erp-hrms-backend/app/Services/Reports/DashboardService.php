@@ -46,9 +46,15 @@ class DashboardService
      */
     public function getDashboardData(): array
     {
+        $attendanceSummary = $this->attendanceService->getTodaySummary();
         return [
             'employees' => $this->getEmployeeStats(),
-            'attendance' => $this->attendanceService->getTodaySummary(),
+            // Use attendance_today key so the frontend dashboard can read it directly
+            'attendance_today' => [
+                'present'    => $attendanceSummary['present'] ?? 0,
+                'absent'     => $attendanceSummary['absent'] ?? 0,
+                'not_marked' => $attendanceSummary['not_marked'] ?? $attendanceSummary['absent'] ?? 0,
+            ],
             'leave_requests' => $this->getLeaveStats(),
             'payroll' => $this->getPayrollStats(),
             'upcoming_birthdays' => $this->getUpcomingBirthdays(),
@@ -71,7 +77,13 @@ class DashboardService
      */
     public function getLeaveStats(): array
     {
-        return $this->leaveService->getStatistics();
+        $stats = $this->leaveService->getStatistics();
+        // Add approved_this_month so the dashboard card can display it
+        $stats['approved_this_month'] = \App\Models\TimeOffRequest::where('approval_status', 'approved')
+            ->whereMonth('approved_at', now()->month)
+            ->whereYear('approved_at', now()->year)
+            ->count();
+        return $stats;
     }
 
     /**

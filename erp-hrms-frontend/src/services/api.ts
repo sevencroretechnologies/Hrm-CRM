@@ -252,6 +252,8 @@ export const paymentTermApi = {
 
 export const dashboardService = {
   getStats: (params?: Record<string, unknown>) => api.get('/dashboard/stats', { params }),
+  // Full HRM dashboard - returns employees, attendance_today, leave_requests, payroll, etc.
+  getDashboard: (params?: Record<string, unknown>) => api.get('/dashboard', { params }),
   getSalesOverview: (params?: Record<string, unknown>) => api.get('/dashboard/sales-overview', { params }),
   getEmployeeStats: (params?: Record<string, unknown>) => api.get('/dashboard/employee-stats', { params }),
   getAttendanceStats: (params?: Record<string, unknown>) => api.get('/dashboard/attendance-stats', { params }),
