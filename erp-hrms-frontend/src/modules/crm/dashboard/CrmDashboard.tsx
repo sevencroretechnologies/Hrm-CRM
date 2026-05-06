@@ -150,6 +150,7 @@ function LostDealReasonsChart({ stats }: { stats: DashboardStats }) {
 }
 
 export default function CrmDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [salesOverviewData, setSalesOverviewData] = useState<any[]>([]);
   const [latestOpportunities, setLatestOpportunities] = useState<Opportunity[]>([]);
@@ -432,7 +433,7 @@ export default function CrmDashboard() {
           </div>
         </div>
 
-        {/* Tasks Overview */}
+        {/* Tasks Overview & Recent Tasks */}
         <div className="lg:col-span-1 flex flex-col gap-6">
           <div className="dash-card">
             <div className="dash-card-header !pb-4">
@@ -469,6 +470,57 @@ export default function CrmDashboard() {
                   </div>
                   <span className="text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded text-sm min-w-[28px] text-center">{completedTasks}</span>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="dash-card">
+            <div className="dash-card-header !pb-4">
+              <h5 className="font-semibold text-gray-700">Staff Sales Tasks</h5>
+              <div 
+                className="text-blue-500 hover:text-blue-600 font-medium cursor-pointer text-sm"
+                onClick={() => navigate('/crm/sales-tasks')}
+              >
+                View All &rsaquo;
+              </div>
+            </div>
+            <div className="dash-card-body p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50/50 border-b border-gray-100">
+                      <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Staff</th>
+                      <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Task</th>
+                      <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Due</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tasks
+                      .filter(t => t.status !== 'Closed')
+                      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                      .slice(0, 5)
+                      .map((task, i) => (
+                        <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
+                          <td className="px-4 py-3 text-xs font-medium text-gray-700">
+                            {task.sales_task?.assigned_staff?.full_name || 'Unassigned'}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-600">
+                            <div className="truncate max-w-[100px]" title={task.description}>
+                              {task.description}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                            {task.date}
+                          </td>
+                        </tr>
+                      ))}
+                    {tasks.filter(t => t.status !== 'Closed').length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-6 text-center text-gray-400 text-xs">No pending tasks</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
