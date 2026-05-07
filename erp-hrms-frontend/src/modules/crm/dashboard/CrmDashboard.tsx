@@ -435,11 +435,11 @@ export default function CrmDashboard() {
 
         {/* Tasks Overview & Recent Tasks */}
         <div className="lg:col-span-1 flex flex-col gap-6">
-          <div className="dash-card">
+          <div className="dash-card !h-auto">
             <div className="dash-card-header !pb-4">
               <h5 className="font-semibold text-gray-700">Tasks Overview</h5>
             </div>
-            <div className="dash-card-body">
+            <div className="dash-card-body !overflow-visible">
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
@@ -474,7 +474,7 @@ export default function CrmDashboard() {
             </div>
           </div>
 
-          <div className="dash-card">
+          <div className="dash-card !h-auto">
             <div className="dash-card-header !pb-4">
               <h5 className="font-semibold text-gray-700">Staff Sales Tasks</h5>
               <div 
@@ -484,7 +484,7 @@ export default function CrmDashboard() {
                 View All &rsaquo;
               </div>
             </div>
-            <div className="dash-card-body p-0">
+            <div className="dash-card-body p-0 !overflow-visible">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
