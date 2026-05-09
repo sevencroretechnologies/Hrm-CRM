@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import { attendanceService, staffService } from '../../services/api';
 import { showAlert } from '../../lib/sweetalert';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -7,7 +8,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 
 import { StatusBadge } from '../../components/ui/status-badge';
-import { Calendar, Clock, Filter, MapPin, ShieldAlert, Watch } from 'lucide-react';
+import { Calendar, Clock, FileDown, Filter, MapPin, ShieldAlert, Watch } from 'lucide-react';
 import DataTable, { TableColumn } from 'react-data-table-component';
 import { useNavigate } from 'react-router-dom';
 
@@ -93,6 +94,7 @@ export default function WorkLogs() {
   const [perPage, setPerPage] = useState(10);
   const [sortField, setSortField] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [isExporting, setIsExporting] = useState(false);
 
   const safeNumberFormat = (value: any, decimals: number = 1): string => {
     if (value === undefined || value === null || isNaN(Number(value))) {
@@ -259,6 +261,67 @@ export default function WorkLogs() {
     setEndDate('');
     setStaffMemberId('');
     setPage(1);
+  };
+
+  // ================= EXPORT EXCEL =================
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      // Build the same filter params but fetch all records
+      const params: Record<string, unknown> = { page: 1, per_page: 9999 };
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
+      if (staffMemberId) params.staff_member_id = staffMemberId;
+      if (sortField) {
+        params.order_by = sortField;
+        params.order = sortDirection;
+      }
+
+      const response = await attendanceService.getWorkLogs(params);
+      const allLogs: WorkLog[] = response.data.data || [];
+
+      const rows = allLogs.map((log, index) => ({
+        'S.No': index + 1,
+        'Date': log.log_date || '-',
+        'Employee': log.staff_member?.full_name || '-',
+        'Staff Code': log.staff_member?.staff_code || '-',
+        
+        'Clock In': formatTimeString(log.clock_in || log.clock_in_time),
+        'Clock Out': formatTimeString(log.clock_out || log.clock_out_time),
+        'Total Hours': (() => {
+          const h = log.total_hours ?? calculateTotalHours(log.clock_in, log.clock_out);
+          return parseFloat(safeNumberFormat(h, 2));
+        })(),
+        'Status': log.status || '-',
+        'Late (min)': log.late_minutes || 0,
+        'Early Leave (min)': log.early_leave_minutes || 0,
+        'Overtime (min)': log.overtime_minutes || 0,
+        'Break (min)': log.break_minutes || 0,
+        'Notes': log.notes || '-',
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+
+      // Auto column widths
+      const colWidths = Object.keys(rows[0] || {}).map((key) => ({
+        wch: Math.max(key.length + 2, 16),
+      }));
+      worksheet['!cols'] = colWidths;
+
+      const workbook = XLSX.utils.book_new();
+      const sheetName = startDate && endDate
+        ? `${startDate} to ${endDate}`.slice(0, 31)
+        : 'Work Logs';
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+
+      const today = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(workbook, `WorkLogs_Export_${today}.xlsx`);
+    } catch (error) {
+      console.error('Export failed:', error);
+      showAlert('error', 'Export Failed', 'Could not export work logs. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
 // Copy this exact function from your clock-in page to MyWorkLogs
@@ -760,6 +823,28 @@ const calculateTotalHours = (clockIn: string | null, clockOut: string | null): n
                 className="flex-1"
               >
                 Clear Filters
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleExportExcel}
+                disabled={isExporting || isLoading || (meta?.total ?? 0) === 0}
+                className="border-emerald-500 text-emerald-700 hover:bg-emerald-50 flex-1"
+                title="Export filtered work logs to Excel"
+              >
+                {isExporting ? (
+                  <>
+                    <svg className="animate-spin mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Export Excel
+                  </>
+                )}
               </Button>
             </div>
           </div>

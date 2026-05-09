@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import { Link } from 'react-router-dom';
 import { staffService } from '../../services/api';
 import { showAlert, showConfirmDialog, getErrorMessage } from '../../lib/sweetalert';
@@ -25,6 +26,7 @@ import {
   Edit,
   Trash2,
   Users,
+  FileDown,
 } from 'lucide-react';
 
 interface StaffMember {
@@ -32,7 +34,7 @@ interface StaffMember {
   full_name: string;
   personal_email: string;
   work_email: string;
-  phone_number: string;
+  mobile_number: string;
   job_title: { title: string } | null;
   division: { title: string } | null;
   office_location: { title: string } | null;
@@ -43,6 +45,7 @@ interface StaffMember {
 export default function StaffList() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
@@ -123,6 +126,48 @@ export default function StaffList() {
     setSortField(field);
     setSortDirection(sortDirection);
     setPage(1); // Reset to first page when sorting
+  };
+
+  // ================= EXPORT EXCEL =================
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      // Fetch ALL staff records regardless of current pagination
+      const response = await staffService.getAll({ per_page: 9999, page: 1 });
+      const allStaff: StaffMember[] = response.data.data || [];
+
+      const rows = allStaff.map((member, index) => ({
+        'S.No': index + 1,
+        'Full Name': member.full_name,
+
+        'Email': member.personal_email || '-',
+        'Phone Number': member.mobile_number || '-',
+        'Job Title': member.job_title?.title || '-',
+        'Department': member.division?.title || '-',
+        'Office Location': member.office_location?.title || '-',
+        'Employment Status': member.employment_status || '-',
+        'Hire Date': member.hire_date || '-',
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+
+      // Auto-fit column widths
+      const colWidths = Object.keys(rows[0] || {}).map((key) => ({
+        wch: Math.max(key.length + 2, 20),
+      }));
+      worksheet['!cols'] = colWidths;
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Staff Members');
+
+      const today = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(workbook, `Staff_Members_${today}.xlsx`);
+    } catch (error) {
+      console.error('Export failed:', error);
+      showAlert('error', 'Export Failed', 'Could not export staff data. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // ================= DELETE =================
@@ -260,11 +305,34 @@ export default function StaffList() {
           <h1 className="text-2xl font-bold">Staff Members</h1>
           <p className="text-muted-foreground">Manage your organization employees</p>
         </div>
-        <Link to="/staff/create">
-          <Button className="bg-solarized-blue hover:bg-solarized-blue/90">
-            <Plus className="mr-2 h-4 w-4" /> Add Staff
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={handleExportExcel}
+            disabled={isExporting || totalRows === 0}
+            className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+          >
+            {isExporting ? (
+              <>
+                <svg className="animate-spin mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <FileDown className="mr-2 h-4 w-4" />
+                Export Excel
+              </>
+            )}
           </Button>
-        </Link>
+          <Link to="/staff/create">
+            <Button className="bg-solarized-blue hover:bg-solarized-blue/90">
+              <Plus className="mr-2 h-4 w-4" /> Add Staff
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card>
