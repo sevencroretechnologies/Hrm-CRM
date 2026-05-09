@@ -2,7 +2,8 @@ import { Contact, Customer, CustomerGroup, Lead, Opportunity, OpportunityLostRea
 import axios from 'axios';
 import { get } from 'node:http';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+// const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = 'http://localhost/HRM-CRM/erp-hrms-backend/public/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
