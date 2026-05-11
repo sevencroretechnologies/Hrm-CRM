@@ -314,14 +314,12 @@ const navigation: NavItem[] = [
     name: "Performance",
     href: "/performance",
     icon: Target,
-    permission: "view_staff_performance",
     children: [
-      { name: "Goals", href: "/performance/goals", permission: "manage_goals" },
+      { name: "Goals", href: "/performance/goals" },
       // { name: 'KPIs', href: '/performance/kpis', permission: 'view_staff_performance' },
       {
         name: "Appraisals",
         href: "/performance/appraisals",
-        permission: "manage_appraisals",
       },
       // {
       //   name: "Competencies",
