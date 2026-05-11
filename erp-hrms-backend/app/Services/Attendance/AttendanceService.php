@@ -563,7 +563,15 @@ class AttendanceService extends BaseService
 
         $startOfMonth = Carbon::create($year, $month, 1);
         $endOfMonth = $startOfMonth->copy()->endOfMonth();
-        $workingDays = $this->countWorkingDays($startOfMonth, $endOfMonth);
+
+        // Subtract holidays scoped to this employee's tenant from the working-day count.
+        $staffMember = \App\Models\StaffMember::find($staffMemberId);
+        $workingDays = $this->countWorkingDays(
+            $startOfMonth,
+            $endOfMonth,
+            $staffMember?->org_id,
+            $staffMember?->company_id
+        );
 
         // Get leaves for this month
         $leaves = TimeOffRequest::where('staff_member_id', $staffMemberId)
@@ -750,15 +758,23 @@ class AttendanceService extends BaseService
     }
 
     /**
-     * Count working days between dates (excludes weekends).
+     * Count working days between dates (excludes weekends and, when org/company are supplied,
+     * also excludes company holidays that fall on otherwise-working days).
      */
-    protected function countWorkingDays(Carbon $start, Carbon $end): int
+    protected function countWorkingDays(Carbon $start, Carbon $end, ?int $orgId = null, ?int $companyId = null): int
     {
+        $holidayLookup = [];
+        if ($orgId !== null || $companyId !== null) {
+            $holidayLookup = array_flip(
+                \App\Models\CompanyHoliday::datesInRange($start, $end, $orgId, $companyId)
+            );
+        }
+
         $days = 0;
         $current = $start->copy();
 
         while ($current <= $end) {
-            if (!$current->isWeekend()) {
+            if (! $current->isWeekend() && ! isset($holidayLookup[$current->format('Y-m-d')])) {
                 $days++;
             }
             $current->addDay();

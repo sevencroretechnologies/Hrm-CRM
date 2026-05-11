@@ -195,6 +195,9 @@ function App() {
             {/* Profile */}
             <Route path="/profile" element={<Profile />} />
 
+            {/* Company Notices (visible to all staff) */}
+            <Route path="/notices" element={<CompanyNotices />} />
+
             {/* Staff Management */}
             <Route path="/staff" element={<StaffList />} />
             <Route path="/staff/create" element={<StaffCreate />} />
@@ -237,11 +240,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/attendance/my-summary" element={<MyAttendanceSummary />} />
-            <Route path="/attendance/shifts" element={
-              <ProtectedRoute requiredPermission="view_attendance">
-                <Shifts />
-              </ProtectedRoute>
-            } />
+            <Route path="/attendance/shifts" element={<Shifts />} />
 
             {/* Leave Management */}
             <Route path="/leave" element={<LeaveRequests />} />
@@ -328,21 +327,13 @@ function App() {
             <Route path="/recruitment/custom-questions" element={<CustomQuestions />} />
 
             {/* Performance */}
-            <Route path="/performance/goals" element={
-              <ProtectedRoute requiredPermission="manage_goals">
-                <Goals />
-              </ProtectedRoute>
-            } />
+            <Route path="/performance/goals" element={<Goals />} />
             <Route path="/performance/competencies" element={
               <ProtectedRoute requiredPermission="view_staff_performance">
                 <Competencies />
               </ProtectedRoute>
             } />
-            <Route path="/performance/appraisals" element={
-              <ProtectedRoute requiredPermission="manage_appraisals">
-                <Appraisals />
-              </ProtectedRoute>
-            } />
+            <Route path="/performance/appraisals" element={<Appraisals />} />
 
             {/* Assets */}
             <Route path="/assets" element={<AssetsList />} />

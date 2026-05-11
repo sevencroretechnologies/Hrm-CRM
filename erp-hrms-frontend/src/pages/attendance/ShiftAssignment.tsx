@@ -5,12 +5,18 @@ import { ShiftRoster } from '../../pages/attendance/ShiftRoster';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Users, Calendar } from 'lucide-react';
-import { useShifts } from '../../hooks/useShifts';
+import { useShifts } from '../../hooks/use-shifts';
 
 export default function ShiftAssignments() {
   const [selectedShift, setSelectedShift] = useState(null);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const { shifts, isLoading } = useShifts();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { shifts, isLoading, refresh: refreshShifts } = useShifts();
+
+  const handleSuccess = () => {
+    setRefreshKey(prev => prev + 1);
+    refreshShifts?.();
+  };
 
   return (
     <div className="space-y-6">
@@ -87,7 +93,7 @@ export default function ShiftAssignments() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ShiftRoster />
+            <ShiftRoster key={refreshKey} />
           </CardContent>
         </Card>
       </div>
@@ -98,6 +104,7 @@ export default function ShiftAssignments() {
           shift={selectedShift}
           open={isAssignDialogOpen}
           onOpenChange={setIsAssignDialogOpen}
+          onSuccess={handleSuccess}
         />
       )}
     </div>

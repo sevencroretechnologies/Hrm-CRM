@@ -37,7 +37,7 @@ class CompanyNotice extends Model
     public function recipients()
     {
         return $this->belongsToMany(StaffMember::class, 'company_notice_recipients')
-            ->withPivot('is_read', 'read_at')
+            ->withPivot('is_read', 'read_at', 'org_id', 'company_id')
             ->withTimestamps();
     }
 

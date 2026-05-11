@@ -29,6 +29,7 @@ interface AssignShiftDialogProps {
     name: string;
     start_time: string;
     end_time: string;
+    assignments?: Array<{ staff_member_id?: number; staff_member?: { id: number } }>;
   };
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -55,15 +56,36 @@ export function AssignShiftDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [isMultiple, setIsMultiple] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [assignedStaffIds, setAssignedStaffIds] = useState<number[]>([]);
 
   useEffect(() => {
     if (open) {
       fetchStaffMembers();
+      fetchShiftDetails();
+      
+      // Reset form on open
+      setSelectedStaff(isMultiple ? [] : []);
+      setEffectiveTo('');
+      setIsMultiple(false);
+      setSearchQuery('');
+      
       // Set default date to today
       const today = new Date().toISOString().split('T')[0];
       setEffectiveFrom(today);
     }
-  }, [open]);
+  }, [open, shift.id]);
+
+  const fetchShiftDetails = async () => {
+    try {
+      const response = await attendanceService.getShift(shift.id);
+      const shiftData = response.data.data;
+      if (shiftData.assignments) {
+        setAssignedStaffIds(shiftData.assignments.map((a: any) => a.staff_member_id || a.staff_member?.id));
+      }
+    } catch (error) {
+      console.error('Failed to fetch shift details:', error);
+    }
+  };
 
   const fetchStaffMembers = async () => {
     try {
@@ -142,11 +164,16 @@ export function AssignShiftDialog({
     return `${hour12}:${m} ${ampm}`;
   };
 
-  const filteredStaffMembers = staffMembers.filter(member =>
-    member.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.staff_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.department?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredStaffMembers = staffMembers.filter(member => {
+    const matchesSearch = member.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.staff_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.department?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Filter out already assigned staff
+    const isNotAssigned = !assignedStaffIds.includes(member.id);
+    
+    return matchesSearch && isNotAssigned;
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

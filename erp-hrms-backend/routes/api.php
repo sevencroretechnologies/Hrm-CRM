@@ -639,10 +639,15 @@ Route::middleware('auth:sanctum')->group(function () {
         // ============================================
         // PROMPT SET 31: Shifts Management
         // ============================================
-        Route::apiResource('shifts', ShiftController::class)->middleware('permission:view_attendance');
+        Route::get('/shifts', [ShiftController::class, 'index']);
+        Route::get('/shifts/{shift}', [ShiftController::class, 'show']);
+        Route::post('/shifts', [ShiftController::class, 'store'])->middleware('permission:edit_attendance');
+        Route::put('/shifts/{shift}', [ShiftController::class, 'update'])->middleware('permission:edit_attendance');
+        Route::delete('/shifts/{shift}', [ShiftController::class, 'destroy'])->middleware('permission:edit_attendance');
+
         Route::post('/shifts/{shift}/assign', [ShiftController::class , 'assign'])->middleware('permission:edit_attendance');
-        Route::get('/shift-roster', [ShiftController::class , 'roster'])->middleware('permission:view_attendance');
-        Route::get('/shifts/employee/{staffMemberId}', [ShiftController::class , 'employeeShifts'])->middleware('permission:view_attendance');
+        Route::get('/shift-roster', [ShiftController::class , 'roster']);
+        Route::get('/shifts/employee/{staffMemberId}', [ShiftController::class , 'employeeShifts']);
 
         // ============================================
         // PROMPT SET 32: Timesheets

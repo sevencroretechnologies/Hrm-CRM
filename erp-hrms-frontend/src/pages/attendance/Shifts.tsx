@@ -48,6 +48,14 @@ interface Shift {
   end_time: string;
   break_duration_minutes: number;
   assignments_count?: number;
+  assignments?: Array<{
+    id: number;
+    staff_member: {
+      id: number;
+      full_name: string;
+      staff_code?: string;
+    };
+  }>;
 }
 
 export default function Shifts() {
@@ -60,6 +68,8 @@ export default function Shifts() {
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [viewingShift, setViewingShift] = useState<Shift | null>(null);
   const [activeTab, setActiveTab] = useState('shifts');
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [isLoadingRole, setIsLoadingRole] = useState(true);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -72,10 +82,35 @@ export default function Shifts() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (activeTab === 'shifts') {
+    const checkRole = () => {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const userData = JSON.parse(userStr);
+          const userRoles = (userData.roles || [userData.role]).map((r: string) => r.toLowerCase());
+          const hasAdminRole = userRoles.some((role: string) => 
+            ['admin', 'administrator', 'super-admin', 'superadmin', 'hr', 'organisation', 'company'].includes(role)
+          );
+          setIsAdminUser(hasAdminRole);
+          if (!hasAdminRole) {
+            setActiveTab('roster');
+          }
+        }
+      } catch (e) {
+        console.error('Error checking role:', e);
+      } finally {
+        setIsLoadingRole(false);
+      }
+    };
+
+    checkRole();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'shifts' && isAdminUser) {
       fetchShifts();
     }
-  }, [activeTab]);
+  }, [activeTab, isAdminUser]);
 
   const fetchShifts = async () => {
     setIsLoading(true);
@@ -223,9 +258,15 @@ export default function Shifts() {
     setIsDialogOpen(true);
   };
 
-  const handleView = (shift: Shift) => {
-    setViewingShift(shift);
-    setIsViewDialogOpen(true);
+  const handleView = async (shift: Shift) => {
+    try {
+      const response = await attendanceService.getShift(shift.id);
+      setViewingShift(response.data.data);
+      setIsViewDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch shift details:', error);
+      showAlert('error', 'Error', 'Failed to fetch shift details');
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -317,13 +358,15 @@ export default function Shifts() {
       {/* TABS */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="shifts" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Shifts
-          </TabsTrigger>
+          {isAdminUser && (
+            <TabsTrigger value="shifts" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Shifts
+            </TabsTrigger>
+          )}
           <TabsTrigger value="roster" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Roster
+            {isAdminUser ? 'Roster' : 'My Shifts'}
           </TabsTrigger>
         </TabsList>
 
@@ -664,8 +707,27 @@ export default function Shifts() {
                 <p className="font-medium">{viewingShift.break_duration_minutes} minutes</p>
               </div>
               <div className="space-y-2">
-                <Label className="text-muted-foreground">Assignments</Label>
-                <p className="font-medium">{viewingShift.assignments_count || 0} staff members</p>
+                <Label className="text-muted-foreground">Assignments ({viewingShift.assignments?.length || 0})</Label>
+                {viewingShift.assignments && viewingShift.assignments.length > 0 ? (
+                  <div className="max-h-40 overflow-y-auto rounded-md border p-2 bg-solarized-base3">
+                    <ul className="space-y-1">
+                      {viewingShift.assignments.map((assignment) => (
+                        <li key={assignment.id} className="text-sm flex justify-between">
+                          <span className="font-medium text-solarized-base01">
+                            {assignment.staff_member.full_name}
+                          </span>
+                          {assignment.staff_member.staff_code && (
+                            <span className="text-xs text-muted-foreground">
+                              ({assignment.staff_member.staff_code})
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No staff members assigned yet.</p>
+                )}
               </div>
             </div>
           )}

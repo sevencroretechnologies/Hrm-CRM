@@ -310,16 +310,34 @@ class WorkingDayController extends Controller
                 $workingDays = array_keys(array_filter($config->getWorkingDaysArray()));
             }
 
+            $holidayDates = \App\Models\CompanyHoliday::datesInRange(
+                $startDate,
+                $endDate,
+                $user->org_id,
+                $user->company_id
+            );
+            $holidayLookup = array_flip($holidayDates);
+
             $workingDaysCount = 0;
             $totalDays = $startDate->diffInDays($endDate) + 1;
             $workingDates = [];
+            $holidayWorkingDates = []; // holidays that landed on otherwise-working days
 
             for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
                 $dayName = strtolower($date->format('l'));
-                if (in_array($dayName, $workingDays)) {
-                    $workingDaysCount++;
-                    $workingDates[] = $date->format('Y-m-d');
+                $iso = $date->format('Y-m-d');
+
+                if (! in_array($dayName, $workingDays)) {
+                    continue;
                 }
+
+                if (isset($holidayLookup[$iso])) {
+                    $holidayWorkingDates[] = $iso;
+                    continue;
+                }
+
+                $workingDaysCount++;
+                $workingDates[] = $iso;
             }
 
             return $this->success([
@@ -329,6 +347,8 @@ class WorkingDayController extends Controller
                 'working_days_count' => $workingDaysCount,
                 'working_days' => $workingDays,
                 'working_dates' => $workingDates,
+                'holidays_count' => count($holidayWorkingDates),
+                'holiday_dates' => $holidayWorkingDates,
             ], 'Working days calculated successfully');
         } catch (\Exception $e) {
             return $this->serverError('Failed to calculate working days: ' . $e->getMessage());

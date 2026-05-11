@@ -53,6 +53,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Notices", href: "/notices", icon: Bell },
   {
     name: "Staff",
     href: "/staff",
@@ -103,6 +104,7 @@ const navigation: NavItem[] = [
       { name: "Clock In/Out (Self)", href: "/attendance/self" },
       { name: "My Work Logs", href: "/attendance/my-logs" },
       { name: "My Summary", href: "/attendance/my-summary" },
+      { name: "Shifts", href: "/attendance/shifts" },
       // Admin-only items (hidden for user role)
       {
         name: "Clock In/Out",
@@ -119,11 +121,11 @@ const navigation: NavItem[] = [
         href: "/attendance/summary",
         permission: "view_attendance",
       },
-      {
-        name: "Shifts",
-        href: "/attendance/shifts",
-        permission: "edit_attendance",
-      },
+      // {
+      //   name: "Manage Shifts",
+      //   href: "/attendance/shifts",
+      //   permission: "edit_attendance",
+      // },
     ],
   },
   {
@@ -312,14 +314,12 @@ const navigation: NavItem[] = [
     name: "Performance",
     href: "/performance",
     icon: Target,
-    permission: "view_staff_performance",
     children: [
-      { name: "Goals", href: "/performance/goals", permission: "manage_goals" },
+      { name: "Goals", href: "/performance/goals" },
       // { name: 'KPIs', href: '/performance/kpis', permission: 'view_staff_performance' },
       {
         name: "Appraisals",
         href: "/performance/appraisals",
-        permission: "manage_appraisals",
       },
       // {
       //   name: "Competencies",
