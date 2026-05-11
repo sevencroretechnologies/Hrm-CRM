@@ -195,6 +195,9 @@ function App() {
             {/* Profile */}
             <Route path="/profile" element={<Profile />} />
 
+            {/* Company Notices (visible to all staff) */}
+            <Route path="/notices" element={<CompanyNotices />} />
+
             {/* Staff Management */}
             <Route path="/staff" element={<StaffList />} />
             <Route path="/staff/create" element={<StaffCreate />} />

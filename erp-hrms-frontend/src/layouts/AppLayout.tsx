@@ -53,6 +53,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Notices", href: "/notices", icon: Bell },
   {
     name: "Staff",
     href: "/staff",

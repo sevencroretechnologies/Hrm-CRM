@@ -7,6 +7,7 @@ use App\Models\CompanyNotice;
 use App\Models\StaffMember;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CompanyNoticeController extends Controller
 {
@@ -14,13 +15,27 @@ class CompanyNoticeController extends Controller
 
     public function index(Request $request)
     {
-        $query = CompanyNotice::with('author');
+        $staffMemberId = $this->currentStaffMemberId($request);
+
+        $query = CompanyNotice::with(['author', 'recipients'])
+            ->withCount([
+                'recipients as recipients_count',
+                'recipients as read_count' => function ($q) {
+                    $q->where('company_notice_recipients.is_read', true);
+                },
+            ]);
 
         if ($request->boolean('active_only', false)) {
             $query->active();
         }
         if ($request->boolean('featured_only', false)) {
             $query->featured();
+        }
+        if ($request->boolean('unread_only', false) && $staffMemberId) {
+            $query->whereHas('recipients', function ($q) use ($staffMemberId) {
+                $q->where('staff_members.id', $staffMemberId)
+                    ->where('company_notice_recipients.is_read', false);
+            });
         }
         if ($request->filled('search')) {
             $query->where('title', 'like', '%'.$request->search.'%');
@@ -29,6 +44,8 @@ class CompanyNoticeController extends Controller
         $notices = $request->boolean('paginate', true)
             ? $query->latest()->paginate($request->input('per_page', 15))
             : $query->latest()->get();
+
+        $this->appendReadStatus($notices, $staffMemberId);
 
         return $this->success($notices);
     }
@@ -47,19 +64,48 @@ class CompanyNoticeController extends Controller
         ]);
 
         $validated['author_id'] = $request->user()->id;
-        $notice = CompanyNotice::create(collect($validated)->except('recipient_ids')->toArray());
+        $isCompanyWide = $validated['is_company_wide'] ?? true;
 
-        // Attach recipients if not company-wide
-        if (! ($validated['is_company_wide'] ?? true) && ! empty($validated['recipient_ids'])) {
-            $notice->recipients()->attach($validated['recipient_ids']);
-        }
+        $notice = DB::transaction(function () use ($validated, $isCompanyWide) {
+            $notice = CompanyNotice::create(collect($validated)->except('recipient_ids')->toArray());
 
-        return $this->created($notice->load('recipients'), 'Company notice created');
+            $recipientIds = $isCompanyWide
+                ? StaffMember::pluck('id')->toArray()
+                : ($validated['recipient_ids'] ?? []);
+
+            if (! empty($recipientIds)) {
+                $notice->recipients()->attach(
+                    $this->pivotPayload($recipientIds, $notice)
+                );
+            }
+
+            return $notice;
+        });
+
+        $notice->loadCount([
+            'recipients as recipients_count',
+            'recipients as read_count' => function ($q) {
+                $q->where('company_notice_recipients.is_read', true);
+            },
+        ]);
+
+        return $this->created($notice->load(['author', 'recipients']), 'Company notice created');
     }
 
-    public function show(CompanyNotice $companyNotice)
+    public function show(Request $request, CompanyNotice $companyNotice)
     {
-        return $this->success($companyNotice->load(['author', 'recipients']));
+        $staffMemberId = $this->currentStaffMemberId($request);
+
+        $companyNotice->load(['author', 'recipients'])->loadCount([
+            'recipients as recipients_count',
+            'recipients as read_count' => function ($q) {
+                $q->where('company_notice_recipients.is_read', true);
+            },
+        ]);
+
+        $this->appendReadStatus(collect([$companyNotice]), $staffMemberId);
+
+        return $this->success($companyNotice);
     }
 
     public function update(Request $request, CompanyNotice $companyNotice)
@@ -75,14 +121,47 @@ class CompanyNoticeController extends Controller
             'recipient_ids.*' => 'exists:staff_members,id',
         ]);
 
-        $companyNotice->update(collect($validated)->except('recipient_ids')->toArray());
+        DB::transaction(function () use ($companyNotice, $validated) {
+            $companyNotice->update(collect($validated)->except('recipient_ids')->toArray());
 
-        // Sync recipients if provided
-        if (isset($validated['recipient_ids'])) {
-            $companyNotice->recipients()->sync($validated['recipient_ids']);
-        }
+            $isCompanyWide = \array_key_exists('is_company_wide', $validated)
+                ? (bool) $validated['is_company_wide']
+                : (bool) $companyNotice->is_company_wide;
 
-        return $this->success($companyNotice->fresh(['author', 'recipients']), 'Company notice updated');
+            if ($isCompanyWide) {
+                // For company-wide, ensure every staff member is a recipient
+                // without resetting read status of existing recipients.
+                $allStaffIds = StaffMember::pluck('id')->toArray();
+                $companyNotice->recipients()->syncWithoutDetaching(
+                    $this->pivotPayload($allStaffIds, $companyNotice)
+                );
+            } elseif (\array_key_exists('recipient_ids', $validated)) {
+                $targetIds = $validated['recipient_ids'] ?? [];
+                $existingIds = $companyNotice->recipients()->pluck('staff_members.id')->toArray();
+
+                $toAttach = array_diff($targetIds, $existingIds);
+                $toDetach = array_diff($existingIds, $targetIds);
+
+                if (! empty($toAttach)) {
+                    $companyNotice->recipients()->attach(
+                        $this->pivotPayload($toAttach, $companyNotice)
+                    );
+                }
+                if (! empty($toDetach)) {
+                    $companyNotice->recipients()->detach($toDetach);
+                }
+            }
+        });
+
+        $fresh = $companyNotice->fresh(['author', 'recipients'])
+            ->loadCount([
+                'recipients as recipients_count',
+                'recipients as read_count' => function ($q) {
+                    $q->where('company_notice_recipients.is_read', true);
+                },
+            ]);
+
+        return $this->success($fresh, 'Company notice updated');
     }
 
     /**
@@ -96,12 +175,33 @@ class CompanyNoticeController extends Controller
             return $this->error('Staff member not found', 404);
         }
 
-        $companyNotice->recipients()->updateExistingPivot($staffMember->id, [
-            'is_read' => true,
-            'read_at' => now(),
+        // Only allow marking as read for staff that should receive this notice.
+        if (! $companyNotice->is_company_wide) {
+            $isRecipient = $companyNotice->recipients()
+                ->where('staff_members.id', $staffMember->id)
+                ->exists();
+
+            if (! $isRecipient) {
+                return $this->error('You are not a recipient of this notice', 403);
+            }
+        }
+
+        // syncWithoutDetaching inserts the pivot row if missing and updates it if present,
+        // so this works whether or not the staff member was pre-attached.
+        $companyNotice->recipients()->syncWithoutDetaching([
+            $staffMember->id => [
+                'is_read' => true,
+                'read_at' => now(),
+                'org_id' => $companyNotice->org_id,
+                'company_id' => $companyNotice->company_id,
+            ],
         ]);
 
-        return $this->noContent('Notice marked as read');
+        return $this->success([
+            'notice_id' => $companyNotice->id,
+            'is_read' => true,
+            'read_at' => now()->toIso8601String(),
+        ], 'Notice marked as read');
     }
 
     public function destroy(CompanyNotice $companyNotice)
@@ -109,5 +209,50 @@ class CompanyNoticeController extends Controller
         $companyNotice->delete();
 
         return $this->noContent('Company notice deleted');
+    }
+
+    /**
+     * Build a pivot payload [staff_id => [org_id, company_id]] so attach/sync
+     * persists the tenant scope columns on company_notice_recipients.
+     */
+    private function pivotPayload(array $staffIds, CompanyNotice $notice): array
+    {
+        $base = [
+            'org_id' => $notice->org_id,
+            'company_id' => $notice->company_id,
+        ];
+
+        $payload = [];
+        foreach ($staffIds as $id) {
+            $payload[$id] = $base;
+        }
+
+        return $payload;
+    }
+
+    private function currentStaffMemberId(Request $request): ?int
+    {
+        $user = $request->user();
+        if (! $user) {
+            return null;
+        }
+
+        return StaffMember::where('user_id', $user->id)->value('id');
+    }
+
+    private function appendReadStatus($notices, ?int $staffMemberId): void
+    {
+        $collection = method_exists($notices, 'getCollection')
+            ? $notices->getCollection()
+            : collect($notices);
+
+        foreach ($collection as $notice) {
+            $pivot = $staffMemberId
+                ? optional($notice->recipients->firstWhere('id', $staffMemberId))->pivot
+                : null;
+
+            $notice->setAttribute('is_read', $pivot ? (bool) $pivot->is_read : false);
+            $notice->setAttribute('read_at', $pivot?->read_at);
+        }
     }
 }
