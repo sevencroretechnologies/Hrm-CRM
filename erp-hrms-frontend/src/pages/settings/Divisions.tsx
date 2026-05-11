@@ -1,19 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
-import { settingsService } from '../../services/api';
-import { showAlert, showConfirmDialog, getErrorMessage } from '../../lib/sweetalert';
-import { Card, CardContent, CardHeader } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
-import { StatusBadge } from '../../components/ui/status-badge';
+import { useState, useEffect, useCallback } from "react";
+import { settingsService } from "../../services/api";
+import {
+  showAlert,
+  showConfirmDialog,
+  getErrorMessage,
+} from "../../lib/sweetalert";
+import { Card, CardContent, CardHeader } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Textarea } from "../../components/ui/textarea";
+import { StatusBadge } from "../../components/ui/status-badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../components/ui/select';
+} from "../../components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -22,15 +26,23 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../../components/ui/dialog';
-import { Plus, Building2, Edit, Trash2, MoreHorizontal, Search } from 'lucide-react';
+} from "../../components/ui/dialog";
+import {
+  Plus,
+  Building2,
+  Edit,
+  Trash2,
+  MoreHorizontal,
+  Search,
+  Eye,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '../../components/ui/dropdown-menu';
-import DataTable, { TableColumn } from 'react-data-table-component';
+} from "../../components/ui/dropdown-menu";
+import DataTable, { TableColumn } from "react-data-table-component";
 
 interface Location {
   id: number;
@@ -55,20 +67,20 @@ export default function Divisions() {
   const [editingDivision, setEditingDivision] = useState<Division | null>(null);
   const [viewingDivision, setViewingDivision] = useState<Division | null>(null);
   const [formData, setFormData] = useState({
-    title: '',
-    notes: '',
-    office_location_id: '',
+    title: "",
+    notes: "",
+    office_location_id: "",
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Pagination & Sorting State
-  const [searchInput, setSearchInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
-  const [sortField, setSortField] = useState<string>('');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // Fetch locations on mount
   useEffect(() => {
@@ -77,7 +89,7 @@ export default function Divisions() {
         const locRes = await settingsService.getOfficeLocations();
         setLocations(locRes.data.data || []);
       } catch (error) {
-        console.error('Failed to fetch locations:', error);
+        console.error("Failed to fetch locations:", error);
       }
     };
     fetchLocations();
@@ -110,15 +122,19 @@ export default function Divisions() {
           setTotalRows(0);
         }
       } catch (error) {
-        console.error('Failed to fetch divisions:', error);
-        showAlert('error', 'Error', getErrorMessage(error, 'Failed to fetch divisions'));
+        console.error("Failed to fetch divisions:", error);
+        showAlert(
+          "error",
+          "Error",
+          getErrorMessage(error, "Failed to fetch divisions"),
+        );
         setDivisions([]);
         setTotalRows(0);
       } finally {
         setIsLoading(false);
       }
     },
-    [perPage, searchQuery, sortField, sortDirection]
+    [perPage, searchQuery, sortField, sortDirection],
   );
 
   useEffect(() => {
@@ -143,9 +159,12 @@ export default function Divisions() {
   };
 
   // Sorting Handler - Only Name column is sortable
-  const handleSort = (column: TableColumn<Division>, sortDirection: 'asc' | 'desc') => {
-    if (column.name === 'Name') {
-      setSortField('title');
+  const handleSort = (
+    column: TableColumn<Division>,
+    sortDirection: "asc" | "desc",
+  ) => {
+    if (column.name === "Name") {
+      setSortField("title");
       setSortDirection(sortDirection);
       setPage(1);
     }
@@ -156,15 +175,15 @@ export default function Divisions() {
     let isValid = true;
 
     if (!formData.title.trim()) {
-      errors.title = 'Department Name is required';
+      errors.title = "Department Name is required";
       isValid = false;
     } else if (formData.title.length > 255) {
-      errors.title = 'Department Name must be less than 255 characters';
+      errors.title = "Department Name must be less than 255 characters";
       isValid = false;
     }
 
     if (!formData.office_location_id) {
-      errors.office_location_id = 'Office Location is required';
+      errors.office_location_id = "Office Location is required";
       isValid = false;
     }
 
@@ -188,17 +207,19 @@ export default function Divisions() {
         await settingsService.createDivision(formData);
       }
       showAlert(
-        'success',
-        'Success!',
-        editingDivision ? 'Division updated successfully' : 'Division created successfully',
-        2000
+        "success",
+        "Success!",
+        editingDivision
+          ? "Division updated successfully"
+          : "Division created successfully",
+        2000,
       );
       setIsDialogOpen(false);
       setEditingDivision(null);
       resetForm();
       fetchDivisions(page);
     } catch (error: any) {
-      console.error('Failed to save division:', error);
+      console.error("Failed to save division:", error);
 
       // Handle backend validation errors (status 422)
       if (error.response?.status === 422 && error.response?.data?.errors) {
@@ -207,9 +228,17 @@ export default function Divisions() {
           apiErrors[key] = error.response.data.errors[key][0];
         });
         setFieldErrors(apiErrors);
-        showAlert('error', 'Validation Error', 'Please fix the errors highlighted below.');
+        showAlert(
+          "error",
+          "Validation Error",
+          "Please fix the errors highlighted below.",
+        );
       } else {
-        showAlert('error', 'Error', getErrorMessage(error, 'Failed to save division'));
+        showAlert(
+          "error",
+          "Error",
+          getErrorMessage(error, "Failed to save division"),
+        );
       }
     }
   };
@@ -218,8 +247,8 @@ export default function Divisions() {
     setEditingDivision(division);
     setFormData({
       title: division.title,
-      notes: division.notes || '',
-      office_location_id: division.office_location_id?.toString() || '',
+      notes: division.notes || "",
+      office_location_id: division.office_location_id?.toString() || "",
     });
     setFieldErrors({}); // Clear any existing errors
     setIsDialogOpen(true);
@@ -232,24 +261,28 @@ export default function Divisions() {
 
   const handleDelete = async (id: number) => {
     const result = await showConfirmDialog(
-      'Are you sure?',
-      'You want to delete this division?'
+      "Are you sure?",
+      "You want to delete this division?",
     );
 
     if (!result.isConfirmed) return;
 
     try {
       await settingsService.deleteDivision(id);
-      showAlert('success', 'Deleted!', 'Division deleted successfully', 2000);
+      showAlert("success", "Deleted!", "Division deleted successfully", 2000);
       fetchDivisions(page);
     } catch (error: unknown) {
-      console.error('Failed to delete division:', error);
-      showAlert('error', 'Error', getErrorMessage(error, 'Failed to delete division'));
+      console.error("Failed to delete division:", error);
+      showAlert(
+        "error",
+        "Error",
+        getErrorMessage(error, "Failed to delete division"),
+      );
     }
   };
 
   const resetForm = () => {
-    setFormData({ title: '', notes: '', office_location_id: '' });
+    setFormData({ title: "", notes: "", office_location_id: "" });
     setFieldErrors({});
   };
 
@@ -262,30 +295,30 @@ export default function Divisions() {
   // Table Columns
   const columns: TableColumn<Division>[] = [
     {
-      name: 'Name',
+      name: "Name",
       selector: (row) => row.title,
       cell: (row) => <span className="font-medium">{row.title}</span>,
       sortable: true,
     },
     {
-      name: 'Office Location',
-      selector: (row) => row.office_location?.title || '-',
+      name: "Office Location",
+      selector: (row) => row.office_location?.title || "-",
     },
     {
-      name: 'Notes',
-      selector: (row) => row.notes || '-',
+      name: "Notes",
+      selector: (row) => row.notes || "-",
       cell: (row) => (
-        <span className="max-w-[200px] truncate">{row.notes || '-'}</span>
+        <span className="max-w-[200px] truncate">{row.notes || "-"}</span>
       ),
     },
     {
-      name: 'Status',
+      name: "Status",
       cell: (row) => (
-        <StatusBadge status={row.is_active ? 'active' : 'inactive'} />
+        <StatusBadge status={row.is_active ? "active" : "inactive"} />
       ),
     },
     {
-      name: 'Actions',
+      name: "Actions",
       cell: (row) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -295,7 +328,7 @@ export default function Divisions() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => handleView(row)}>
-              <Building2 className="mr-2 h-4 w-4" />
+              <Eye className="mr-2 h-4 w-4" />
               View
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleEdit(row)}>
@@ -313,7 +346,7 @@ export default function Divisions() {
         </DropdownMenu>
       ),
       ignoreRowClick: true,
-      width: '80px',
+      width: "80px",
     },
   ];
 
@@ -321,20 +354,20 @@ export default function Divisions() {
   const customStyles = {
     headRow: {
       style: {
-        backgroundColor: '#f9fafb',
-        borderBottomWidth: '1px',
-        borderBottomColor: '#e5e7eb',
-        borderBottomStyle: 'solid' as const,
-        minHeight: '56px',
+        backgroundColor: "#f9fafb",
+        borderBottomWidth: "1px",
+        borderBottomColor: "#e5e7eb",
+        borderBottomStyle: "solid" as const,
+        minHeight: "56px",
       },
     },
     headCells: {
       style: {
-        fontSize: '14px',
-        fontWeight: '600',
-        color: '#374151',
-        paddingLeft: '16px',
-        paddingRight: '16px',
+        fontSize: "14px",
+        fontWeight: "600",
+        color: "#374151",
+        paddingLeft: "16px",
+        paddingRight: "16px",
       },
     },
   };
@@ -343,8 +376,12 @@ export default function Divisions() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-solarized-base02">Departments</h1>
-          <p className="text-solarized-base01">Manage company divisions and departments</p>
+          <h1 className="text-2xl font-bold text-solarized-base02">
+            Departments
+          </h1>
+          <p className="text-solarized-base01">
+            Manage company divisions and departments
+          </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -361,15 +398,22 @@ export default function Divisions() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingDivision ? 'Edit Division' : 'Add New Department'}</DialogTitle>
+              <DialogTitle>
+                {editingDivision ? "Edit Division" : "Add New Department"}
+              </DialogTitle>
               <DialogDescription>
-                {editingDivision ? 'Update the division details.' : 'Add a new department.'}
+                {editingDivision
+                  ? "Update the division details."
+                  : "Add a new department."}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title" className={fieldErrors.title ? 'text-red-500' : ''}>
+                  <Label
+                    htmlFor="title"
+                    className={fieldErrors.title ? "text-red-500" : ""}
+                  >
                     Department Name *
                   </Label>
                   <Input
@@ -377,26 +421,40 @@ export default function Divisions() {
                     value={formData.title}
                     onChange={(e) => {
                       setFormData({ ...formData, title: e.target.value });
-                      if (fieldErrors.title) setFieldErrors(prev => ({ ...prev, title: '' }));
+                      if (fieldErrors.title)
+                        setFieldErrors((prev) => ({ ...prev, title: "" }));
                     }}
                     placeholder="e.g., Engineering"
-                    className={fieldErrors.title ? 'border-red-500' : ''}
+                    className={fieldErrors.title ? "border-red-500" : ""}
                     maxLength={255}
                   />
-                  {renderError('title')}
+                  {renderError("title")}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="office_location_id" className={fieldErrors.office_location_id ? 'text-red-500' : ''}>
+                  <Label
+                    htmlFor="office_location_id"
+                    className={
+                      fieldErrors.office_location_id ? "text-red-500" : ""
+                    }
+                  >
                     Office Location *
                   </Label>
                   <Select
                     value={formData.office_location_id}
                     onValueChange={(value) => {
                       setFormData({ ...formData, office_location_id: value });
-                      if (fieldErrors.office_location_id) setFieldErrors(prev => ({ ...prev, office_location_id: '' }));
+                      if (fieldErrors.office_location_id)
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          office_location_id: "",
+                        }));
                     }}
                   >
-                    <SelectTrigger className={fieldErrors.office_location_id ? 'border-red-500' : ''}>
+                    <SelectTrigger
+                      className={
+                        fieldErrors.office_location_id ? "border-red-500" : ""
+                      }
+                    >
                       <SelectValue placeholder="Select location" />
                     </SelectTrigger>
                     <SelectContent>
@@ -407,25 +465,34 @@ export default function Divisions() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {renderError('office_location_id')}
+                  {renderError("office_location_id")}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="notes">Notes</Label>
                   <Textarea
                     id="notes"
                     value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, notes: e.target.value })
+                    }
                     placeholder="Department notes"
                     rows={3}
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-solarized-blue hover:bg-solarized-blue/90">
-                  {editingDivision ? 'Update' : 'Create'}
+                <Button
+                  type="submit"
+                  className="bg-solarized-blue hover:bg-solarized-blue/90"
+                >
+                  {editingDivision ? "Update" : "Create"}
                 </Button>
               </DialogFooter>
             </form>
@@ -441,7 +508,7 @@ export default function Divisions() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
-            <Button type="submit" variant="outline" >
+            <Button type="submit" variant="outline">
               <Search className="mr-2 h-4 w-4 " /> Search
             </Button>
           </form>
@@ -450,8 +517,12 @@ export default function Divisions() {
           {!isLoading && divisions.length === 0 ? (
             <div className="text-center py-12">
               <Building2 className="h-12 w-12 text-solarized-base01 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-solarized-base02">No divisions configured</h3>
-              <p className="text-solarized-base01 mt-1">Add your first division.</p>
+              <h3 className="text-lg font-medium text-solarized-base02">
+                No divisions configured
+              </h3>
+              <p className="text-solarized-base01 mt-1">
+                Add your first division.
+              </p>
             </div>
           ) : (
             <DataTable
@@ -486,28 +557,37 @@ export default function Divisions() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-solarized-base01">Department Name</Label>
-                <p className="font-medium text-solarized-base02">{viewingDivision.title}</p>
+                <p className="font-medium text-solarized-base02">
+                  {viewingDivision.title}
+                </p>
               </div>
               <div className="space-y-2">
                 <Label className="text-solarized-base01">Office Location</Label>
                 <p className="font-medium text-solarized-base02">
-                  {viewingDivision.office_location?.title || '-'}
+                  {viewingDivision.office_location?.title || "-"}
                 </p>
               </div>
               <div className="space-y-2">
                 <Label className="text-solarized-base01">Notes</Label>
-                <p className="text-solarized-base02">{viewingDivision.notes || '-'}</p>
+                <p className="text-solarized-base02">
+                  {viewingDivision.notes || "-"}
+                </p>
               </div>
               <div className="space-y-2">
                 <Label className="text-solarized-base01">Status</Label>
                 <div>
-                  <StatusBadge status={viewingDivision.is_active ? 'active' : 'inactive'} />
+                  <StatusBadge
+                    status={viewingDivision.is_active ? "active" : "inactive"}
+                  />
                 </div>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsViewDialogOpen(false)}
+            >
               Close
             </Button>
           </DialogFooter>
