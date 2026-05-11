@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { settingsService, staffService } from '../../services/api';
 import { showAlert, getErrorMessage } from '../../lib/sweetalert';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
@@ -67,6 +68,10 @@ interface CompanyNotice {
     email: string;
   };
   recipients?: StaffMember[];
+  recipients_count?: number;
+  read_count?: number;
+  is_read?: boolean;
+  read_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -90,6 +95,10 @@ interface PaginationMeta {
    COMPONENT
 ========================= */
 export default function CompanyNotices() {
+  const { hasAnyRole } = useAuth();
+  // Admin-style roles get full CRUD; staff/regular users get view + mark-as-read only.
+  const canManage = hasAnyRole(['admin', 'company', 'hr', 'org']);
+
   const [notices, setNotices] = useState<CompanyNotice[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,6 +107,7 @@ export default function CompanyNotices() {
   const [filters, setFilters] = useState({
     active_only: false,
     featured_only: false,
+    unread_only: false,
   });
 
   // Dialog states
@@ -448,12 +458,43 @@ export default function CompanyNotices() {
       cell: (row) => (
         <StatusBadge status={row.is_company_wide ? 'company_wide' : 'specific'}>
           {row.is_company_wide ? 'Company Wide' : 'Specific'}
-          {!row.is_company_wide && row.recipients && (
-            <span className="ml-1">({row.recipients.length})</span>
+          {typeof row.recipients_count === 'number' && (
+            <span className="ml-1">({row.recipients_count})</span>
           )}
         </StatusBadge>
       ),
       width: '180px',
+    },
+    {
+      name: 'Read',
+      cell: (row) => {
+        const total = row.recipients_count ?? 0;
+        const read = row.read_count ?? 0;
+        return (
+          <div className="flex items-center gap-2">
+            {row.is_read ? (
+              <Badge
+                variant="outline"
+                className="bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-transparent flex items-center px-2 py-0.5"
+              >
+                <Check className="h-3 w-3 mr-1" />
+                Read
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="bg-gray-100 hover:bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-transparent flex items-center px-2 py-0.5"
+              >
+                Unread
+              </Badge>
+            )}
+            <span className="text-xs text-gray-500">
+              {read}/{total}
+            </span>
+          </div>
+        );
+      },
+      width: '160px',
     },
     {
       name: 'Actions',
@@ -469,21 +510,27 @@ export default function CompanyNotices() {
               <Eye className="mr-2 h-4 w-4" />
               View
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleEdit(row)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleMarkAsRead(row.id)}>
-              <Check className="mr-2 h-4 w-4" />
-              Mark as Read
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleDelete(row.id)}
-              className="text-red-600 dark:text-red-400"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
+            {canManage && (
+              <DropdownMenuItem onClick={() => handleEdit(row)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+            )}
+            {!row.is_read && (
+              <DropdownMenuItem onClick={() => handleMarkAsRead(row.id)}>
+                <Check className="mr-2 h-4 w-4" />
+                Mark as Read
+              </DropdownMenuItem>
+            )}
+            {canManage && (
+              <DropdownMenuItem
+                onClick={() => handleDelete(row.id)}
+                className="text-red-600 dark:text-red-400"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -509,22 +556,28 @@ export default function CompanyNotices() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Company Notices</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage company-wide announcements and notices</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            {canManage
+              ? 'Manage company-wide announcements and notices'
+              : 'View company-wide announcements and mark them as read'}
+          </p>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              className="bg-solarized-blue hover:bg-solarized-blue/90 text-white"
-              onClick={() => {
-                setEditingNotice(null);
-                resetForm();
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Notice
-            </Button>
-          </DialogTrigger>
+        <Dialog open={canManage && isDialogOpen} onOpenChange={canManage ? setIsDialogOpen : undefined}>
+          {canManage && (
+            <DialogTrigger asChild>
+              <Button
+                className="bg-solarized-blue hover:bg-solarized-blue/90 text-white"
+                onClick={() => {
+                  setEditingNotice(null);
+                  resetForm();
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Notice
+              </Button>
+            </DialogTrigger>
+          )}
 
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -799,6 +852,18 @@ export default function CompanyNotices() {
                 <Star className="mr-2 h-4 w-4" />
                 Featured
               </Button>
+              <Button
+                variant={filters.unread_only ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setFilters({ ...filters, unread_only: !filters.unread_only });
+                  setPage(1);
+                }}
+                className={filters.unread_only ? "bg-blue-600 hover:bg-blue-700" : ""}
+              >
+                <Bell className="mr-2 h-4 w-4" />
+                Unread
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -873,6 +938,7 @@ export default function CompanyNotices() {
           <CardDescription>
             {filters.active_only && 'Showing active notices only. '}
             {filters.featured_only && 'Showing featured notices only. '}
+            {filters.unread_only && 'Showing unread notices only. '}
             {search && `Search results for "${search}"`}
           </CardDescription>
         </CardHeader>
@@ -890,15 +956,19 @@ export default function CompanyNotices() {
               <p className="text-gray-600 dark:text-gray-400 mt-1">
                 {search || filters.active_only || filters.featured_only
                   ? 'Try changing your search or filters'
-                  : 'Create your first company notice'}
+                  : canManage
+                    ? 'Create your first company notice'
+                    : 'No notices have been published yet'}
               </p>
-              <Button
-                className="bg-solarized-blue hover:bg-solarized-blue/90 text-white"
-                onClick={() => setIsDialogOpen(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Create Notice
-              </Button>
+              {canManage && (
+                <Button
+                  className="bg-solarized-blue hover:bg-solarized-blue/90 text-white"
+                  onClick={() => setIsDialogOpen(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Notice
+                </Button>
+              )}
             </div>
           ) : (
             <DataTable
@@ -921,15 +991,19 @@ export default function CompanyNotices() {
                   <p className="text-gray-600 dark:text-gray-400 mt-1">
                     {search || filters.active_only || filters.featured_only
                       ? 'Try changing your search or filters'
-                      : 'Create your first company notice'}
+                      : canManage
+                        ? 'Create your first company notice'
+                        : 'No notices have been published yet'}
                   </p>
-                  <Button
-                    className="bg-solarized-blue hover:bg-solarized-blue/90 text-white mt-4"
-                    onClick={() => setIsDialogOpen(true)}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Notice
-                  </Button>
+                  {canManage && (
+                    <Button
+                      className="bg-solarized-blue hover:bg-solarized-blue/90 text-white mt-4"
+                      onClick={() => setIsDialogOpen(true)}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Notice
+                    </Button>
+                  )}
                 </div>
               }
             />
@@ -967,7 +1041,28 @@ export default function CompanyNotices() {
                   <StatusBadge status={viewingNotice.is_company_wide ? 'company_wide' : 'specific'}>
                     {viewingNotice.is_company_wide ? 'Company Wide' : 'Specific Recipients'}
                   </StatusBadge>
+                  {viewingNotice.is_read ? (
+                    <Badge
+                      variant="outline"
+                      className="bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-transparent flex items-center px-2 py-0.5"
+                    >
+                      <Check className="h-3 w-3 mr-1" />
+                      Read
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="bg-gray-100 hover:bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-transparent flex items-center px-2 py-0.5"
+                    >
+                      Unread
+                    </Badge>
+                  )}
                 </div>
+                {typeof viewingNotice.recipients_count === 'number' && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Read by {viewingNotice.read_count ?? 0} of {viewingNotice.recipients_count} recipient(s)
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
