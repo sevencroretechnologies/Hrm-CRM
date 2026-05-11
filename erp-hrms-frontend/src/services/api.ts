@@ -342,8 +342,11 @@ export const attendanceService = {
 
   getShiftAssignments: (params?: {
     date?: string;
-    staff_member_id?: number;
-    shift_id?: number;
+    staff_member_id?: string | number;
+    shift_id?: string | number;
+    company_id?: string | number;
+    org_id?: string | number;
+    status?: string;
   }) => {
     return api.get('/shift-roster', { params });
   },

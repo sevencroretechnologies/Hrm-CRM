@@ -240,11 +240,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/attendance/my-summary" element={<MyAttendanceSummary />} />
-            <Route path="/attendance/shifts" element={
-              <ProtectedRoute requiredPermission="view_attendance">
-                <Shifts />
-              </ProtectedRoute>
-            } />
+            <Route path="/attendance/shifts" element={<Shifts />} />
 
             {/* Leave Management */}
             <Route path="/leave" element={<LeaveRequests />} />

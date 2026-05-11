@@ -68,6 +68,8 @@ export default function Shifts() {
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [viewingShift, setViewingShift] = useState<Shift | null>(null);
   const [activeTab, setActiveTab] = useState('shifts');
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [isLoadingRole, setIsLoadingRole] = useState(true);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -80,10 +82,35 @@ export default function Shifts() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (activeTab === 'shifts') {
+    const checkRole = () => {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const userData = JSON.parse(userStr);
+          const userRoles = (userData.roles || [userData.role]).map((r: string) => r.toLowerCase());
+          const hasAdminRole = userRoles.some((role: string) => 
+            ['admin', 'administrator', 'super-admin', 'superadmin', 'hr', 'organisation', 'company'].includes(role)
+          );
+          setIsAdminUser(hasAdminRole);
+          if (!hasAdminRole) {
+            setActiveTab('roster');
+          }
+        }
+      } catch (e) {
+        console.error('Error checking role:', e);
+      } finally {
+        setIsLoadingRole(false);
+      }
+    };
+
+    checkRole();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'shifts' && isAdminUser) {
       fetchShifts();
     }
-  }, [activeTab]);
+  }, [activeTab, isAdminUser]);
 
   const fetchShifts = async () => {
     setIsLoading(true);
@@ -331,13 +358,15 @@ export default function Shifts() {
       {/* TABS */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="shifts" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Shifts
-          </TabsTrigger>
+          {isAdminUser && (
+            <TabsTrigger value="shifts" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Shifts
+            </TabsTrigger>
+          )}
           <TabsTrigger value="roster" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Roster
+            {isAdminUser ? 'Roster' : 'My Shifts'}
           </TabsTrigger>
         </TabsList>
 

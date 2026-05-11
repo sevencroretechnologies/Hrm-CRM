@@ -169,11 +169,14 @@ class ShiftController extends Controller
                 return $this->error("Shift '{$shift->name}' is already assigned to employee '{$staff->full_name}' for the selected period.", 422);
             }
 
+            $staff = \App\Models\StaffMember::find($staffMemberId);
             $assignment = ShiftAssignment::create([
                 'shift_id' => $shift->id,
                 'staff_member_id' => $staffMemberId,
                 'effective_from' => $request->effective_from,
                 'effective_to' => $request->effective_to,
+                'org_id' => $staff->org_id,
+                'company_id' => $staff->company_id,
             ]);
 
             $assignments->push($assignment->load('staffMember'));
@@ -184,7 +187,36 @@ class ShiftController extends Controller
 
     public function roster(Request $request)
     {
-        $query = ShiftAssignment::with(['shift', 'staffMember']);
+        $user = $request->user();
+        $query = ShiftAssignment::with(['shift', 'staffMember.company', 'staffMember.organization']);
+
+        // Role-based filtering
+        $staffMember = \App\Models\StaffMember::where('user_id', $user->id)->first();
+        
+        // Check if user has admin-like roles
+        $isAdmin = $user->hasAnyRole(['admin', 'administrator', 'super-admin', 'superadmin', 'hr', 'organisation', 'company']);
+
+        if (!$isAdmin && $staffMember) {
+            // Regular employee - only see own shifts
+            $query->where('staff_member_id', $staffMember->id);
+        } else {
+            // Admin users - can use filters
+            if ($request->staff_member_id && $request->staff_member_id !== 'all') {
+                $query->where('staff_member_id', $request->staff_member_id);
+            }
+            
+            if ($request->company_id && $request->company_id !== 'all') {
+                $query->whereHas('staffMember', function($q) use ($request) {
+                    $q->where('company_id', $request->company_id);
+                });
+            }
+
+            if ($request->org_id && $request->org_id !== 'all') {
+                $query->whereHas('staffMember', function($q) use ($request) {
+                    $q->where('org_id', $request->org_id);
+                });
+            }
+        }
 
         if ($request->date) {
             $query->where('effective_from', '<=', $request->date)
@@ -198,8 +230,20 @@ class ShiftController extends Controller
             $query->where('shift_id', $request->shift_id);
         }
 
-        if ($request->staff_member_id && $request->staff_member_id !== 'all') {
-            $query->where('staff_member_id', $request->staff_member_id);
+        if ($request->status && $request->status !== 'all') {
+            $today = now()->toDateString();
+            if ($request->status === 'active') {
+                $query->where('effective_from', '<=', $today)
+                    ->where(function ($q) use ($today) {
+                        $q->whereNull('effective_to')
+                            ->orWhere('effective_to', '>=', $today);
+                    });
+            } elseif ($request->status === 'upcoming') {
+                $query->where('effective_from', '>', $today);
+            } elseif ($request->status === 'expired') {
+                $query->whereNotNull('effective_to')
+                    ->where('effective_to', '<', $today);
+            }
         }
 
         return $this->success($query->get());

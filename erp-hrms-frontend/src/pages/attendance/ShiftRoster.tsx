@@ -24,6 +24,17 @@ import { showAlert, showConfirmDialog, getErrorMessage } from '../../lib/sweetal
 import { Skeleton } from '../../components/ui/skeleton';
 import { Badge } from '../../components/ui/badge';
 import { AssignShiftToStaffDialog } from './AssignShiftToStaffDialog';
+import { companyService, organizationService } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
+
+interface UserData {
+  id: number;
+  name: string;
+  roles: string[];
+  role: string;
+  org_id?: number;
+  company_id?: number;
+}
 
 interface ShiftAssignment {
   id: number;
@@ -36,6 +47,7 @@ interface ShiftAssignment {
     name: string;
     start_time: string;
     end_time: string;
+    break_duration_minutes: number;
     color?: string;
   };
   staff_member: {
@@ -52,25 +64,73 @@ export function ShiftRoster() {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedShift, setSelectedShift] = useState<string>('all');
   const [selectedStaff, setSelectedStaff] = useState<string>('all');
+  const [selectedCompany, setSelectedCompany] = useState<string>('all');
+  const [selectedOrg, setSelectedOrg] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [shifts, setShifts] = useState<Array<{id: number, name: string}>>([]);
   const [staffMembers, setStaffMembers] = useState<Array<{id: number, full_name: string}>>([]);
-  const [showFilters, setShowFilters] = useState(false);
+  const [companies, setCompanies] = useState<Array<{id: number, name: string}>>([]);
+  const [organizations, setOrganizations] = useState<Array<{id: number, name: string}>>([]);
   const [isAssignStaffDialogOpen, setIsAssignStaffDialogOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isOrgAdmin, setIsOrgAdmin] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    const loadUserData = () => {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const userData: UserData = JSON.parse(userStr);
+          setCurrentUser(userData);
+
+          const userRoles = (userData.roles || [userData.role]).map(r => r.toLowerCase());
+          const hasSuperAdmin = userRoles.includes('super-admin') || userRoles.includes('superadmin');
+          const hasOrgAdmin = userRoles.includes('organisation') || userRoles.includes('admin');
+          const hasCompanyAdmin = userRoles.includes('company') || userRoles.includes('hr');
+          
+          setIsSuperAdmin(hasSuperAdmin);
+          setIsOrgAdmin(hasOrgAdmin);
+          setIsAdminUser(hasSuperAdmin || hasOrgAdmin || hasCompanyAdmin);
+        } else {
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error('Failed to parse user data:', error);
+        navigate('/login');
+      }
+    };
+
+    loadUserData();
+
     // Set default date to today
     const today = new Date().toISOString().split('T')[0];
     setSelectedDate(today);
     
     fetchShifts();
-    fetchStaffMembers();
-  }, []);
+    // Only fetch these if the user is an admin
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const userData = JSON.parse(userStr);
+      const userRoles = (userData.roles || [userData.role]).map((r: string) => r.toLowerCase());
+      const hasAdminRole = userRoles.some((role: string) => 
+        ['admin', 'administrator', 'super-admin', 'superadmin', 'hr', 'organisation', 'company'].includes(role)
+      );
+      if (hasAdminRole) {
+        fetchStaffMembers();
+        fetchCompanies();
+        fetchOrganizations();
+      }
+    }
+  }, [navigate]);
 
   useEffect(() => {
-    if (selectedDate) {
+    if (selectedDate || selectedShift || selectedStaff || selectedCompany || selectedOrg || selectedStatus) {
       fetchRoster();
     }
-  }, [selectedDate, selectedShift, selectedStaff]);
+  }, [selectedDate, selectedShift, selectedStaff, selectedCompany, selectedOrg, selectedStatus]);
 
   const fetchRoster = async () => {
     if (!selectedDate) return;
@@ -87,6 +147,18 @@ export function ShiftRoster() {
       
       if (selectedStaff !== 'all') {
         params.staff_member_id = selectedStaff;
+      }
+
+      if (selectedCompany !== 'all') {
+        params.company_id = selectedCompany;
+      }
+
+      if (selectedOrg !== 'all') {
+        params.org_id = selectedOrg;
+      }
+
+      if (selectedStatus !== 'all') {
+        params.status = selectedStatus;
       }
 
       const response = await attendanceService.getShiftAssignments(params);
@@ -114,6 +186,24 @@ export function ShiftRoster() {
       setStaffMembers(response.data.data || []);
     } catch (error) {
       console.error('Failed to fetch staff members:', error);
+    }
+  };
+
+  const fetchCompanies = async () => {
+    try {
+      const response = await companyService.getAll();
+      setCompanies(response.data.data || response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch companies:', error);
+    }
+  };
+
+  const fetchOrganizations = async () => {
+    try {
+      const response = await organizationService.getAll();
+      setOrganizations(response.data.data || response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch organizations:', error);
     }
   };
 
@@ -177,14 +267,16 @@ export function ShiftRoster() {
             Shift Roster
           </CardTitle>
           <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              onClick={() => setIsAssignStaffDialogOpen(true)}
-              className="flex items-center gap-2 bg-solarized-blue hover:bg-solarized-blue/90"
-            >
-              <UserPlus className="h-4 w-4" />
-              Assign to Staff
-            </Button>
+            {isAdminUser && (
+              <Button
+                size="sm"
+                onClick={() => setIsAssignStaffDialogOpen(true)}
+                className="flex items-center gap-2 bg-solarized-blue hover:bg-solarized-blue/90"
+              >
+                <UserPlus className="h-4 w-4" />
+                Assign to Staff
+              </Button>
+            )}
             
             <Input
               type="date"
@@ -234,7 +326,7 @@ export function ShiftRoster() {
         )} */}
         {/* Filters */}
         <div className="mb-6 p-4 border rounded-lg space-y-4 bg-muted/30">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div className="space-y-2">
               <Label htmlFor="date-filter">View Date</Label>
               <Input
@@ -247,7 +339,7 @@ export function ShiftRoster() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="shift-filter">Filter by Shift</Label>
+              <Label htmlFor="shift-filter">Shift</Label>
               <Select value={selectedShift} onValueChange={setSelectedShift}>
                 <SelectTrigger id="shift-filter">
                   <SelectValue placeholder="All Shifts" />
@@ -263,22 +355,77 @@ export function ShiftRoster() {
               </Select>
             </div>
 
+            {isAdminUser && (
+              <div className="space-y-2">
+                <Label htmlFor="staff-filter">Staff Member</Label>
+                <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+                  <SelectTrigger id="staff-filter">
+                    <SelectValue placeholder="All Staff" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Staff</SelectItem>
+                    {staffMembers.map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id.toString()}>
+                        {staff.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="staff-filter">Filter by Staff Member</Label>
-              <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-                <SelectTrigger id="staff-filter">
-                  <SelectValue placeholder="All Staff" />
+              <Label htmlFor="status-filter">Assignment Status</Label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger id="status-filter">
+                  <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Staff</SelectItem>
-                  {staffMembers.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.id.toString()}>
-                      {staff.full_name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="upcoming">Upcoming</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {isSuperAdmin && (
+              <div className="space-y-2">
+                <Label htmlFor="org-filter">Organization</Label>
+                <Select value={selectedOrg} onValueChange={setSelectedOrg}>
+                  <SelectTrigger id="org-filter">
+                    <SelectValue placeholder="All Organizations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Organizations</SelectItem>
+                    {organizations.map((org) => (
+                      <SelectItem key={org.id} value={org.id.toString()}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* {(isSuperAdmin || isOrgAdmin) && (
+              <div className="space-y-2">
+                <Label htmlFor="company-filter">Company</Label>
+                <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+                  <SelectTrigger id="company-filter">
+                    <SelectValue placeholder="All Companies" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Companies</SelectItem>
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={company.id.toString()}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )} */}
           </div>
           
           <div className="flex justify-end">
@@ -288,6 +435,9 @@ export function ShiftRoster() {
               onClick={() => {
                 setSelectedShift('all');
                 setSelectedStaff('all');
+                setSelectedCompany('all');
+                setSelectedOrg('all');
+                setSelectedStatus('all');
                 const today = new Date().toISOString().split('T')[0];
                 setSelectedDate(today);
               }}
@@ -321,9 +471,10 @@ export function ShiftRoster() {
                   <TableHead>Staff Member</TableHead>
                   <TableHead>Shift</TableHead>
                   <TableHead>Timings</TableHead>
+                  <TableHead>Break</TableHead>
                   <TableHead>Effective Period</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  {isAdminUser && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -360,29 +511,34 @@ export function ShiftRoster() {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
+                        {assignment.shift.break_duration_minutes || 0} mins
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
                         <div>From: {formatDate(assignment.effective_from)}</div>
                         {assignment.effective_to ? (
                           <div className="text-muted-foreground">
                             To: {formatDate(assignment.effective_to)}
                           </div>
-                        ) : (
-                          <div className="text-muted-foreground">Ongoing</div>
-                        )}
+                        ) : null}
                       </div>
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(assignment)}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveAssignment(assignment.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+                    {isAdminUser && (
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveAssignment(assignment.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

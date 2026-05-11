@@ -17,6 +17,8 @@ class ShiftAssignment extends Model
         'effective_to',
         'is_rotating',
         'rotation_pattern',
+        'org_id',
+        'company_id',
     ];
 
     protected $casts = [

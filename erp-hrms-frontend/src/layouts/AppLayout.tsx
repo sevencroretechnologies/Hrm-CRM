@@ -104,6 +104,7 @@ const navigation: NavItem[] = [
       { name: "Clock In/Out (Self)", href: "/attendance/self" },
       { name: "My Work Logs", href: "/attendance/my-logs" },
       { name: "My Summary", href: "/attendance/my-summary" },
+      { name: "Shifts", href: "/attendance/shifts" },
       // Admin-only items (hidden for user role)
       {
         name: "Clock In/Out",
@@ -120,11 +121,11 @@ const navigation: NavItem[] = [
         href: "/attendance/summary",
         permission: "view_attendance",
       },
-      {
-        name: "Shifts",
-        href: "/attendance/shifts",
-        permission: "edit_attendance",
-      },
+      // {
+      //   name: "Manage Shifts",
+      //   href: "/attendance/shifts",
+      //   permission: "edit_attendance",
+      // },
     ],
   },
   {
