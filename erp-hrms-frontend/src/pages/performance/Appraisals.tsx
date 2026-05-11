@@ -9,7 +9,7 @@ import {
 } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { StatusBadge } from '../../components/ui/status-badge';
-import { showAlert, getErrorMessage } from '../../lib/sweetalert';
+import { showAlert, showConfirmDialog, getErrorMessage } from '../../lib/sweetalert';
 import { Avatar, AvatarFallback } from '../../components/ui/avatar';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -366,7 +366,12 @@ export default function Appraisals() {
   };
 
   const handleActivateCycle = async (cycleId: number) => {
-    if (!confirm('Activating this cycle will create appraisal records for all active staff members. Continue?')) return;
+    const result = await showConfirmDialog(
+      'Activate Cycle?',
+      'Activating this cycle will create appraisal records for all active staff members. Continue?',
+      'Yes, Activate'
+    );
+    if (!result.isConfirmed) return;
 
     try {
       await performanceService.activateCycle(cycleId);
@@ -379,7 +384,12 @@ export default function Appraisals() {
   };
 
   const handleCloseCycle = async (cycleId: number) => {
-    if (!confirm('Are you sure you want to close this cycle?')) return;
+    const result = await showConfirmDialog(
+      'Close Cycle?',
+      'Are you sure you want to close this cycle?',
+      'Yes, Close'
+    );
+    if (!result.isConfirmed) return;
 
     try {
       await performanceService.closeCycle(cycleId);
@@ -392,7 +402,12 @@ export default function Appraisals() {
   };
 
   const handleDeleteCycle = async (cycleId: number) => {
-    if (!confirm('Are you sure you want to delete this cycle?')) return;
+    const result = await showConfirmDialog(
+      'Delete Cycle?',
+      'Are you sure you want to delete this cycle?',
+      'Yes, Delete'
+    );
+    if (!result.isConfirmed) return;
 
     try {
       await performanceService.deleteCycle(cycleId);
