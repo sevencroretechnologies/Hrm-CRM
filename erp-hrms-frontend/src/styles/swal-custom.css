@@ -1,5 +1,10 @@
 /* SweetAlert2 Custom Styling - Solarized Theme */
 
+/* Always render SweetAlert above any open modal/dialog backdrop */
+.swal2-container {
+  z-index: 999999 !important;
+}
+
 .swal-solarized {
   border-radius: 12px !important;
   background: #fdf6e3 !important;

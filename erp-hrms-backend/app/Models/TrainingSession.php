@@ -14,7 +14,8 @@ class TrainingSession extends Model
         'training_program_id',
         'session_name',
         'date',
-        'time',
+        'start_time',
+        'end_time',
         'location',
         'trainer_id',
         'max_participants',
@@ -22,8 +23,7 @@ class TrainingSession extends Model
     ];
 
     protected $casts = [
-        'date' => 'date',
-        'time' => 'datetime:H:i',
+        'date' => 'date:Y-m-d',
     ];
 
     public function program()

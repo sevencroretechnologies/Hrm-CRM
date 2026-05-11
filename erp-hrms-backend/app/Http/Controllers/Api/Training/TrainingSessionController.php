@@ -42,12 +42,13 @@ class TrainingSessionController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'training_program_id' => 'required|exists:training_programs,id',
-            'session_name' => 'required|string|max:255',
-            'date' => 'required|date',
-            'time' => 'nullable|date_format:H:i',
-            'location' => 'nullable|string|max:255',
-            'trainer_id' => 'nullable|exists:staff_members,id',
-            'max_participants' => 'nullable|integer|min:1',
+            'session_name'        => 'required|string|max:255',
+            'date'                => 'required|date',
+            'start_time'          => 'nullable|date_format:H:i',
+            'end_time'            => 'nullable|date_format:H:i',
+            'location'            => 'nullable|string|max:255',
+            'trainer_id'          => 'nullable|exists:staff_members,id',
+            'max_participants'    => 'nullable|integer|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -69,13 +70,14 @@ class TrainingSessionController extends Controller
     public function update(Request $request, TrainingSession $trainingSession)
     {
         $validator = Validator::make($request->all(), [
-            'session_name' => 'sometimes|required|string|max:255',
-            'date' => 'sometimes|required|date',
-            'time' => 'nullable|date_format:H:i',
-            'location' => 'nullable|string|max:255',
-            'trainer_id' => 'nullable|exists:staff_members,id',
+            'session_name'     => 'sometimes|required|string|max:255',
+            'date'             => 'sometimes|required|date',
+            'start_time'       => 'nullable|date_format:H:i',
+            'end_time'         => 'nullable|date_format:H:i',
+            'location'         => 'nullable|string|max:255',
+            'trainer_id'       => 'nullable|exists:staff_members,id',
             'max_participants' => 'nullable|integer|min:1',
-            'status' => 'nullable|in:scheduled,in_progress,completed,cancelled',
+            'status'           => 'nullable|in:scheduled,in_progress,completed,cancelled',
         ]);
 
         if ($validator->fails()) {
@@ -173,6 +175,11 @@ class TrainingSessionController extends Controller
 
         if ($request->training_session_id) {
             $query->where('training_session_id', $request->training_session_id);
+        }
+        if ($request->training_program_id) {
+            $query->whereHas('session', function ($q) use ($request) {
+                $q->where('training_program_id', $request->training_program_id);
+            });
         }
         if ($request->staff_member_id) {
             $query->where('staff_member_id', $request->staff_member_id);
