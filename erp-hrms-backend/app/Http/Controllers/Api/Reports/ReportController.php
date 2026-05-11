@@ -80,15 +80,36 @@ class ReportController extends Controller
             $workingDays = array_keys(array_filter($workingDayConfig->getWorkingDaysArray()));
         }
 
-        // Calculate actual working days in the month based on configuration
+        // Holidays in the range scoped to the current user's tenant — they reduce the
+        // working-day count when they fall on an otherwise-working day-of-week.
+        $authUser = auth()->user();
+        $holidayDates = \App\Models\CompanyHoliday::datesInRange(
+            $startDate,
+            $endDate,
+            $authUser?->org_id,
+            $authUser?->company_id
+        );
+        $holidayLookup = array_flip($holidayDates);
+
+        // Calculate actual working days in the month based on configuration, excluding holidays.
         $totalWorkingDays = 0;
         $workingDates = [];
+        $holidayWorkingDates = [];
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
             $dayName = strtolower($date->format('l'));
-            if (in_array($dayName, $workingDays)) {
-                $totalWorkingDays++;
-                $workingDates[] = $date->format('Y-m-d');
+            $iso = $date->format('Y-m-d');
+
+            if (! in_array($dayName, $workingDays)) {
+                continue;
             }
+
+            if (isset($holidayLookup[$iso])) {
+                $holidayWorkingDates[] = $iso;
+                continue;
+            }
+
+            $totalWorkingDays++;
+            $workingDates[] = $iso;
         }
 
         $query = StaffMember::active();

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { settingsService } from '../../services/api';
 import { showAlert } from '../../lib/sweetalert';
 import { Card, CardContent } from '../../components/ui/card';
@@ -8,7 +8,8 @@ import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Badge } from '../../components/ui/badge';
 import { Skeleton } from '../../components/ui/skeleton';
-import { Calendar, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
+import { Calendar, Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -180,6 +181,89 @@ export default function WorkingDays() {
     });
   };
 
+  const EXPIRY_WARNING_DAYS = 7;
+
+  const startOfToday = () => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const daysUntil = (dateString?: string): number | null => {
+    if (!dateString) return null;
+    const target = new Date(dateString);
+    if (isNaN(target.getTime())) return null;
+    target.setHours(0, 0, 0, 0);
+    const diff = target.getTime() - startOfToday().getTime();
+    return Math.round(diff / (1000 * 60 * 60 * 24));
+  };
+
+  type ExpiryStatus = 'expired' | 'expiring' | 'active' | 'scheduled';
+  const getExpiryStatus = (config: WorkingDayConfig): { status: ExpiryStatus; daysLeft: number | null } => {
+    const daysFromStart = daysUntil(config.from_date);
+    const daysLeft = daysUntil(config.to_date);
+
+    // Future-dated config
+    if (daysFromStart !== null && daysFromStart > 0) {
+      return { status: 'scheduled', daysLeft };
+    }
+    // No end date or end date in the future
+    if (daysLeft === null) return { status: 'active', daysLeft: null };
+    if (daysLeft < 0) return { status: 'expired', daysLeft };
+    if (daysLeft <= EXPIRY_WARNING_DAYS) return { status: 'expiring', daysLeft };
+    return { status: 'active', daysLeft };
+  };
+
+  // A config is "covering today" if today is between from_date and to_date inclusive
+  // (or either bound is missing). This is what determines whether payroll has a rule today.
+  const coversToday = (config: WorkingDayConfig): boolean => {
+    const today = startOfToday();
+    if (config.from_date) {
+      const from = new Date(config.from_date);
+      if (isNaN(from.getTime())) return false;
+      from.setHours(0, 0, 0, 0);
+      if (from > today) return false;
+    }
+    if (config.to_date) {
+      const to = new Date(config.to_date);
+      if (isNaN(to.getTime())) return false;
+      to.setHours(0, 0, 0, 0);
+      if (to < today) return false;
+    }
+    return true;
+  };
+
+  const activeNowConfigs = useMemo(() => configs.filter(coversToday), [configs]);
+
+  // Among configs covering today, pick the one with the latest end date (or open-ended).
+  // That's the "current" rule; we only alert based on its expiry, not historical configs.
+  const currentConfig = useMemo<WorkingDayConfig | null>(() => {
+    if (activeNowConfigs.length === 0) return null;
+    return activeNowConfigs.reduce((latest, c) => {
+      if (!latest.to_date) return latest;
+      if (!c.to_date) return c;
+      return new Date(c.to_date) > new Date(latest.to_date) ? c : latest;
+    });
+  }, [activeNowConfigs]);
+
+  const currentDaysLeft = currentConfig ? daysUntil(currentConfig.to_date) : null;
+  const noActiveConfig = !isLoading && configs.length > 0 && currentConfig === null;
+  const currentExpiringSoon =
+    currentConfig !== null && currentDaysLeft !== null && currentDaysLeft >= 0 && currentDaysLeft <= EXPIRY_WARNING_DAYS;
+  const showAttentionBanner = noActiveConfig || currentExpiringSoon;
+
+  // Show a one-time SweetAlert per session when attention is actually required.
+  const alertedRef = useRef(false);
+  useEffect(() => {
+    if (isLoading || alertedRef.current || !showAttentionBanner) return;
+
+    alertedRef.current = true;
+    const message = noActiveConfig
+      ? 'No working days configuration covers today. Please add a new configuration to keep payroll accurate.'
+      : `The current working days configuration ends in ${currentDaysLeft} day${currentDaysLeft === 1 ? '' : 's'}. Please reset or extend it to avoid payroll issues.`;
+    showAlert('warning', 'Working Days Need Attention', message);
+  }, [isLoading, showAttentionBanner, noActiveConfig, currentDaysLeft]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -192,6 +276,33 @@ export default function WorkingDays() {
           Add Configuration
         </Button>
       </div>
+
+      {showAttentionBanner && !isLoading && (
+        <Alert
+          variant={noActiveConfig ? 'destructive' : 'default'}
+          className={
+            noActiveConfig
+              ? ''
+              : 'border-amber-500/50 text-amber-700 dark:text-amber-400 [&>svg]:text-amber-600'
+          }
+        >
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>
+            {noActiveConfig
+              ? 'No active working days configuration'
+              : 'Working days configuration is ending soon'}
+          </AlertTitle>
+          <AlertDescription>
+            {noActiveConfig ? (
+              <span>No configuration covers today. Please add a new configuration to keep payroll accurate.</span>
+            ) : (
+              <span>
+                The current configuration ends in {currentDaysLeft} day{currentDaysLeft === 1 ? '' : 's'}. Please reset or extend it to avoid payroll issues.
+              </span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card className="border-0 shadow-md">
         <CardContent className="p-0">
@@ -209,14 +320,28 @@ export default function WorkingDays() {
             </div>
           ) : (
             <div className="divide-y">
-              {configs.map((config) => (
+              {configs.map((config) => {
+                const { status, daysLeft } = getExpiryStatus(config);
+                return (
                 <div key={config.id} className="p-6 hover:bg-solarized-base3/30 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
                         <h3 className="text-lg font-semibold text-solarized-base02">
                           {getWorkingDaysCount(config)} Working Days
                         </h3>
+                        {status === 'expired' && (
+                          <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-transparent">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Expired {daysLeft !== null ? `${Math.abs(daysLeft)} day${Math.abs(daysLeft) === 1 ? '' : 's'} ago` : ''}
+                          </Badge>
+                        )}
+                        {status === 'expiring' && (
+                          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-transparent">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Ends in {daysLeft} day{daysLeft === 1 ? '' : 's'}
+                          </Badge>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -268,7 +393,8 @@ export default function WorkingDays() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

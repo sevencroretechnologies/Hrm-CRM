@@ -112,11 +112,13 @@ class PayrollService extends BaseService
         // Get Working Days Configuration for this employee's organization/company
         $workingDaysConfig = $this->getWorkingDaysConfig($employee, $startDate, $endDate);
 
-        // Calculate total working days in the month (excluding non-working days like weekends)
+        // Calculate total working days in the month (excluding weekends AND company holidays)
         $totalWorkingDays = $workingDaysConfig['total_working_days'];
         $workingDates = $workingDaysConfig['working_dates'];
         $nonWorkingDates = $workingDaysConfig['non_working_dates'];
         $workingDaysArray = $workingDaysConfig['working_days']; // ['monday', 'tuesday', etc.]
+        $holidayDates = $workingDaysConfig['holiday_dates'] ?? [];
+        $holidaysCount = $workingDaysConfig['holidays_count'] ?? 0;
 
         // 1. Attendance Stats - Only count working days
         $workLogs = \App\Models\WorkLog::where('staff_member_id', $staffMemberId)
@@ -222,6 +224,8 @@ class PayrollService extends BaseService
                 'total_calendar_days' => $startDate->daysInMonth,
                 'total_working_days' => $totalWorkingDays,
                 'working_days_config' => $workingDaysArray,
+                'holidays_count' => $holidaysCount,
+                'holiday_dates' => $holidayDates,
                 'present_days' => $presentDays,
                 'absent_days' => $totalAbsentDays,
                 'marked_absent_days' => $absentDays,
@@ -476,17 +480,38 @@ class PayrollService extends BaseService
         // Get array of working day names
         $workingDaysArray = array_keys(array_filter($workingDays));
 
-        // Calculate working dates in the range
+        // Look up holidays in the same range scoped to this employee's tenant.
+        // Holidays that fall on a working day reduce the payable working-day count.
+        $holidayDates = \App\Models\CompanyHoliday::datesInRange(
+            $startDate,
+            $endDate,
+            $orgId,
+            $companyId
+        );
+        $holidayLookup = array_flip($holidayDates);
+
+        // Calculate working dates in the range, excluding holidays.
         $workingDates = [];
         $nonWorkingDates = [];
+        $holidayWorkingDates = []; // holidays that landed on otherwise-working days
 
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
             $dayName = strtolower($date->format('l'));
-            if (isset($workingDays[$dayName]) && $workingDays[$dayName]) {
-                $workingDates[] = $date->format('Y-m-d');
-            } else {
-                $nonWorkingDates[] = $date->format('Y-m-d');
+            $iso = $date->format('Y-m-d');
+            $isWorkingDayOfWeek = isset($workingDays[$dayName]) && $workingDays[$dayName];
+
+            if (! $isWorkingDayOfWeek) {
+                $nonWorkingDates[] = $iso;
+                continue;
             }
+
+            if (isset($holidayLookup[$iso])) {
+                $holidayWorkingDates[] = $iso;
+                $nonWorkingDates[] = $iso;
+                continue;
+            }
+
+            $workingDates[] = $iso;
         }
 
         return [
@@ -494,6 +519,8 @@ class PayrollService extends BaseService
             'total_working_days' => count($workingDates),
             'working_dates' => $workingDates,
             'non_working_dates' => $nonWorkingDates,
+            'holidays_count' => count($holidayWorkingDates),
+            'holiday_dates' => $holidayWorkingDates,
         ];
     }
 }
