@@ -48,6 +48,14 @@ interface Shift {
   end_time: string;
   break_duration_minutes: number;
   assignments_count?: number;
+  assignments?: Array<{
+    id: number;
+    staff_member: {
+      id: number;
+      full_name: string;
+      staff_code?: string;
+    };
+  }>;
 }
 
 export default function Shifts() {
@@ -223,9 +231,15 @@ export default function Shifts() {
     setIsDialogOpen(true);
   };
 
-  const handleView = (shift: Shift) => {
-    setViewingShift(shift);
-    setIsViewDialogOpen(true);
+  const handleView = async (shift: Shift) => {
+    try {
+      const response = await attendanceService.getShift(shift.id);
+      setViewingShift(response.data.data);
+      setIsViewDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch shift details:', error);
+      showAlert('error', 'Error', 'Failed to fetch shift details');
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -664,8 +678,27 @@ export default function Shifts() {
                 <p className="font-medium">{viewingShift.break_duration_minutes} minutes</p>
               </div>
               <div className="space-y-2">
-                <Label className="text-muted-foreground">Assignments</Label>
-                <p className="font-medium">{viewingShift.assignments_count || 0} staff members</p>
+                <Label className="text-muted-foreground">Assignments ({viewingShift.assignments?.length || 0})</Label>
+                {viewingShift.assignments && viewingShift.assignments.length > 0 ? (
+                  <div className="max-h-40 overflow-y-auto rounded-md border p-2 bg-solarized-base3">
+                    <ul className="space-y-1">
+                      {viewingShift.assignments.map((assignment) => (
+                        <li key={assignment.id} className="text-sm flex justify-between">
+                          <span className="font-medium text-solarized-base01">
+                            {assignment.staff_member.full_name}
+                          </span>
+                          {assignment.staff_member.staff_code && (
+                            <span className="text-xs text-muted-foreground">
+                              ({assignment.staff_member.staff_code})
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No staff members assigned yet.</p>
+                )}
               </div>
             </div>
           )}

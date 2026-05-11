@@ -18,11 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { Filter, User, Clock, Trash2 } from 'lucide-react';
+import { Filter, User, Clock, Trash2, UserPlus } from 'lucide-react';
 import { attendanceService } from '../../services/api';
 import { showAlert, showConfirmDialog, getErrorMessage } from '../../lib/sweetalert';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Badge } from '../../components/ui/badge';
+import { AssignShiftToStaffDialog } from './AssignShiftToStaffDialog';
 
 interface ShiftAssignment {
   id: number;
@@ -54,6 +55,7 @@ export function ShiftRoster() {
   const [shifts, setShifts] = useState<Array<{id: number, name: string}>>([]);
   const [staffMembers, setStaffMembers] = useState<Array<{id: number, full_name: string}>>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [isAssignStaffDialogOpen, setIsAssignStaffDialogOpen] = useState(false);
 
   useEffect(() => {
     // Set default date to today
@@ -176,13 +178,12 @@ export function ShiftRoster() {
           </CardTitle>
           <div className="flex items-center gap-3">
             <Button
-              variant="outline"
               size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2"
+              onClick={() => setIsAssignStaffDialogOpen(true)}
+              className="flex items-center gap-2 bg-solarized-blue hover:bg-solarized-blue/90"
             >
-              <Filter className="h-4 w-4" />
-              Filters
+              <UserPlus className="h-4 w-4" />
+              Assign to Staff
             </Button>
             
             <Input
@@ -196,61 +197,106 @@ export function ShiftRoster() {
       </CardHeader>
 
       <CardContent>
-        {/* Filters */}
-        {showFilters && (
-          <div className="mb-6 p-4 border rounded-lg space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="shift-filter">Shift</Label>
-                <Select value={selectedShift} onValueChange={setSelectedShift}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Shifts" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Shifts</SelectItem>
-                    {shifts.map((shift) => (
-                      <SelectItem key={shift.id} value={shift.id.toString()}>
-                        {shift.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="staff-filter">Staff Member</Label>
-                <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Staff" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Staff</SelectItem>
-                    {staffMembers.map((staff) => (
-                      <SelectItem key={staff.id} value={staff.id.toString()}>
-                        {staff.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+{/* 
+           {assignments.length > 0 && (
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold">{assignments.length}</div>
+                  <div className="text-sm text-muted-foreground">Total Assignments</div>
+                </div>
+              </CardContent>
+            </Card>
             
-            <div className="flex justify-end">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSelectedShift('all');
-                  setSelectedStaff('all');
-                  const today = new Date().toISOString().split('T')[0];
-                  setSelectedDate(today);
-                }}
-              >
-                Clear Filters
-              </Button>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold">
+                    {new Set(assignments.map(a => a.staff_member_id)).size}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Unique Staff</div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold">
+                    {new Set(assignments.map(a => a.shift_id)).size}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Unique Shifts</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )} */}
+        {/* Filters */}
+        <div className="mb-6 p-4 border rounded-lg space-y-4 bg-muted/30">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="space-y-2">
+              <Label htmlFor="date-filter">View Date</Label>
+              <Input
+                id="date-filter"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="shift-filter">Filter by Shift</Label>
+              <Select value={selectedShift} onValueChange={setSelectedShift}>
+                <SelectTrigger id="shift-filter">
+                  <SelectValue placeholder="All Shifts" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Shifts</SelectItem>
+                  {shifts.map((shift) => (
+                    <SelectItem key={shift.id} value={shift.id.toString()}>
+                      {shift.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="staff-filter">Filter by Staff Member</Label>
+              <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+                <SelectTrigger id="staff-filter">
+                  <SelectValue placeholder="All Staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Staff</SelectItem>
+                  {staffMembers.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id.toString()}>
+                      {staff.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        )}
+          
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedShift('all');
+                setSelectedStaff('all');
+                const today = new Date().toISOString().split('T')[0];
+                setSelectedDate(today);
+              }}
+              className="text-xs h-8"
+            >
+              Reset Filters
+            </Button>
+          </div>
+        </div>
 
         {/* Roster Table */}
         {isLoading ? (
@@ -345,7 +391,7 @@ export function ShiftRoster() {
         )}
 
         {/* Summary Stats */}
-        {assignments.length > 0 && (
+        {/* {assignments.length > 0 && (
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardContent className="pt-6">
@@ -378,8 +424,14 @@ export function ShiftRoster() {
               </CardContent>
             </Card>
           </div>
-        )}
+        )} */}
       </CardContent>
+
+      <AssignShiftToStaffDialog
+        open={isAssignStaffDialogOpen}
+        onOpenChange={setIsAssignStaffDialogOpen}
+        onSuccess={fetchRoster}
+      />
     </Card>
   );
 }

@@ -15,7 +15,25 @@ class ShiftController extends Controller
 
     public function index(Request $request)
     {
-        $shifts = Shift::withCount('assignments')->get();
+        $query = Shift::withCount('assignments');
+
+        if ($request->has('staff_member_id')) {
+            $staffId = $request->staff_member_id;
+            $today = now()->toDateString();
+            
+            $query->whereNotExists(function ($q) use ($staffId, $today) {
+                $q->select(\DB::raw(1))
+                    ->from('shift_assignments')
+                    ->whereColumn('shift_assignments.shift_id', 'shifts.id')
+                    ->where('shift_assignments.staff_member_id', $staffId)
+                    ->where(function ($sub) use ($today) {
+                        $sub->whereNull('effective_to')
+                            ->orWhere('effective_to', '>=', $today);
+                    });
+            });
+        }
+
+        $shifts = $query->get();
 
         return $this->success($shifts);
     }
@@ -124,6 +142,33 @@ class ShiftController extends Controller
         $assignments = collect();
 
         foreach ($staffMemberIds as $staffMemberId) {
+            // Check for existing active assignment for this specific shift
+            $exists = ShiftAssignment::where('staff_member_id', $staffMemberId)
+                ->where('shift_id', $shift->id)
+                ->where(function ($q) use ($request) {
+                    $from = $request->effective_from;
+                    $to = $request->effective_to;
+                    
+                    $q->where(function ($sub) use ($from, $to) {
+                        if ($to) {
+                            $sub->where('effective_from', '<=', $to)
+                                ->where(function ($inner) use ($from) {
+                                    $inner->whereNull('effective_to')
+                                        ->orWhere('effective_to', '>=', $from);
+                                });
+                        } else {
+                            $sub->whereNull('effective_to')
+                                ->orWhere('effective_to', '>=', $from);
+                        }
+                    });
+                })
+                ->exists();
+
+            if ($exists) {
+                $staff = \App\Models\StaffMember::find($staffMemberId);
+                return $this->error("Shift '{$shift->name}' is already assigned to employee '{$staff->full_name}' for the selected period.", 422);
+            }
+
             $assignment = ShiftAssignment::create([
                 'shift_id' => $shift->id,
                 'staff_member_id' => $staffMemberId,
@@ -147,6 +192,14 @@ class ShiftController extends Controller
                     $q->whereNull('effective_to')
                         ->orWhere('effective_to', '>=', $request->date);
                 });
+        }
+
+        if ($request->shift_id && $request->shift_id !== 'all') {
+            $query->where('shift_id', $request->shift_id);
+        }
+
+        if ($request->staff_member_id && $request->staff_member_id !== 'all') {
+            $query->where('staff_member_id', $request->staff_member_id);
         }
 
         return $this->success($query->get());

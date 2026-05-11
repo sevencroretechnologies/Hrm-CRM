@@ -117,6 +117,24 @@ class ShiftService extends BaseService
     {
         $query = $this->query();
         
+        // Filter out shifts already assigned to a specific staff member if requested
+        if (!empty($params['staff_member_id'])) {
+            $staffId = $params['staff_member_id'];
+            $today = now()->toDateString();
+            
+            $query->whereNotExists(function ($q) use ($staffId, $today) {
+                $q->select(DB::raw(1))
+                    ->from('shift_assignments')
+                    ->whereColumn('shift_assignments.shift_id', 'shifts.id')
+                    ->where('shift_assignments.staff_member_id', $staffId)
+                    ->whereNull('shift_assignments.deleted_at')
+                    ->where(function ($sub) use ($today) {
+                        $sub->whereNull('effective_to')
+                            ->orWhere('effective_to', '>=', $today);
+                    });
+            });
+        }
+
         // Apply search if provided
         if (!empty($params['search'])) {
             $query = $this->applySearch($query, $params['search']);
@@ -129,6 +147,33 @@ class ShiftService extends BaseService
         $query->orderBy('name');
         
         return $query->get();
+    }
+
+    /**
+     * Check if a shift is already assigned to an employee for a given period.
+     */
+    public function isAlreadyAssigned(int $staffId, int $shiftId, string $from, ?string $to = null): bool
+    {
+        return ShiftAssignment::where('staff_member_id', $staffId)
+            ->where('shift_id', $shiftId)
+            ->where(function ($q) use ($from, $to) {
+                // Check for overlapping periods
+                $q->where(function ($sub) use ($from, $to) {
+                    if ($to) {
+                        // Assignment overlaps if it starts before $to and ends after $from
+                        $sub->where('effective_from', '<=', $to)
+                            ->where(function ($inner) use ($from) {
+                                $inner->whereNull('effective_to')
+                                    ->orWhere('effective_to', '>=', $from);
+                            });
+                    } else {
+                        // If new assignment has no end date, it overlaps if any existing assignment ends after $from
+                        $sub->whereNull('effective_to')
+                            ->orWhere('effective_to', '>=', $from);
+                    }
+                });
+            })
+            ->exists();
     }
 
     public function getEmployeeShift(int $staffMemberId, string $date = null): ?Shift

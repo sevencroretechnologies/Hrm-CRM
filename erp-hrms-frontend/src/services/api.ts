@@ -373,7 +373,8 @@ export const attendanceService = {
   getMonthlyAttendance: (staffMemberId: number, params?: Record<string, unknown>) =>
     api.get(`/attendance/monthly/${staffMemberId}`, { params }),
 
-  getShifts: () => api.get('/shifts'),
+  getShifts: (params?: { staff_member_id?: number }) => api.get('/shifts', { params }),
+  getShift: (id: number) => api.get(`/shifts/${id}`),
   createShift: (data: Record<string, unknown>) => api.post('/shifts', data),
   updateShift: (id: number, data: Record<string, unknown>) => api.put(`/shifts/${id}`, data),
   deleteShift: (id: number) => api.delete(`/shifts/${id}`),
