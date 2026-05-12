@@ -53,7 +53,15 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Notices", href: "/notices", icon: Bell },
+  {
+    // Staff/user-facing view of company notices. Admin-style roles manage notices
+    // under Settings → Notices, so hide this top-level entry for them.
+    name: "Notices",
+    href: "/notices",
+    icon: Bell,
+    check: (user: any) =>
+      !["admin", "company", "hr", "org"].some((r) => user?.roles?.includes(r)),
+  },
   {
     name: "Staff",
     href: "/staff",

@@ -193,44 +193,76 @@ export default function TaxSlabs() {
       isValid = false;
     }
 
-    if (!formData.income_from) {
+    // Income From — required, must be a valid number, not negative.
+    if (formData.income_from === '' || formData.income_from === null) {
       errors.income_from = 'Income From is required';
       isValid = false;
-    } else if (Number(formData.income_from) < 0) {
-      errors.income_from = 'Income From must be at least 0';
-      isValid = false;
+    } else {
+      const from = Number(formData.income_from);
+      if (isNaN(from)) {
+        errors.income_from = 'Income From must be a valid number';
+        isValid = false;
+      } else if (from < 0) {
+        errors.income_from = 'Income From cannot be negative';
+        isValid = false;
+      }
     }
 
-    if (!formData.income_to) {
+    // Income To — required, valid number, not negative, and greater than Income From.
+    if (formData.income_to === '' || formData.income_to === null) {
       errors.income_to = 'Income To is required';
       isValid = false;
     } else {
       const from = Number(formData.income_from);
       const to = Number(formData.income_to);
-      if (to <= from) {
+      if (isNaN(to)) {
+        errors.income_to = 'Income To must be a valid number';
+        isValid = false;
+      } else if (to < 0) {
+        errors.income_to = 'Income To cannot be negative';
+        isValid = false;
+      } else if (!isNaN(from) && to <= from) {
         errors.income_to = 'Income To must be greater than Income From';
         isValid = false;
       }
     }
 
-    if (formData.fixed_amount && Number(formData.fixed_amount) < 0) {
-      errors.fixed_amount = 'Fixed Amount must be at least 0';
-      isValid = false;
+    // Fixed Amount — optional, but if present must be a valid non-negative number.
+    if (formData.fixed_amount !== '' && formData.fixed_amount !== null) {
+      const fixed = Number(formData.fixed_amount);
+      if (isNaN(fixed)) {
+        errors.fixed_amount = 'Fixed Amount must be a valid number';
+        isValid = false;
+      } else if (fixed < 0) {
+        errors.fixed_amount = 'Fixed Amount cannot be negative';
+        isValid = false;
+      }
     }
 
-    if (formData.percentage) {
+    // Tax Rate (%) — optional, but if present must be a valid number between 0 and 100.
+    if (formData.percentage !== '' && formData.percentage !== null) {
       const pct = Number(formData.percentage);
-      if (pct < 0) {
-        errors.percentage = 'Percentage must be at least 0';
+      if (isNaN(pct)) {
+        errors.percentage = 'Tax rate must be a valid number';
+        isValid = false;
+      } else if (pct < 0) {
+        errors.percentage = 'Tax rate cannot be negative';
         isValid = false;
       } else if (pct > 100) {
-        errors.percentage = 'Percentage cannot exceed 100';
+        errors.percentage = 'Tax rate cannot exceed 100';
         isValid = false;
       }
     }
 
     setFieldErrors(errors);
     return isValid;
+  };
+
+  // Block "-", "+", "e", "E" in number inputs so negatives/scientific notation can't be typed.
+  const blockInvalidNumberKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (['-', '+', 'e', 'E'].includes(e.key)) {
+      e.preventDefault();
+    }
   };
 
   // Handle form submission for create/update
@@ -583,6 +615,7 @@ export default function TaxSlabs() {
                       min="0"
                       step="1"
                       value={formData.income_from}
+                      onKeyDown={blockInvalidNumberKeys}
                       onChange={(e) => {
                         setFormData({ ...formData, income_from: e.target.value });
                         if (fieldErrors.income_from) setFieldErrors(prev => ({ ...prev, income_from: '' }));
@@ -600,6 +633,7 @@ export default function TaxSlabs() {
                       min="0"
                       step="1"
                       value={formData.income_to}
+                      onKeyDown={blockInvalidNumberKeys}
                       onChange={(e) => {
                         setFormData({ ...formData, income_to: e.target.value });
                         if (fieldErrors.income_to) setFieldErrors(prev => ({ ...prev, income_to: '' }));
@@ -620,6 +654,7 @@ export default function TaxSlabs() {
                       min="0"
                       step="0.01"
                       value={formData.fixed_amount}
+                      onKeyDown={blockInvalidNumberKeys}
                       onChange={(e) => {
                         setFormData({ ...formData, fixed_amount: e.target.value });
                         if (fieldErrors.fixed_amount) setFieldErrors(prev => ({ ...prev, fixed_amount: '' }));
@@ -638,6 +673,7 @@ export default function TaxSlabs() {
                       max="100"
                       step="0.1"
                       value={formData.percentage}
+                      onKeyDown={blockInvalidNumberKeys}
                       onChange={(e) => {
                         setFormData({ ...formData, percentage: e.target.value });
                         if (fieldErrors.percentage) setFieldErrors(prev => ({ ...prev, percentage: '' }));
@@ -861,53 +897,51 @@ export default function TaxSlabs() {
             </DialogDescription>
           </DialogHeader>
           {selectedSlab && (
-            <div className="space-y-6 py-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-solarized-base01">Title</Label>
-                  <p className="text-sm font-medium">{selectedSlab.title}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-solarized-base01">Income From</Label>
-                  <p className="text-sm font-medium">{formatCurrency(selectedSlab.income_from)}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-solarized-base01">Income To</Label>
-                  <p className="text-sm font-medium">{formatCurrency(selectedSlab.income_to)}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-solarized-base01">Fixed Amount</Label>
-                  <p className="text-sm font-medium">
-                    {selectedSlab.fixed_amount > 0 ? formatCurrency(selectedSlab.fixed_amount) : '-'}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-solarized-base01">Tax Rate</Label>
-                  <p className="text-sm font-medium">
-                    {selectedSlab.percentage > 0 ? formatPercentage(selectedSlab.percentage) : '-'}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-solarized-base01">Status</Label>
-                  <div>
-                    <Badge
-                      className={
-                        selectedSlab.is_active
-                          ? 'bg-solarized-green/10 text-solarized-green'
-                          : 'bg-solarized-red/10 text-solarized-red'
-                      }
-                    >
-                      {selectedSlab.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </div>
-                </div>
-                {selectedSlab.author && (
-                  <div className="space-y-2">
-                    <Label className="text-solarized-base01">Created By</Label>
-                    <p className="text-sm font-medium">{selectedSlab.author.name}</p>
-                  </div>
-                )}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 py-2">
+              <div className="col-span-2 space-y-0.5">
+                <Label className="text-xs text-solarized-base01">Title</Label>
+                <p className="text-sm font-medium">{selectedSlab.title}</p>
               </div>
+              <div className="space-y-0.5">
+                <Label className="text-xs text-solarized-base01">Income From</Label>
+                <p className="text-sm font-medium">{formatCurrency(selectedSlab.income_from)}</p>
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-xs text-solarized-base01">Income To</Label>
+                <p className="text-sm font-medium">{formatCurrency(selectedSlab.income_to)}</p>
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-xs text-solarized-base01">Fixed Amount</Label>
+                <p className="text-sm font-medium">
+                  {selectedSlab.fixed_amount > 0 ? formatCurrency(selectedSlab.fixed_amount) : '-'}
+                </p>
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-xs text-solarized-base01">Tax Rate</Label>
+                <p className="text-sm font-medium">
+                  {selectedSlab.percentage > 0 ? formatPercentage(selectedSlab.percentage) : '-'}
+                </p>
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-xs text-solarized-base01">Status</Label>
+                <div>
+                  <Badge
+                    className={
+                      selectedSlab.is_active
+                        ? 'bg-solarized-green/10 text-solarized-green'
+                        : 'bg-solarized-red/10 text-solarized-red'
+                    }
+                  >
+                    {selectedSlab.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+              </div>
+              {selectedSlab.author && (
+                <div className="space-y-0.5">
+                  <Label className="text-xs text-solarized-base01">Created By</Label>
+                  <p className="text-sm font-medium">{selectedSlab.author.name}</p>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
