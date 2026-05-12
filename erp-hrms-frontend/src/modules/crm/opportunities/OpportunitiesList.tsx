@@ -134,6 +134,7 @@ export default function OpportunitiesList() {
   const [statuses, setStatuses] = useState<OppStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(''); // status_id
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
@@ -161,7 +162,7 @@ export default function OpportunitiesList() {
     setLoading(true);
     try {
       const params: Record<string, unknown> = { page: pg, per_page: perPage };
-      if (search) params.search = search;
+      if (appliedSearch) params.search = appliedSearch;
       if (statusFilter) params.status_id = statusFilter;
       const r = await crmOpportunityService.getAll(params);
 
@@ -177,14 +178,20 @@ export default function OpportunitiesList() {
     } finally {
       setLoading(false);
     }
-  }, [perPage, search, statusFilter]);
+  }, [perPage, appliedSearch, statusFilter]);
 
-  // Debounce search + filter (400 ms) — same as crm-frontend useCallback / useEffect
-  useEffect(() => {
-    if (debounce.current) clearTimeout(debounce.current);
-    debounce.current = setTimeout(() => { setPage(1); fetchData(1); }, 400);
-    return () => { if (debounce.current) clearTimeout(debounce.current); };
-  }, [search, statusFilter, fetchData]);
+  // Search handlers
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAppliedSearch(search.trim());
+    setPage(1);
+  };
+
+  const handleClearSearch = () => {
+    setSearch('');
+    setAppliedSearch('');
+    setPage(1);
+  };
 
   useEffect(() => { fetchData(page); }, [page, fetchData]);
 
@@ -355,16 +362,26 @@ export default function OpportunitiesList() {
         </Button>
       </div>
 
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search opportunities..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-10"
-          />
-        </div>
+      <div className="flex gap-3 flex-wrap items-center">
+        <form onSubmit={handleSearchSubmit} className="flex gap-2 flex-1 min-w-[300px] max-w-lg">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by party name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-10"
+            />
+          </div>
+          <Button type="submit" variant="outline" className="h-10 shrink-0">
+            <Search className="mr-2 h-4 w-4" /> Search
+          </Button>
+          {appliedSearch && (
+            <Button type="button" variant="ghost" onClick={handleClearSearch} className="h-10 shrink-0">
+              ✕
+            </Button>
+          )}
+        </form>
         <div className="w-44">
           <Select
             value={statusFilter || 'all'}

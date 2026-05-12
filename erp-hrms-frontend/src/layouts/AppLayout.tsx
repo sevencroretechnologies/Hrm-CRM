@@ -133,8 +133,20 @@ const navigation: NavItem[] = [
     href: "/leave/requests",
     icon: Calendar,
     children: [
-      { name: "My Requests", href: "/leave/requests" },
+      {
+        name: "Leave Type",
+        href: "/leave/categories",
+        check: (user) =>
+          (!!user?.company_id &&
+            !!user?.org_id &&
+            (user?.roles?.includes("hr") ||
+              user?.roles?.includes("company"))) ||
+          user?.permissions?.includes("manage_time_off_categories") ||
+          user?.roles?.includes("admin"),
+      },
       { name: "Apply Leave", href: "/leave/apply" },
+      { name: "My Requests", href: "/leave/requests" },
+
       { name: "My Balances", href: "/leave/my-balances" },
       // Admin-only items (hidden for user role)
       {
@@ -153,17 +165,7 @@ const navigation: NavItem[] = [
         permission: "view_time_off",
       },
 
-      {
-        name: "Leave Type",
-        href: "/leave/categories",
-        check: (user) =>
-          (!!user?.company_id &&
-            !!user?.org_id &&
-            (user?.roles?.includes("hr") ||
-              user?.roles?.includes("company"))) ||
-          user?.permissions?.includes("manage_time_off_categories") ||
-          user?.roles?.includes("admin"),
-      },
+
     ],
   },
   {
@@ -233,6 +235,16 @@ const navigation: NavItem[] = [
         permission: "view_recruitment",
       },
       {
+        name: "Candidate Sources",
+        href: "/recruitment/candidate-sources",
+        permission: "view_recruitment",
+      },
+      {
+        name: "Interview Types",
+        href: "/recruitment/job/stages",
+        permission: "view_recruitment",
+      },
+      {
         name: "Candidates",
         href: "/recruitment/candidates",
         permission: "view_recruitment",
@@ -245,6 +257,11 @@ const navigation: NavItem[] = [
       {
         name: "Applications",
         href: "/recruitment/applications",
+        permission: "view_recruitment",
+      },
+      {
+        name: "Interview Schedule",
+        href: "/recruitment/interviews",
         permission: "view_recruitment",
       },
       // {
@@ -283,31 +300,18 @@ const navigation: NavItem[] = [
         href: "/recruitment/custom-questions",
         permission: "view_recruitment",
       },
-      {
-        name: "Interview Schedule",
-        href: "/recruitment/interviews",
-        permission: "view_recruitment",
-      },
+
       // {
       //   name: "Onboarding Checklists",
       //   href: "/recruitment/onboarding-checklists",
       //   permission: "view_recruitment",
       // },
-      {
-        name: "Candidate Sources",
-        href: "/recruitment/candidate-sources",
-        permission: "view_recruitment",
-      },
-      {
-        name: "Interview Types",
-        href: "/recruitment/job/stages",
-        permission: "view_recruitment",
-      },
-      {
-        name: "Career",
-        href: "/recruitment/career",
-        permission: "view_recruitment",
-      },
+
+      // {
+      //   name: "Career",
+      //   href: "/recruitment/career",
+      //   permission: "view_recruitment",
+      // },
     ],
   },
   {
@@ -353,13 +357,13 @@ const navigation: NavItem[] = [
     icon: GraduationCap,
     permission: "view_staff_training",
     children: [
-     
+
       {
         name: "Training Types",
         href: "/training/types",
         permission: "view_staff_training",
       },
-       {
+      {
         name: "Training Programs",
         href: "/training/programs",
         permission: "view_staff_training",
@@ -394,7 +398,7 @@ const navigation: NavItem[] = [
     permission: "view_meetings",
     children: [
       { name: "All Meetings", href: "/meetings", permission: "view_meetings" },
-       {
+      {
         name: "Meeting Types",
         href: "/meetings/types",
         permission: "manage_meeting_types",
@@ -420,8 +424,8 @@ const navigation: NavItem[] = [
         permission: "view_meetings",
       },
       // { name: 'Meeting Calendar', href: '/meetings/calendar', permission: "view_meetings" },
-      
-     
+
+
     ],
   },
   {
@@ -513,18 +517,20 @@ const navigation: NavItem[] = [
     children: [
       { name: "Dashboard", href: "/crm/dashboard", permission: "view_crm_dashboard" },
       { name: "Leads", href: "/crm/leads", permission: "view_leads" },
-      { name: "Customer from Lead or Opportunity", href: "/crm/customers", permission: "view_customers" },
-      { name: "Opportunities", href: "/crm/opportunities", permission: "view_opportunities" },
       { name: "Prospects", href: "/crm/prospects", permission: "view_prospects" },
+      { name: "Opportunities", href: "/crm/opportunities", permission: "view_opportunities" },
+      { name: "Opportunity Lost Reasons", href: "/crm/opportunity-lost-reasons", permission: "manage_crm_masters" },
+      { name: "Customer from Lead or Opportunity", href: "/crm/customers", permission: "view_customers" },
       { name: "New Customer", href: "/crm/contacts", permission: "create_customers" },
-      { name: "Campaigns", href: "/crm/campaigns", permission: "view_campaigns" },
-      { name: "Sales Task", href: "/crm/sales-tasks", permission: "view_sales_tasks" },
-      { name: "Sources", href: "/crm/sources", permission: "manage_crm_masters" },
       { name: "Product List", href: "/crm/products", permission: "manage_crm_masters" },
       { name: "Product Categories", href: "/crm/product-categories", permission: "manage_crm_masters" },
-      { name: "Opportunity Lost Reasons", href: "/crm/opportunity-lost-reasons", permission: "manage_crm_masters" },
-      { name: "Sales Stages", href: "/crm/sales-stages", permission: "manage_crm_masters" },
-      { name: "Settings", href: "/crm/settings", permission: "manage_crm_masters" },
+      { name: "Sales Task", href: "/crm/sales-tasks", permission: "view_sales_tasks" },
+      { name: "Campaigns", href: "/crm/campaigns", permission: "view_campaigns" },
+      { name: "Sources", href: "/crm/sources", permission: "manage_crm_masters" },
+
+
+      // { name: "Sales Stages", href: "/crm/sales-stages", permission: "manage_crm_masters" },
+      // { name: "Settings", href: "/crm/settings", permission: "manage_crm_masters" },
     ],
   },
   {

@@ -747,7 +747,7 @@ export default function Candidates() {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-3">
                 <div>
                   <Label className="text-solarized-base01 flex items-center gap-2">
                     <Mail className="h-4 w-4" /> Email
@@ -774,8 +774,12 @@ export default function Candidates() {
                     <p className="font-medium">{viewingCandidate.gender}</p>
                   </div>
                 )}
+                <div>
+                  <Label className="text-solarized-base01">Applications</Label>
+                  <p className="font-medium">{viewingCandidate.applications_count || 0} applications</p>
+                </div>
                 {viewingCandidate.linkedin_url && (
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-3">
                     <Label className="text-solarized-base01 flex items-center gap-2">
                       <Linkedin className="h-4 w-4" /> LinkedIn
                     </Label>
@@ -783,30 +787,26 @@ export default function Candidates() {
                       href={viewingCandidate.linkedin_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-solarized-blue hover:underline font-medium"
+                      className="text-solarized-blue hover:underline font-medium break-all"
                     >
                       {viewingCandidate.linkedin_url}
                     </a>
                   </div>
                 )}
                 {viewingCandidate.address && (
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-3">
                     <Label className="text-solarized-base01 flex items-center gap-2">
                       <MapPin className="h-4 w-4" /> Address
                     </Label>
                     <p className="font-medium">{viewingCandidate.address}</p>
                   </div>
                 )}
-                <div>
-                  <Label className="text-solarized-base01">Applications</Label>
-                  <p className="font-medium">{viewingCandidate.applications_count || 0} applications</p>
-                </div>
                 {/* <div>
                   <Label className="text-solarized-base01">Created</Label>
                   <p className="font-medium">{formatDate(viewingCandidate.created_at)}</p>
                 </div> */}
                 {viewingCandidate.resume_path && (
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-3 mt-2">
                     <Label className="text-solarized-base01 flex items-center gap-2">
                       <FileText className="h-4 w-4" /> Resume
                     </Label>
