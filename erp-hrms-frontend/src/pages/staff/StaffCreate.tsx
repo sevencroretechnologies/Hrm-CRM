@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { staffService, settingsService } from '../../services/api';
+import { staffService, settingsService, contractService, contractTypeService } from '../../services/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
+import { Checkbox } from '../../components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -22,9 +23,28 @@ interface SelectOption {
   title: string;
 }
 
+interface ContractTypeOption {
+  id: number;
+  title: string;
+  default_duration_months?: number;
+}
+
 interface FieldErrors {
   [key: string]: string | undefined;
 }
+
+/** Add `months` to a yyyy-mm-dd string, returning yyyy-mm-dd. */
+const addMonthsToDate = (dateStr: string, months: number): string => {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return '';
+  const date = new Date(y, m - 1, d);
+  date.setMonth(date.getMonth() + months);
+  const yy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+};
 
 export default function StaffCreate() {
   const navigate = useNavigate();
@@ -34,6 +54,7 @@ export default function StaffCreate() {
   const [locations, setLocations] = useState<SelectOption[]>([]);
   const [divisions, setDivisions] = useState<SelectOption[]>([]);
   const [jobTitles, setJobTitles] = useState<SelectOption[]>([]);
+  const [contractTypes, setContractTypes] = useState<ContractTypeOption[]>([]);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -65,17 +86,29 @@ export default function StaffCreate() {
     emergency_contact_relationship: '',
   });
 
+  // Optional initial contract for the new employee.
+  const [contractData, setContractData] = useState({
+    create_contract: false,
+    contract_type_id: '',
+    start_date: '',
+    end_date: '',
+    salary: '',
+    terms: '',
+  });
+
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [locRes, divRes, jobRes] = await Promise.all([
+        const [locRes, divRes, jobRes, ctRes] = await Promise.all([
           settingsService.getOfficeLocations(),
           settingsService.getDivisions(),
           settingsService.getJobTitles(),
+          contractTypeService.getAll({ per_page: 100 }),
         ]);
         setLocations(locRes.data.data || []);
         setDivisions(divRes.data.data || []);
         setJobTitles(jobRes.data.data || []);
+        setContractTypes(ctRes.data.data || []);
       } catch (error) {
         console.error('Failed to fetch options:', error);
       }
@@ -83,18 +116,77 @@ export default function StaffCreate() {
     fetchOptions();
   }, []);
 
+  const handleContractChange = (name: string, value: string) => {
+    setContractData(prev => {
+      const next = { ...prev, [name]: value };
+      // Auto-fill end_date from the contract type's default duration.
+      if (name === 'contract_type_id' || name === 'start_date') {
+        const typeId = name === 'contract_type_id' ? value : prev.contract_type_id;
+        const start = name === 'start_date' ? value : prev.start_date;
+        const type = contractTypes.find(t => t.id.toString() === typeId);
+        const duration = type?.default_duration_months;
+        if (duration && duration > 0 && start && (!prev.end_date || name === 'contract_type_id')) {
+          next.end_date = addMonthsToDate(start, duration);
+        }
+      }
+      return next;
+    });
+    const errKey = `contract_${name === 'start_date' ? 'start_date' : name === 'end_date' ? 'end_date' : name}`;
+    if (fieldErrors[errKey]) {
+      setFieldErrors(prev => ({ ...prev, [errKey]: undefined }));
+    }
+  };
+
+  const selectedContractType = contractTypes.find(
+    t => t.id.toString() === contractData.contract_type_id
+  );
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData(prev => ({ ...prev, [name]: value }));
     if (fieldErrors[name]) {
       setFieldErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+
+    // Keep the contract salary in sync with base salary while the contract section is active.
+    if (name === 'base_salary') {
+      setContractData(prev => (prev.create_contract ? { ...prev, salary: value } : prev));
+      setFieldErrors(prev => (prev.contract_salary ? { ...prev, contract_salary: undefined } : prev));
+    }
+    // Keep the contract start date aligned with hire date until the user edits it.
+    if (name === 'hire_date') {
+      setContractData(prev =>
+        prev.create_contract && (!prev.start_date || prev.start_date === '') ? { ...prev, start_date: value } : prev
+      );
     }
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData({ ...formData, [name]: value });
+    setFormData(prev => ({ ...prev, [name]: value }));
     if (fieldErrors[name]) {
       setFieldErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+
+    // Selecting "Contract" (or "Intern") as the employment type turns on the
+    // contract section automatically; switching back to a permanent type turns it off.
+    if (name === 'employment_type') {
+      const contractLike = value === 'contract' || value === 'intern';
+      setContractData(prev => ({
+        ...prev,
+        create_contract: contractLike,
+        start_date: contractLike && !prev.start_date ? (formData.hire_date || '') : prev.start_date,
+        salary: contractLike && !prev.salary ? (formData.base_salary || '') : prev.salary,
+      }));
+      if (!contractLike) {
+        // Clear any stale contract validation errors when it's no longer required.
+        setFieldErrors(prev => ({
+          ...prev,
+          contract_contract_type_id: undefined,
+          contract_start_date: undefined,
+          contract_end_date: undefined,
+          contract_salary: undefined,
+        }));
+      }
     }
   };
 
@@ -158,6 +250,52 @@ export default function StaffCreate() {
     validateRequired('emergency_contact_phone', 'Contact Phone');
     validateRequired('emergency_contact_relationship', 'Relationship');
 
+    // Optional contract — only validate when the user opted in.
+    if (contractData.create_contract) {
+      if (!contractData.contract_type_id) {
+        errors.contract_contract_type_id = 'Contract type is required';
+        isValid = false;
+      }
+      if (!contractData.start_date) {
+        errors.contract_start_date = 'Contract start date is required';
+        isValid = false;
+      }
+      if (!contractData.end_date) {
+        errors.contract_end_date = 'Contract end date is required';
+        isValid = false;
+      } else if (contractData.start_date) {
+        const start = new Date(contractData.start_date);
+        const end = new Date(contractData.end_date);
+        if (isNaN(end.getTime())) {
+          errors.contract_end_date = 'Invalid contract end date';
+          isValid = false;
+        } else if (end <= start) {
+          errors.contract_end_date = 'Contract end date must be after start date';
+          isValid = false;
+        } else {
+          const type = contractTypes.find(t => t.id.toString() === contractData.contract_type_id);
+          const duration = type?.default_duration_months;
+          if (duration && duration > 0) {
+            const maxEnd = addMonthsToDate(contractData.start_date, duration);
+            if (maxEnd && contractData.end_date > maxEnd) {
+              errors.contract_end_date = `End date cannot be more than ${duration} month${duration === 1 ? '' : 's'} after the start date (max ${maxEnd}) for "${type?.title}"`;
+              isValid = false;
+            }
+          }
+        }
+      }
+      if (contractData.salary && contractData.salary.trim() !== '') {
+        const sal = Number(contractData.salary);
+        if (isNaN(sal)) {
+          errors.contract_salary = 'Contract salary must be a number';
+          isValid = false;
+        } else if (sal < 0) {
+          errors.contract_salary = 'Contract salary cannot be negative';
+          isValid = false;
+        }
+      }
+    }
+
     setFieldErrors(errors);
 
     if (!isValid) {
@@ -205,8 +343,37 @@ export default function StaffCreate() {
         formDataToSend.append(key, value as string | Blob);
       });
 
-      await staffService.create(formDataToSend);
-      showAlert('success', 'Success!', 'Staff member created successfully', 2000);
+      const staffRes = await staffService.create(formDataToSend);
+
+      // Optionally create an initial contract for the newly created staff member.
+      if (contractData.create_contract) {
+        const newStaffId = staffRes?.data?.data?.id;
+        if (newStaffId) {
+          try {
+            await contractService.createContract({
+              staff_member_id: newStaffId,
+              contract_type_id: contractData.contract_type_id ? parseInt(contractData.contract_type_id) : null,
+              start_date: contractData.start_date,
+              end_date: contractData.end_date,
+              salary: contractData.salary ? parseFloat(contractData.salary) : null,
+              terms: contractData.terms || null,
+            });
+            showAlert('success', 'Success!', 'Staff member and contract created successfully', 2000);
+          } catch (contractErr) {
+            console.error('Failed to create contract:', contractErr);
+            showAlert(
+              'warning',
+              'Staff created — contract failed',
+              getErrorMessage(contractErr, 'The staff member was created but the contract could not be added. You can add it from the Contracts page.')
+            );
+          }
+        } else {
+          showAlert('success', 'Success!', 'Staff member created successfully', 2000);
+        }
+      } else {
+        showAlert('success', 'Success!', 'Staff member created successfully', 2000);
+      }
+
       navigate('/staff');
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
@@ -673,6 +840,141 @@ export default function StaffCreate() {
               </div>
             </CardContent>
           </Card>
+
+          {/* CONTRACT — auto-enabled when employment type is Contract / Intern */}
+          {(() => {
+            const isContractEmployment =
+              formData.employment_type === 'contract' || formData.employment_type === 'intern';
+            return (
+          <Card className="border-0 shadow-md">
+            <CardHeader>
+              <CardTitle>{isContractEmployment ? 'Contract' : 'Contract (Optional)'}</CardTitle>
+              <CardDescription>
+                {isContractEmployment
+                  ? 'Employment type is Contract / Intern — add the contract details below.'
+                  : 'Create an initial employment contract for this employee'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="create_contract"
+                  checked={contractData.create_contract}
+                  disabled={isContractEmployment}
+                  onCheckedChange={(checked) => {
+                    const enabled = checked === true;
+                    setContractData(prev => ({
+                      ...prev,
+                      create_contract: enabled,
+                      // Seed sensible defaults when enabling.
+                      start_date: enabled && !prev.start_date ? (formData.hire_date || '') : prev.start_date,
+                      salary: enabled && !prev.salary ? (formData.base_salary || '') : prev.salary,
+                    }));
+                  }}
+                />
+                <Label htmlFor="create_contract" className={isContractEmployment ? '' : 'cursor-pointer'}>
+                  {isContractEmployment
+                    ? 'Contract required for this employment type'
+                    : 'Add a contract for this employee now'}
+                </Label>
+              </div>
+
+              {contractData.create_contract && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="contract_type_id" className={fieldErrors.contract_contract_type_id ? 'text-red-500' : ''}>
+                      Contract Type *
+                    </Label>
+                    <Select
+                      value={contractData.contract_type_id}
+                      onValueChange={(value) => handleContractChange('contract_type_id', value)}
+                    >
+                      <SelectTrigger id="contract_type_id" aria-invalid={!!fieldErrors.contract_contract_type_id}>
+                        <SelectValue placeholder="Select contract type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contractTypes.map((type) => (
+                          <SelectItem key={type.id} value={String(type.id)}>
+                            {type.title}{type.default_duration_months ? ` (${type.default_duration_months} mo)` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {renderError('contract_contract_type_id')}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="contract_salary" className={fieldErrors.contract_salary ? 'text-red-500' : ''}>
+                      Contract Salary
+                    </Label>
+                    <Input
+                      id="contract_salary"
+                      type="number"
+                      min="0"
+                      value={contractData.salary}
+                      onChange={(e) => handleContractChange('salary', e.target.value)}
+                      placeholder="50000"
+                      aria-invalid={!!fieldErrors.contract_salary}
+                    />
+                    {renderError('contract_salary')}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="contract_start_date" className={fieldErrors.contract_start_date ? 'text-red-500' : ''}>
+                      Start Date *
+                    </Label>
+                    <Input
+                      id="contract_start_date"
+                      type="date"
+                      value={contractData.start_date}
+                      onChange={(e) => handleContractChange('start_date', e.target.value)}
+                      aria-invalid={!!fieldErrors.contract_start_date}
+                    />
+                    {renderError('contract_start_date')}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="contract_end_date" className={fieldErrors.contract_end_date ? 'text-red-500' : ''}>
+                      End Date *
+                    </Label>
+                    <Input
+                      id="contract_end_date"
+                      type="date"
+                      value={contractData.end_date}
+                      min={contractData.start_date || undefined}
+                      max={
+                        selectedContractType?.default_duration_months && contractData.start_date
+                          ? addMonthsToDate(contractData.start_date, selectedContractType.default_duration_months)
+                          : undefined
+                      }
+                      onChange={(e) => handleContractChange('end_date', e.target.value)}
+                      aria-invalid={!!fieldErrors.contract_end_date}
+                    />
+                    {selectedContractType?.default_duration_months ? (
+                      <p className="text-xs text-solarized-base01">
+                        Max {selectedContractType.default_duration_months} month
+                        {selectedContractType.default_duration_months === 1 ? '' : 's'} from start date for "{selectedContractType.title}".
+                      </p>
+                    ) : null}
+                    {renderError('contract_end_date')}
+                  </div>
+
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="contract_terms">Terms</Label>
+                    <Textarea
+                      id="contract_terms"
+                      value={contractData.terms}
+                      onChange={(e) => handleContractChange('terms', e.target.value)}
+                      placeholder="Contract terms and conditions..."
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+            );
+          })()}
 
           <div className="flex justify-end gap-4">
             <Button type="button" variant="outline" onClick={() => navigate(-1)}>

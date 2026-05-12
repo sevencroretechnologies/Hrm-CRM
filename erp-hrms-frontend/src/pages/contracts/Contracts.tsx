@@ -38,6 +38,7 @@ import {
   Edit,
   Trash2,
   Search,
+  RefreshCw,
 } from 'lucide-react';
 import DataTable, { TableColumn } from 'react-data-table-component';
 
@@ -71,7 +72,24 @@ interface Staff {
 interface ContractType {
   id: number;
   title: string;
+  default_duration_months?: number;
 }
+
+/**
+ * Add `months` to a yyyy-mm-dd date string and return a yyyy-mm-dd string.
+ * Used to derive the maximum allowed end_date from a contract type's duration.
+ */
+const addMonthsToDate = (dateStr: string, months: number): string => {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return '';
+  const date = new Date(y, m - 1, d);
+  date.setMonth(date.getMonth() + months);
+  const yy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+};
 
 /* =========================
    COMPONENT
@@ -84,7 +102,12 @@ export default function Contracts() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+
+  // Status update form state
+  const [statusValue, setStatusValue] = useState<string>('');
+  const [isStatusSubmitting, setIsStatusSubmitting] = useState(false);
 
   // Edit form state
   const [editFormData, setEditFormData] = useState({
@@ -158,7 +181,8 @@ export default function Contracts() {
       }
     }
 
-    // End date validation (required, must be after start date)
+    // End date validation (required, after start date, and within the contract type's
+    // configured duration when one is set).
     if (!newContract.end_date) {
       errors.end_date = 'End date is required';
       isValid = false;
@@ -172,6 +196,19 @@ export default function Contracts() {
         if (endDate <= startDate) {
           errors.end_date = 'End date must be after start date';
           isValid = false;
+        } else {
+          // Enforce the contract type's default duration as an upper bound.
+          const selectedType = contractTypes.find(
+            t => t.id.toString() === newContract.contract_type_id
+          );
+          const duration = selectedType?.default_duration_months;
+          if (duration && duration > 0) {
+            const maxEnd = addMonthsToDate(newContract.start_date, duration);
+            if (maxEnd && newContract.end_date > maxEnd) {
+              errors.end_date = `End date cannot be more than ${duration} month${duration === 1 ? '' : 's'} after the start date (max ${maxEnd}) for "${selectedType?.title}"`;
+              isValid = false;
+            }
+          }
         }
       }
     }
@@ -400,6 +437,37 @@ export default function Contracts() {
     setIsEditOpen(true);
   };
 
+  const handleOpenStatus = (c: Contract) => {
+    setSelectedContract(c);
+    setStatusValue(c.status || 'draft');
+    setIsStatusOpen(true);
+  };
+
+  const handleSaveStatus = async () => {
+    if (!selectedContract) return;
+    if (!statusValue) {
+      showAlert('error', 'Validation Error', 'Please select a status.');
+      return;
+    }
+    if (statusValue === selectedContract.status) {
+      setIsStatusOpen(false);
+      return;
+    }
+
+    setIsStatusSubmitting(true);
+    try {
+      await contractService.updateContract(selectedContract.id, { status: statusValue });
+      showAlert('success', 'Updated', 'Contract status updated successfully', 2000);
+      setIsStatusOpen(false);
+      fetchContracts(page);
+    } catch (error) {
+      console.error('Failed to update contract status:', error);
+      showAlert('error', 'Error', getErrorMessage(error, 'Failed to update contract status'));
+    } finally {
+      setIsStatusSubmitting(false);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     const result = await showConfirmDialog('Delete Contract', 'Are you sure you want to delete this contract?');
     if (!result.isConfirmed) return;
@@ -579,6 +647,9 @@ export default function Contracts() {
             <DropdownMenuItem onClick={() => handleEdit(row)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleOpenStatus(row)}>
+              <RefreshCw className="mr-2 h-4 w-4" /> Update Status
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => handleDelete(row.id)}
               className="text-solarized-red"
@@ -749,6 +820,49 @@ export default function Contracts() {
           )}
         </CardContent>
       </Card>
+
+      {/* UPDATE STATUS MODAL */}
+      <Dialog open={isStatusOpen} onOpenChange={setIsStatusOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Contract Status</DialogTitle>
+            <DialogDescription>
+              {selectedContract
+                ? `Change the status for contract ${selectedContract.reference_number}.`
+                : 'Change the contract status.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <Label htmlFor="contract-status">Status</Label>
+            <Select value={statusValue} onValueChange={setStatusValue}>
+              <SelectTrigger id="contract-status">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+                <SelectItem value="terminated">Terminated</SelectItem>
+              </SelectContent>
+            </Select>
+            {selectedContract && (
+              <p className="text-xs text-gray-500">
+                Current: <span className="font-medium">{selectedContract.status}</span>
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsStatusOpen(false)} disabled={isStatusSubmitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveStatus} disabled={isStatusSubmitting}>
+              {isStatusSubmitting ? 'Saving...' : 'Update Status'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* VIEW CONTRACT MODAL */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
@@ -1002,8 +1116,16 @@ export default function Contracts() {
                 <Select
                   value={newContract.contract_type_id}
                   onValueChange={(value) => {
-                    setNewContract({ ...newContract, contract_type_id: value });
+                    const selectedType = contractTypes.find(t => t.id.toString() === value);
+                    const duration = selectedType?.default_duration_months;
+                    // Auto-fill end_date from the type's default duration when start_date is set.
+                    const next = { ...newContract, contract_type_id: value };
+                    if (duration && duration > 0 && next.start_date) {
+                      next.end_date = addMonthsToDate(next.start_date, duration);
+                    }
+                    setNewContract(next);
                     clearFieldError('contract_type_id', setAddFieldErrors);
+                    clearFieldError('end_date', setAddFieldErrors);
                   }}
                 >
                   <SelectTrigger className={addFieldErrors.contract_type_id ? 'border-red-500' : ''}>
@@ -1013,6 +1135,7 @@ export default function Contracts() {
                     {contractTypes.map((type) => (
                       <SelectItem key={type.id} value={String(type.id)}>
                         {type.title}
+                        {type.default_duration_months ? ` (${type.default_duration_months} mo)` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1030,8 +1153,20 @@ export default function Contracts() {
                     type="date"
                     value={newContract.start_date}
                     onChange={(e) => {
-                      setNewContract({ ...newContract, start_date: e.target.value });
+                      const newStart = e.target.value;
+                      const selectedType = contractTypes.find(
+                        t => t.id.toString() === newContract.contract_type_id
+                      );
+                      const duration = selectedType?.default_duration_months;
+                      const next = { ...newContract, start_date: newStart };
+                      // Re-derive end_date when start changes, but only if it's empty or
+                      // it was previously the auto-computed value (so manual edits aren't lost).
+                      if (duration && duration > 0 && newStart && !next.end_date) {
+                        next.end_date = addMonthsToDate(newStart, duration);
+                      }
+                      setNewContract(next);
                       clearFieldError('start_date', setAddFieldErrors);
+                      clearFieldError('end_date', setAddFieldErrors);
                     }}
                     className={addFieldErrors.start_date ? 'border-red-500' : ''}
                   />
@@ -1045,12 +1180,33 @@ export default function Contracts() {
                     id="newEndDate"
                     type="date"
                     value={newContract.end_date}
+                    min={newContract.start_date || undefined}
+                    max={(() => {
+                      const t = contractTypes.find(
+                        ct => ct.id.toString() === newContract.contract_type_id
+                      );
+                      const d = t?.default_duration_months;
+                      return d && newContract.start_date
+                        ? addMonthsToDate(newContract.start_date, d)
+                        : undefined;
+                    })()}
                     onChange={(e) => {
                       setNewContract({ ...newContract, end_date: e.target.value });
                       clearFieldError('end_date', setAddFieldErrors);
                     }}
                     className={addFieldErrors.end_date ? 'border-red-500' : ''}
                   />
+                  {(() => {
+                    const t = contractTypes.find(
+                      ct => ct.id.toString() === newContract.contract_type_id
+                    );
+                    const d = t?.default_duration_months;
+                    return d && d > 0 ? (
+                      <p className="text-xs text-gray-500">
+                        Max {d} month{d === 1 ? '' : 's'} from start date for "{t?.title}".
+                      </p>
+                    ) : null;
+                  })()}
                   {renderError('end_date', addFieldErrors)}
                 </div>
               </div>
