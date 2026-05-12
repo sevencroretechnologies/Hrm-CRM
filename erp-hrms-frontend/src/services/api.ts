@@ -328,8 +328,7 @@ export const attendanceService = {
     api.get('/my-monthly-attendance', { params }),
 
   // Shift analytics
-  getShiftAnalytics: (params?: Record<string, unknown>) =>
-    api.get('/attendance/shift-analytics', { params }),
+  getShiftAnalytics: () => api.get('/attendance/shift-analytics'),
 
   // Shift assignment methods
   assignShift: (shiftId: number, data: {
@@ -1183,3 +1182,32 @@ export const crmSettingService = {
 //   update: (id: number, data: Record<string, unknown>) => api.put(`/products/${id}`, data),
 //   delete: (id: number) => api.delete(`/products/${id}`),
 // };
+
+export const halfDayRuleService = {
+  getRules: (params?: {
+    is_active?: boolean;
+    company_id?: number;
+    org_id?: number;
+  }) => api.get('/half-day-rules', { params }),
+
+  createRule: (data: {
+    arriving_late_minutes: number;
+    leaving_early_minutes: number;
+    is_active?: boolean;
+    company_id?: number;
+    org_id?: number;
+  }) => api.post('/half-day-rules', data),
+
+  updateRule: (id: number, data: Partial<{
+    arriving_late_minutes: number;
+    leaving_early_minutes: number;
+    is_active?: boolean;
+    company_id?: number;
+    org_id?: number;
+  }>) => api.put(`/half-day-rules/${id}`, data),
+
+  deleteRule: (id: number) => api.delete(`/half-day-rules/${id}`),
+
+  getRule: (id: number) => api.get(`/half-day-rules/${id}`),
+};
+

@@ -121,11 +121,11 @@ const navigation: NavItem[] = [
         href: "/attendance/summary",
         permission: "view_attendance",
       },
-      // {
-      //   name: "Manage Shifts",
-      //   href: "/attendance/shifts",
-      //   permission: "edit_attendance",
-      // },
+      {
+        name: "Half Day Rules",
+        href: "/attendance/half-day-rules",
+        permission: "view_attendance",
+      },
     ],
   },
   {
