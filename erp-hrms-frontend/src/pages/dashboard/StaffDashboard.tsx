@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useGeolocated } from 'react-geolocated';
-import { attendanceService, leaveService } from '../../services/api';
+import { attendanceService, leaveService, settingsService } from '../../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -19,6 +19,8 @@ import {
   ArrowRight,
   Timer,
   MapPin,
+  Bell,
+  Check,
 } from 'lucide-react';
 
 interface UserData {
@@ -54,6 +56,16 @@ interface RecentLeaveRequest {
   reason?: string;
 }
 
+interface CompanyNotice {
+  id: number;
+  title: string;
+  content: string;
+  publish_date: string;
+  expire_date: string | null;
+  is_featured: boolean;
+  is_read?: boolean;
+}
+
 const formatTimeString = (timeString: string | null | undefined) => {
   if (!timeString) return '--:--';
 
@@ -80,9 +92,12 @@ export default function StaffDashboard() {
   const [currentStatus, setCurrentStatus] = useState<CurrentStatus | null>(null);
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
   const [recentRequests, setRecentRequests] = useState<RecentLeaveRequest[]>([]);
+  const [unreadNotices, setUnreadNotices] = useState<CompanyNotice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
   const [isLoadingLeave, setIsLoadingLeave] = useState(false);
+  const [isLoadingNotices, setIsLoadingNotices] = useState(false);
+  const [markingNoticeId, setMarkingNoticeId] = useState<number | null>(null);
   const [isClocking, setIsClocking] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -175,6 +190,49 @@ export default function StaffDashboard() {
 
     fetchLeaveData();
   }, [currentUser]);
+
+  const fetchUnreadNotices = async () => {
+    setIsLoadingNotices(true);
+    try {
+      const res = await settingsService.getAll({
+        unread_only: true,
+        active_only: true,
+        paginate: false,
+      });
+      const list = Array.isArray(res.data?.data) ? res.data.data : (res.data?.data?.data ?? []);
+      // Featured notices first, then newest publish date.
+      const sorted = [...list].sort((a: CompanyNotice, b: CompanyNotice) => {
+        if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1;
+        return new Date(b.publish_date).getTime() - new Date(a.publish_date).getTime();
+      });
+      setUnreadNotices(sorted);
+    } catch (error) {
+      console.error('Failed to fetch notices:', error);
+      setUnreadNotices([]);
+    } finally {
+      setIsLoadingNotices(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!currentUser) return;
+    fetchUnreadNotices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
+
+  const handleMarkNoticeRead = async (id: number) => {
+    setMarkingNoticeId(id);
+    try {
+      await settingsService.markAsRead(id);
+      // Drop it from the unread list immediately.
+      setUnreadNotices(prev => prev.filter(n => n.id !== id));
+    } catch (error) {
+      console.error('Failed to mark notice as read:', error);
+      setMessage({ type: 'error', text: 'Failed to mark notice as read. Please try again.' });
+    } finally {
+      setMarkingNoticeId(null);
+    }
+  };
 
   const handleClockIn = async () => {
     setIsClocking(true);
@@ -355,6 +413,78 @@ export default function StaffDashboard() {
           )}
           <AlertDescription>{message.text}</AlertDescription>
         </Alert>
+      )}
+
+      {/* Unread Notices */}
+      {(isLoadingNotices || unreadNotices.length > 0) && (
+        <Card className="border-0 shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-solarized-blue" />
+              <div>
+                <CardTitle>
+                  Notices
+                  {!isLoadingNotices && unreadNotices.length > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center rounded-full bg-solarized-red px-2 py-0.5 text-xs font-semibold text-white">
+                      {unreadNotices.length}
+                    </span>
+                  )}
+                </CardTitle>
+                <CardDescription>Announcements you haven't read yet</CardDescription>
+              </div>
+            </div>
+            <Link to="/notices">
+              <Button variant="ghost" size="sm">View all</Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {isLoadingNotices ? (
+              <div className="space-y-3">
+                {[...Array(2)].map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {unreadNotices.slice(0, 5).map((notice) => (
+                  <div
+                    key={notice.id}
+                    className="flex items-start justify-between gap-3 p-3 bg-solarized-base3 rounded-lg"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-solarized-base02 truncate">
+                          {notice.title}
+                        </p>
+                        {notice.is_featured && (
+                          <span className="shrink-0 rounded bg-solarized-yellow/20 px-1.5 py-0.5 text-[10px] font-medium text-solarized-yellow">
+                            Featured
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-xs text-solarized-base01 line-clamp-2">
+                        {notice.content}
+                      </p>
+                      <p className="mt-1 text-[11px] text-solarized-base00">
+                        {new Date(notice.publish_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0"
+                      disabled={markingNoticeId === notice.id}
+                      onClick={() => handleMarkNoticeRead(notice.id)}
+                    >
+                      <Check className="mr-1 h-3.5 w-3.5" />
+                      {markingNoticeId === notice.id ? 'Marking...' : 'Mark read'}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Quick Stats */}

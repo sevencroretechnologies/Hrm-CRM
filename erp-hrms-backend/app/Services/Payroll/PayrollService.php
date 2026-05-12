@@ -40,15 +40,19 @@ class PayrollService extends BaseService
 
         $query = $this->applyFilters($query, $params);
 
-        // Month/Year filter - salary_period format is YYYY-MM
-        if (! empty($params['month']) && ! empty($params['year'])) {
-            $salaryPeriod = sprintf('%04d-%02d-01', $params['year'], $params['month']);
-            $query->where('salary_period', $salaryPeriod);
+        // Month/Year filter — compare on the date parts so it works whether salary_period
+        // is stored as a DATE or a DATETIME (an exact string match against "Y-m-d 00:00:00"
+        // would silently return nothing).
+        if (! empty($params['year'])) {
+            $query->whereYear('salary_period', (int) $params['year']);
+        }
+        if (! empty($params['month'])) {
+            $query->whereMonth('salary_period', (int) $params['month']);
         }
 
-        // Direct salary_period filter
+        // Direct salary_period filter (also date-part safe)
         if (! empty($params['salary_period'])) {
-            $query->where('salary_period', $params['salary_period']);
+            $query->whereDate('salary_period', $params['salary_period']);
         }
 
         $query = $this->applyOrdering($query, $params);
