@@ -2,6 +2,8 @@
 
 namespace App\Services\Attendance;
 
+use App\Models\Attendance\HalfDayRuleConfig;
+use App\Models\Shift;
 use App\Models\StaffMember;
 use App\Models\TimeOffRequest;
 use App\Models\WorkLog;
@@ -231,6 +233,7 @@ class AttendanceService extends BaseService
             // Create new work log
             $workLog = WorkLog::create([
                 'staff_member_id' => $staffMemberId,
+                'shift_id' => $shift ? $shift->id : null, // Save shift ID for later rule checking
                 'log_date' => $today,
                 'clock_in' => $currentTime->format('H:i:s'),
                 'clock_in_ip' => $data['ip_address'] ?? null,
@@ -241,6 +244,9 @@ class AttendanceService extends BaseService
                 'status' => $status,
                 'author_id' => $data['author_id'] ?? null,
             ]);
+
+            // Apply half-day logic after creation
+            $this->applyHalfDayLogic($workLog);
         }
 
         return $this->getCurrentStatus($staffMemberId);
@@ -326,7 +332,82 @@ class AttendanceService extends BaseService
             'author_id' => $data['author_id'] ?? null,
         ]);
 
+        // Apply half-day logic after clock-out
+        $this->applyHalfDayLogic($workLog);
+
         return $this->getCurrentStatus($staffMemberId);
+    }
+
+    /**
+     * Apply half-day logic based on configured rules.
+     */
+    public function applyHalfDayLogic(WorkLog $workLog)
+    {
+        \Illuminate\Support\Facades\Log::info("HalfDay: Checking Log #{$workLog->id} for Staff #{$workLog->staff_member_id}");
+
+        // Don't overwrite leave or holiday
+        if (in_array($workLog->status, ['leave', 'holiday'])) {
+            \Illuminate\Support\Facades\Log::info("HalfDay: Skipping because status is {$workLog->status}");
+            return;
+        }
+
+        $staffMember = $workLog->staffMember;
+        if (!$staffMember) {
+            \Illuminate\Support\Facades\Log::info("HalfDay: No staff member found for log");
+            return;
+        }
+
+        // NEW: If the employee has no shift assigned, skip half-day logic
+        $shiftId = $workLog->shift_id ?: $this->shiftService->getEmployeeShift($staffMember->id, $workLog->log_date->toDateString())?->id;
+        if (!$shiftId) {
+            \Illuminate\Support\Facades\Log::info("HalfDay: No shift found, skipping");
+            return;
+        }
+
+        // Get active rule: Try Company level -> then Org level -> then Global
+        // We use withoutGlobalScopes() because global rules (NULL company_id) 
+        // might be filtered out by the HasOrgAndCompany trait.
+        $rule = HalfDayRuleConfig::withoutGlobalScopes()
+            ->where('is_active', true)
+            ->where(function($query) use ($staffMember) {
+                $query->where('company_id', $staffMember->company_id)
+                      ->orWhereNull('company_id');
+            })
+            ->where(function($query) use ($staffMember) {
+                $query->where('org_id', $staffMember->org_id)
+                      ->orWhereNull('org_id');
+            })
+            ->orderByRaw('company_id DESC, org_id DESC')
+            ->first();
+
+        if (!$rule) {
+            \Illuminate\Support\Facades\Log::info("HalfDay: No active rule found in DB");
+            return;
+        }
+
+        \Illuminate\Support\Facades\Log::info("HalfDay: Found Rule #{$rule->id} (Late: {$rule->arriving_late_minutes}m, Early: {$rule->leaving_early_minutes}m)");
+        \Illuminate\Support\Facades\Log::info("HalfDay: WorkLog Late: {$workLog->late_minutes}m, Early: {$workLog->early_leave_minutes}m");
+
+        $isHalfDay = false;
+
+        // Check late arrival
+        if ($rule->arriving_late_minutes > 0 && $workLog->late_minutes >= $rule->arriving_late_minutes) {
+            \Illuminate\Support\Facades\Log::info("HalfDay: Late threshold met!");
+            $isHalfDay = true;
+        }
+
+        // Check early leaving
+        if ($rule->leaving_early_minutes > 0 && $workLog->early_leave_minutes >= $rule->leaving_early_minutes) {
+            \Illuminate\Support\Facades\Log::info("HalfDay: Early leave threshold met!");
+            $isHalfDay = true;
+        }
+
+        if ($isHalfDay) {
+            \Illuminate\Support\Facades\Log::info("HalfDay: Updating status to half_day");
+            $workLog->update(['status' => 'half_day']);
+        } else {
+            \Illuminate\Support\Facades\Log::info("HalfDay: Conditions not met");
+        }
     }
 
     /**

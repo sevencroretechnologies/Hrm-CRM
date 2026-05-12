@@ -32,6 +32,7 @@ class WorkLog extends Model
         'clock_out_latitude',
         'clock_out_longitude',
         'clock_out_accuracy',
+        'shift_id',
         'tenant_id',
         'author_id',
     ];
@@ -42,6 +43,7 @@ class WorkLog extends Model
         'early_leave_minutes' => 'integer',
         'overtime_minutes' => 'integer',
         'break_minutes' => 'integer',
+        'shift_id' => 'integer',
         // 'clock_in' => 'datetime',
         // 'clock_out' => 'datetime',
     ];
@@ -94,24 +96,10 @@ protected $appends = ['clock_in_full', 'clock_out_full', 'clock_in_display', 'cl
         return $this->belongsTo(User::class, 'author_id');
     }
 
-public function shift()
-{
-    return $this->hasOneThrough(
-        Shift::class,
-        ShiftAssignment::class,
-        'staff_member_id', // Foreign key on ShiftAssignment table
-        'id', // Foreign key on Shift table
-        'staff_member_id', // Local key on WorkLog table
-        'shift_id' // Local key on ShiftAssignment table
-    )->where(function ($query) {
-        $logDate = $this->log_date->format('Y-m-d');
-        $query->whereDate('shift_assignments.effective_from', '<=', $logDate)
-            ->where(function ($q) use ($logDate) {
-                $q->whereNull('shift_assignments.effective_to')
-                    ->orWhereDate('shift_assignments.effective_to', '>=', $logDate);
-            });
-    });
-}
+    public function shift()
+    {
+        return $this->belongsTo(Shift::class);
+    }
 
     /**
      * Calculate working hours.

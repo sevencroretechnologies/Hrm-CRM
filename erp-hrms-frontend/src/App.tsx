@@ -44,6 +44,7 @@ import ClockInOut from './pages/attendance/ClockInOut';
 import WorkLogs from './pages/attendance/WorkLogs';
 import AttendanceSummary from './pages/attendance/AttendanceSummary';
 import Shifts from './pages/attendance/Shifts';
+import HalfDayRuleConfig from './pages/attendance/HalfDayRuleConfig';
 
 // Leave Management
 import LeaveRequests from './pages/leave/LeaveRequests';
@@ -241,6 +242,7 @@ function App() {
             } />
             <Route path="/attendance/my-summary" element={<MyAttendanceSummary />} />
             <Route path="/attendance/shifts" element={<Shifts />} />
+            <Route path="/attendance/half-day-rules" element={<HalfDayRuleConfig />} />
 
             {/* Leave Management */}
             <Route path="/leave" element={<LeaveRequests />} />

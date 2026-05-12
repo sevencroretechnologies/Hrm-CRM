@@ -179,16 +179,36 @@ class ShiftService extends BaseService
     public function getEmployeeShift(int $staffMemberId, string $date = null): ?Shift
     {
         $date = $date ?? now()->toDateString();
+        $timezone = config('app.timezone') === 'UTC' ? 'Asia/Kolkata' : config('app.timezone');
+        $currentTime = \Carbon\Carbon::now($timezone)->format('H:i:s');
         
-        $assignment = ShiftAssignment::where('staff_member_id', $staffMemberId)
+        $assignments = ShiftAssignment::with('shift')
+            ->where('staff_member_id', $staffMemberId)
             ->where('effective_from', '<=', $date)
             ->where(function ($q) use ($date) {
                 $q->whereNull('effective_to')
                     ->orWhere('effective_to', '>=', $date);
             })
-            ->first();
+            ->get();
 
-        return $assignment ? $assignment->shift : null;
+        if ($assignments->isEmpty()) {
+            return null;
+        }
+
+        if ($assignments->count() === 1) {
+            return $assignments->first()->shift;
+        }
+
+        // If multiple shifts, find the one closest to current time
+        // We look for the shift where current time is closest to start_time
+        return $assignments->map(function($a) { return $a->shift; })
+            ->sortBy(function($shift) use ($currentTime) {
+                // Calculate absolute difference in minutes from current time
+                $current = \Carbon\Carbon::parse($currentTime);
+                $start = \Carbon\Carbon::parse($shift->start_time);
+                return abs($current->diffInMinutes($start));
+            })
+            ->first();
     }
 
     /**
