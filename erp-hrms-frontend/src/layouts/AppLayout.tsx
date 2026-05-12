@@ -126,6 +126,11 @@ const navigation: NavItem[] = [
         href: "/attendance/half-day-rules",
         permission: "view_attendance",
       },
+      {
+        name: "Attendance Settings",
+        href: "/attendance/settings",
+        permission: "view_attendance",
+      },
     ],
   },
   {

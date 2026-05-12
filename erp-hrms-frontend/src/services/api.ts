@@ -1211,3 +1211,12 @@ export const halfDayRuleService = {
   getRule: (id: number) => api.get(`/half-day-rules/${id}`),
 };
 
+export const attendanceSettingService = {
+  getSettings: (params?: Record<string, any>) => api.get('/attendance-settings', { params }),
+  getEffective: (params?: Record<string, any>) => api.get('/attendance-settings/effective', { params }),
+  saveSettings: (data: any) => api.post('/attendance-settings', data),
+  updateSettings: (id: number, data: any) => api.put(`/attendance-settings/${id}`, data),
+  deleteSettings: (id: number) => api.delete(`/attendance-settings/${id}`),
+};
+
+
