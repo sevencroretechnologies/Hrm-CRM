@@ -18,8 +18,23 @@ class ContractController extends Controller
     {
         $query = Contract::with(['staffMember', 'contractType']);
 
+        // Status filter — "expired" and "active" are derived from end_date rather than the
+        // raw column, so a "draft" contract whose end_date has passed still appears in the
+        // Expired bucket, and an "active" contract whose end_date is in the past does not.
         if ($request->status) {
-            $query->where('status', $request->status);
+            $today = now()->toDateString();
+            switch ($request->status) {
+                case 'expired':
+                    $query->whereDate('end_date', '<', $today)
+                        ->where('status', '!=', 'terminated');
+                    break;
+                case 'active':
+                    $query->where('status', 'active')
+                        ->whereDate('end_date', '>=', $today);
+                    break;
+                default:
+                    $query->where('status', $request->status);
+            }
         }
         if ($request->staff_member_id) {
             $query->where('staff_member_id', $request->staff_member_id);

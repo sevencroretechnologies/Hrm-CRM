@@ -67,7 +67,8 @@ export default function MeetingActionItems() {
     const { hasPermission } = useAuth();
     const [actionItems, setActionItems] = useState<MeetingActionItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = useState('');         // what user types
+    const [appliedSearch, setAppliedSearch] = useState(''); // applied on Search click
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
@@ -176,7 +177,7 @@ export default function MeetingActionItems() {
             const response = await meetingActionItemService.getAll({
                 page: currentPage,
                 per_page: perPage,
-                search,
+                search: appliedSearch,
             });
             const resData = response.data.data;
             if (Array.isArray(resData)) {
@@ -192,7 +193,7 @@ export default function MeetingActionItems() {
         } finally {
             setIsLoading(false);
         }
-    }, [perPage, search]);
+    }, [perPage, appliedSearch]);
 
     useEffect(() => {
         fetchActionItems(page);
@@ -201,6 +202,19 @@ export default function MeetingActionItems() {
     useEffect(() => {
         fetchMetadata();
     }, [fetchMetadata]);
+
+    // ================= SEARCH =================
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setAppliedSearch(search.trim());
+        setPage(1);
+    };
+
+    const handleClearSearch = () => {
+        setSearch('');
+        setAppliedSearch('');
+        setPage(1);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -292,7 +306,9 @@ export default function MeetingActionItems() {
 
     const isOverdue = (dueDate: string) => {
         if (!dueDate) return false;
-        return new Date(dueDate) < new Date();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // compare using only the date portion
+        return new Date(dueDate) < today;
     };
 
     const columns: TableColumn<MeetingActionItem>[] = [
@@ -403,7 +419,7 @@ export default function MeetingActionItems() {
             </div>
 
             <div className="grid gap-6 sm:grid-cols-3">
-                <Card className="border-0 shadow-sm bg-white">
+                {/* <Card className="border-0 shadow-sm bg-white">
                     <CardContent className="pt-6">
                         <div className="flex items-center gap-4">
                             <div className="p-2 bg-blue-50 rounded-lg">
@@ -415,8 +431,8 @@ export default function MeetingActionItems() {
                             </div>
                         </div>
                     </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm bg-white">
+                </Card> */}
+                {/* <Card className="border-0 shadow-sm bg-white">
                     <CardContent className="pt-6">
                         <div className="flex items-center gap-4">
                             <div className="p-2 bg-red-50 rounded-lg">
@@ -430,8 +446,8 @@ export default function MeetingActionItems() {
                             </div>
                         </div>
                     </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm bg-white">
+                </Card> */}
+                {/* <Card className="border-0 shadow-sm bg-white">
                     <CardContent className="pt-6">
                         <div className="flex items-center gap-4">
                             <div className="p-2 bg-green-50 rounded-lg">
@@ -445,25 +461,35 @@ export default function MeetingActionItems() {
                             </div>
                         </div>
                     </CardContent>
-                </Card>
+                </Card> */}
             </div>
 
             <Card>
                 <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                        {/* <CardTitle className="text-lg font-semibold">Task Tracking</CardTitle> */}
-                        <div className="flex gap-4">
+                    <form onSubmit={handleSearchSubmit} className="flex gap-2">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search action items..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                            // className="w-64"
+                                className="pl-9"
                             />
-                            <Button variant="outline" size="icon" className='w-40'>
-                                <Search className="h-4 w-4" /> Search
-                            </Button>
                         </div>
-                    </div>
+                        <Button type="submit" variant="outline" className="shrink-0">
+                            <Search className="mr-2 h-4 w-4" /> Search
+                        </Button>
+                        {appliedSearch && (
+                            <Button type="button" variant="ghost" onClick={handleClearSearch} className="shrink-0">
+                                ✕
+                            </Button>
+                        )}
+                    </form>
+                    {appliedSearch && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                            Results for: <span className="font-medium text-foreground">"{appliedSearch}"</span>
+                        </p>
+                    )}
                 </CardHeader>
                 <CardContent>
                     <DataTable

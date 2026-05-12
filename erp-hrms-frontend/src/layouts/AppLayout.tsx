@@ -314,14 +314,12 @@ const navigation: NavItem[] = [
     name: "Performance",
     href: "/performance",
     icon: Target,
-    permission: "view_staff_performance",
     children: [
-      { name: "Goals", href: "/performance/goals", permission: "manage_goals" },
+      { name: "Goals", href: "/performance/goals" },
       // { name: 'KPIs', href: '/performance/kpis', permission: 'view_staff_performance' },
       {
         name: "Appraisals",
         href: "/performance/appraisals",
-        permission: "manage_appraisals",
       },
       // {
       //   name: "Competencies",
@@ -355,23 +353,24 @@ const navigation: NavItem[] = [
     icon: GraduationCap,
     permission: "view_staff_training",
     children: [
-      {
-        name: "Programs",
-        href: "/training/programs",
-        permission: "view_staff_training",
-      },
+     
       {
         name: "Training Types",
         href: "/training/types",
         permission: "view_staff_training",
       },
+       {
+        name: "Training Programs",
+        href: "/training/programs",
+        permission: "view_staff_training",
+      },
       {
-        name: "Sessions",
+        name: "Training Sessions",
         href: "/training/sessions",
         permission: "view_staff_training",
       },
       {
-        name: "Participants",
+        name: "Training Participants",
         href: "/training/participants",
         permission: "manage_staff_training",
       },
@@ -395,12 +394,16 @@ const navigation: NavItem[] = [
     permission: "view_meetings",
     children: [
       { name: "All Meetings", href: "/meetings", permission: "view_meetings" },
-      {
-        name: "Meeting Attendees",
-        href: "/meetings/attendees",
-        permission: "view_meetings",
+       {
+        name: "Meeting Types",
+        href: "/meetings/types",
+        permission: "manage_meeting_types",
       },
-      // { name: 'Meeting Calendar', href: '/meetings/calendar', permission: "view_meetings" },
+      {
+        name: "Meeting Rooms",
+        href: "/meetings/rooms",
+        permission: "manage_meeting_rooms",
+      },
       {
         name: "Meeting Minutes",
         href: "/meetings/minutes",
@@ -412,15 +415,13 @@ const navigation: NavItem[] = [
         permission: "view_meetings",
       },
       {
-        name: "Meeting Types",
-        href: "/meetings/types",
-        permission: "manage_meeting_types",
+        name: "Meeting Attendees",
+        href: "/meetings/attendees",
+        permission: "view_meetings",
       },
-      {
-        name: "Meeting Rooms",
-        href: "/meetings/rooms",
-        permission: "manage_meeting_rooms",
-      },
+      // { name: 'Meeting Calendar', href: '/meetings/calendar', permission: "view_meetings" },
+      
+     
     ],
   },
   {

@@ -1,19 +1,24 @@
-import { useState, useEffect } from 'react';
-import { performanceService, staffService } from '../../services/api';
+import { useState, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { performanceService, staffService } from "../../services/api";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { StatusBadge } from '../../components/ui/status-badge';
-import { showAlert, showConfirmDialog, getErrorMessage } from '../../lib/sweetalert';
-import { Avatar, AvatarFallback } from '../../components/ui/avatar';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
+} from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { StatusBadge } from "../../components/ui/status-badge";
+import {
+  showAlert,
+  showConfirmDialog,
+  getErrorMessage,
+} from "../../lib/sweetalert";
+import { Avatar, AvatarFallback } from "../../components/ui/avatar";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Textarea } from "../../components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -21,9 +26,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../../components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Skeleton } from '../../components/ui/skeleton';
+} from "../../components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
+import { Skeleton } from "../../components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -32,14 +42,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../../components/ui/dialog';
+} from "../../components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../components/ui/select';
+} from "../../components/ui/select";
 import {
   Plus,
   Star,
@@ -56,16 +66,16 @@ import {
   FileText,
   PlayCircle,
   Search,
-  X
-} from 'lucide-react';
+  X,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../../components/ui/dropdown-menu';
-import DataTable, { TableColumn } from 'react-data-table-component';
+} from "../../components/ui/dropdown-menu";
+import DataTable, { TableColumn } from "react-data-table-component";
 
 // ============ TYPES ============
 interface StaffMember {
@@ -81,7 +91,7 @@ interface AppraisalCycle {
   cycle_start: string;
   cycle_end: string;
   review_deadline?: string;
-  status: 'draft' | 'active' | 'closed';
+  status: "draft" | "active" | "closed";
   notes?: string;
   records_count?: number;
   author?: { name: string };
@@ -94,7 +104,7 @@ interface AppraisalRecord {
   cycle?: AppraisalCycle;
   appraisal_cycle_id: number;
   staff_member_id: number;
-  status: 'pending' | 'self_review' | 'completed';
+  status: "pending" | "self_review" | "completed";
   overall_rating?: number;
   self_assessment?: string;
   career_goals?: string;
@@ -116,36 +126,42 @@ interface PaginationMeta {
 
 // ============ HELPER FUNCTIONS ============
 const formatDate = (dateString?: string): string => {
-  if (!dateString) return '-';
+  if (!dateString) return "-";
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
 };
 
 const formatDateForInput = (dateString: string): string => {
-  if (!dateString) return '';
-  if (dateString.includes('T')) {
-    return dateString.split('T')[0];
+  if (!dateString) return "";
+  if (dateString.includes("T")) {
+    return dateString.split("T")[0];
   }
   return dateString;
 };
 
 const getInitials = (name?: string): string => {
-  if (!name) return '??';
+  if (!name) return "??";
   return name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
     .toUpperCase()
     .slice(0, 2);
 };
 
 // ============ MAIN COMPONENT ============
 export default function Appraisals() {
-  const [activeTab, setActiveTab] = useState<'records' | 'cycles'>('records');
+  const { user, hasAnyRole } = useAuth();
+  // Managers/HR/Admins get cycles + manager-review actions.
+  // Staff get a filtered list of their own records with View + Submit Self Review only.
+  const canManage = hasAnyRole(["admin", "company", "hr", "org"]);
+  const currentStaffMemberId = user?.staff_member_id;
+
+  const [activeTab, setActiveTab] = useState<"records" | "cycles">("records");
 
   // Appraisal Records State
   const [records, setRecords] = useState<AppraisalRecord[]>([]);
@@ -153,7 +169,7 @@ export default function Appraisals() {
   const [recordsPage, setRecordsPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [recordsTotalRows, setRecordsTotalRows] = useState(0);
-  const [recordsSearch, setRecordsSearch] = useState('');
+  const [recordsSearch, setRecordsSearch] = useState("");
 
   // Appraisal Cycles State
   const [cycles, setCycles] = useState<AppraisalCycle[]>([]);
@@ -161,7 +177,7 @@ export default function Appraisals() {
   const [cyclesPage, setCyclesPage] = useState(1);
   const [cyclesPerPage, setCyclesPerPage] = useState(10);
   const [cyclesTotalRows, setCyclesTotalRows] = useState(0);
-  const [cyclesSearch, setCyclesSearch] = useState('');
+  const [cyclesSearch, setCyclesSearch] = useState("");
 
   // General State
   const [isLoading, setIsLoading] = useState(true);
@@ -171,44 +187,66 @@ export default function Appraisals() {
   const [isCycleDialogOpen, setIsCycleDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isSelfReviewDialogOpen, setIsSelfReviewDialogOpen] = useState(false);
-  const [isManagerReviewDialogOpen, setIsManagerReviewDialogOpen] = useState(false);
+  const [isManagerReviewDialogOpen, setIsManagerReviewDialogOpen] =
+    useState(false);
 
   // Selected Items
-  const [selectedCycle, setSelectedCycle] = useState<AppraisalCycle | null>(null);
-  const [selectedRecord, setSelectedRecord] = useState<AppraisalRecord | null>(null);
+  const [selectedCycle, setSelectedCycle] = useState<AppraisalCycle | null>(
+    null,
+  );
+  const [selectedRecord, setSelectedRecord] = useState<AppraisalRecord | null>(
+    null,
+  );
   const [editingCycle, setEditingCycle] = useState<AppraisalCycle | null>(null);
 
   // Form Data
   const [cycleForm, setCycleForm] = useState({
-    title: '',
-    cycle_start: '',
-    cycle_end: '',
-    review_deadline: '',
-    notes: '',
+    title: "",
+    cycle_start: "",
+    cycle_end: "",
+    review_deadline: "",
+    notes: "",
   });
 
   const [selfReviewForm, setSelfReviewForm] = useState({
-    self_assessment: '',
-    career_goals: '',
+    self_assessment: "",
+    career_goals: "",
   });
 
   const [managerReviewForm, setManagerReviewForm] = useState({
-    manager_feedback: '',
+    manager_feedback: "",
     overall_rating: 3,
-    strengths: '',
-    improvements: '',
+    strengths: "",
+    improvements: "",
   });
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  // Force staff users onto the Records tab — they don't have access to Cycles.
+  useEffect(() => {
+    if (!canManage && activeTab !== "records") {
+      setActiveTab("records");
+    }
+  }, [canManage, activeTab]);
+
   // ============ EFFECTS ============
   useEffect(() => {
-    if (activeTab === 'records') {
+    if (activeTab === "records") {
       fetchAppraisalRecords();
     } else {
       fetchAppraisalCycles();
     }
-  }, [activeTab, recordsPage, recordsPerPage, recordsSearch, cyclesPage, cyclesPerPage, cyclesSearch]);
+  }, [
+    activeTab,
+    recordsPage,
+    recordsPerPage,
+    recordsSearch,
+    cyclesPage,
+    cyclesPerPage,
+    cyclesSearch,
+    canManage,
+    currentStaffMemberId,
+  ]);
 
   // ============ API FUNCTIONS ============
   const fetchAppraisalRecords = async () => {
@@ -219,12 +257,17 @@ export default function Appraisals() {
         per_page: recordsPerPage,
       };
 
+      // Staff users see only their own appraisal records.
+      if (!canManage && currentStaffMemberId) {
+        params.staff_member_id = currentStaffMemberId;
+      }
+
       if (recordsSearch) {
         params.search = recordsSearch;
       }
 
       const response = await performanceService.getAppraisals(params);
-      console.log('Records response:', response.data);
+      console.log("Records response:", response.data);
 
       if (response.data.success) {
         const data = response.data.data;
@@ -248,7 +291,7 @@ export default function Appraisals() {
         setRecordsTotalRows(0);
       }
     } catch (error) {
-      console.error('Failed to fetch appraisal records:', error);
+      console.error("Failed to fetch appraisal records:", error);
       setRecords([]);
       setRecordsMeta(null);
       setRecordsTotalRows(0);
@@ -270,7 +313,7 @@ export default function Appraisals() {
       }
 
       const response = await performanceService.getAppraisalCycles(params);
-      console.log('Cycles response:', response.data);
+      console.log("Cycles response:", response.data);
 
       if (response.data.success) {
         const data = response.data.data;
@@ -294,7 +337,7 @@ export default function Appraisals() {
         setCyclesTotalRows(0);
       }
     } catch (error) {
-      console.error('Failed to fetch appraisal cycles:', error);
+      console.error("Failed to fetch appraisal cycles:", error);
       setCycles([]);
       setCyclesMeta(null);
       setCyclesTotalRows(0);
@@ -309,18 +352,21 @@ export default function Appraisals() {
     let isValid = true;
 
     if (!cycleForm.title.trim()) {
-      errors.title = 'Title is required';
+      errors.title = "Title is required";
       isValid = false;
     }
     if (!cycleForm.cycle_start) {
-      errors.cycle_start = 'Start date is required';
+      errors.cycle_start = "Start date is required";
       isValid = false;
     }
     if (!cycleForm.cycle_end) {
-      errors.cycle_end = 'End date is required';
+      errors.cycle_end = "End date is required";
       isValid = false;
-    } else if (cycleForm.cycle_start && new Date(cycleForm.cycle_end) < new Date(cycleForm.cycle_start)) {
-      errors.cycle_end = 'End date cannot be before start date';
+    } else if (
+      cycleForm.cycle_start &&
+      new Date(cycleForm.cycle_end) < new Date(cycleForm.cycle_start)
+    ) {
+      errors.cycle_end = "End date cannot be before start date";
       isValid = false;
     }
 
@@ -339,19 +385,32 @@ export default function Appraisals() {
     try {
       if (editingCycle) {
         // Update existing cycle
-        await performanceService.updateAppraisalCycle(editingCycle.id, cycleForm);
-        showAlert('success', 'Success!', 'Appraisal cycle updated successfully', 2000);
+        await performanceService.updateAppraisalCycle(
+          editingCycle.id,
+          cycleForm,
+        );
+        showAlert(
+          "success",
+          "Success!",
+          "Appraisal cycle updated successfully",
+          2000,
+        );
       } else {
         // Create new cycle
         await performanceService.createAppraisalCycle(cycleForm);
-        showAlert('success', 'Success!', 'Appraisal cycle created successfully', 2000);
+        showAlert(
+          "success",
+          "Success!",
+          "Appraisal cycle created successfully",
+          2000,
+        );
       }
       setIsCycleDialogOpen(false);
       resetCycleForm();
       fetchAppraisalCycles();
     } catch (err: any) {
-      console.error('Failed to save appraisal cycle:', err);
-      const message = getErrorMessage(err, 'Failed to save appraisal cycle.');
+      console.error("Failed to save appraisal cycle:", err);
+      const message = getErrorMessage(err, "Failed to save appraisal cycle.");
 
       if (err.response?.data?.errors) {
         const apiErrors: Record<string, string> = {};
@@ -360,62 +419,74 @@ export default function Appraisals() {
         });
         setFieldErrors(apiErrors);
       } else {
-        showAlert('error', 'Error', message);
+        showAlert("error", "Error", message);
       }
     }
   };
 
   const handleActivateCycle = async (cycleId: number) => {
     const result = await showConfirmDialog(
-      'Activate Cycle?',
-      'Activating this cycle will create appraisal records for all active staff members. Continue?',
-      'Yes, Activate'
+      "Activate Cycle?",
+      "Activating this cycle will create appraisal records for all active staff members. Continue?",
+      "Yes, Activate",
     );
     if (!result.isConfirmed) return;
 
     try {
       await performanceService.activateCycle(cycleId);
-      showAlert('success', 'Success!', 'Cycle activated successfully', 2000);
+      showAlert("success", "Success!", "Cycle activated successfully", 2000);
       fetchAppraisalCycles();
     } catch (error) {
-      console.error('Failed to activate cycle:', error);
-      showAlert('error', 'Error', getErrorMessage(error, 'Failed to activate cycle.'));
+      console.error("Failed to activate cycle:", error);
+      showAlert(
+        "error",
+        "Error",
+        getErrorMessage(error, "Failed to activate cycle."),
+      );
     }
   };
 
   const handleCloseCycle = async (cycleId: number) => {
     const result = await showConfirmDialog(
-      'Close Cycle?',
-      'Are you sure you want to close this cycle?',
-      'Yes, Close'
+      "Close Cycle?",
+      "Are you sure you want to close this cycle?",
+      "Yes, Close",
     );
     if (!result.isConfirmed) return;
 
     try {
       await performanceService.closeCycle(cycleId);
-      showAlert('success', 'Success!', 'Cycle closed successfully', 2000);
+      showAlert("success", "Success!", "Cycle closed successfully", 2000);
       fetchAppraisalCycles();
     } catch (error) {
-      console.error('Failed to close cycle:', error);
-      showAlert('error', 'Error', getErrorMessage(error, 'Failed to close cycle.'));
+      console.error("Failed to close cycle:", error);
+      showAlert(
+        "error",
+        "Error",
+        getErrorMessage(error, "Failed to close cycle."),
+      );
     }
   };
 
   const handleDeleteCycle = async (cycleId: number) => {
     const result = await showConfirmDialog(
-      'Delete Cycle?',
-      'Are you sure you want to delete this cycle?',
-      'Yes, Delete'
+      "Delete Cycle?",
+      "Are you sure you want to delete this cycle?",
+      "Yes, Delete",
     );
     if (!result.isConfirmed) return;
 
     try {
       await performanceService.deleteCycle(cycleId);
-      showAlert('success', 'Success!', 'Cycle deleted successfully', 2000);
+      showAlert("success", "Success!", "Cycle deleted successfully", 2000);
       fetchAppraisalCycles();
     } catch (error) {
-      console.error('Failed to delete cycle:', error);
-      showAlert('error', 'Error', getErrorMessage(error, 'Failed to delete cycle.'));
+      console.error("Failed to delete cycle:", error);
+      showAlert(
+        "error",
+        "Error",
+        getErrorMessage(error, "Failed to delete cycle."),
+      );
     }
   };
 
@@ -425,14 +496,26 @@ export default function Appraisals() {
     if (!selectedRecord) return;
 
     try {
-      await performanceService.submitSelfReview(selectedRecord.id, selfReviewForm);
-      showAlert('success', 'Success!', 'Self review submitted successfully', 2000);
+      await performanceService.submitSelfReview(
+        selectedRecord.id,
+        selfReviewForm,
+      );
+      showAlert(
+        "success",
+        "Success!",
+        "Self review submitted successfully",
+        2000,
+      );
       setIsSelfReviewDialogOpen(false);
-      setSelfReviewForm({ self_assessment: '', career_goals: '' });
+      setSelfReviewForm({ self_assessment: "", career_goals: "" });
       fetchAppraisalRecords();
     } catch (error) {
-      console.error('Failed to submit self review:', error);
-      showAlert('error', 'Error', getErrorMessage(error, 'Failed to submit self review.'));
+      console.error("Failed to submit self review:", error);
+      showAlert(
+        "error",
+        "Error",
+        getErrorMessage(error, "Failed to submit self review."),
+      );
     }
   };
 
@@ -441,11 +524,11 @@ export default function Appraisals() {
     let isValid = true;
 
     if (!managerReviewForm.manager_feedback.trim()) {
-      errors.manager_feedback = 'Manager feedback is required';
+      errors.manager_feedback = "Manager feedback is required";
       isValid = false;
     }
     if (!managerReviewForm.overall_rating) {
-      errors.overall_rating = 'Overall rating is required';
+      errors.overall_rating = "Overall rating is required";
       isValid = false;
     }
 
@@ -466,22 +549,27 @@ export default function Appraisals() {
       // Ensure overall_rating is a number
       const data = {
         ...managerReviewForm,
-        overall_rating: Number(managerReviewForm.overall_rating)
+        overall_rating: Number(managerReviewForm.overall_rating),
       };
 
       await performanceService.submitManagerReview(selectedRecord.id, data);
-      showAlert('success', 'Success!', 'Manager review submitted successfully', 2000);
+      showAlert(
+        "success",
+        "Success!",
+        "Manager review submitted successfully",
+        2000,
+      );
       setIsManagerReviewDialogOpen(false);
       setManagerReviewForm({
-        manager_feedback: '',
+        manager_feedback: "",
         overall_rating: 3,
-        strengths: '',
-        improvements: '',
+        strengths: "",
+        improvements: "",
       });
       fetchAppraisalRecords();
     } catch (err: any) {
-      console.error('Failed to submit manager review:', err);
-      const message = getErrorMessage(err, 'Failed to submit manager review.');
+      console.error("Failed to submit manager review:", err);
+      const message = getErrorMessage(err, "Failed to submit manager review.");
 
       if (err.response?.data?.errors) {
         const apiErrors: Record<string, string> = {};
@@ -490,7 +578,7 @@ export default function Appraisals() {
         });
         setFieldErrors(apiErrors);
       } else {
-        showAlert('error', 'Error', message);
+        showAlert("error", "Error", message);
       }
     }
   };
@@ -521,16 +609,22 @@ export default function Appraisals() {
     return (
       <StatusBadge status={status} className="flex items-center gap-1">
         {variant.icon}
-        {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
+        {status.replace("_", " ").charAt(0).toUpperCase() +
+          status.replace("_", " ").slice(1)}
       </StatusBadge>
     );
   };
 
   const renderRating = (rating?: number | string) => {
     // Convert to number if it's a string
-    const numericRating = typeof rating === 'string' ? parseFloat(rating) : rating;
+    const numericRating =
+      typeof rating === "string" ? parseFloat(rating) : rating;
 
-    if (numericRating === undefined || numericRating === null || isNaN(numericRating)) {
+    if (
+      numericRating === undefined ||
+      numericRating === null ||
+      isNaN(numericRating)
+    ) {
       return <span className="text-gray-500 text-sm">Not rated</span>;
     }
 
@@ -539,24 +633,27 @@ export default function Appraisals() {
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`h-4 w-4 ${star <= Math.round(numericRating)
-              ? 'fill-yellow-400 text-yellow-400'
-              : 'text-gray-300'
-              }`}
+            className={`h-4 w-4 ${
+              star <= Math.round(numericRating)
+                ? "fill-yellow-400 text-yellow-400"
+                : "text-gray-300"
+            }`}
           />
         ))}
-        <span className="ml-1 text-sm font-medium">{numericRating.toFixed(1)}</span>
+        <span className="ml-1 text-sm font-medium">
+          {numericRating.toFixed(1)}
+        </span>
       </div>
     );
   };
 
   const resetCycleForm = () => {
     setCycleForm({
-      title: '',
-      cycle_start: '',
-      cycle_end: '',
-      review_deadline: '',
-      notes: '',
+      title: "",
+      cycle_start: "",
+      cycle_end: "",
+      review_deadline: "",
+      notes: "",
     });
     setEditingCycle(null);
     setFieldErrors({});
@@ -571,8 +668,8 @@ export default function Appraisals() {
   // ============ TABLE COLUMNS ============
   const recordsColumns: TableColumn<AppraisalRecord>[] = [
     {
-      name: 'Employee',
-      selector: (row) => row.staff_member?.full_name || 'Unknown',
+      name: "Employee",
+      selector: (row) => row.staff_member?.full_name || "Unknown",
       cell: (row) => (
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
@@ -582,52 +679,53 @@ export default function Appraisals() {
           </Avatar>
           <div>
             <p className="font-medium text-gray-900 dark:text-gray-100">
-              {row.staff_member?.full_name || 'Unknown'}
+              {row.staff_member?.full_name || "Unknown"}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {row.staff_member?.position || '-'}
+              {row.staff_member?.position || "-"}
             </p>
           </div>
         </div>
       ),
       sortable: true,
-      minWidth: '200px',
+      minWidth: "200px",
     },
     {
-      name: 'Appraisal Period',
-      selector: (row) => row.cycle?.title || '-',
+      name: "Appraisal Period",
+      selector: (row) => row.cycle?.title || "-",
       cell: (row) => (
         <div>
-          <p className="font-medium">{row.cycle?.title || '-'}</p>
+          <p className="font-medium">{row.cycle?.title || "-"}</p>
           {row.cycle && (
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {formatDate(row.cycle.cycle_start)} - {formatDate(row.cycle.cycle_end)}
+              {formatDate(row.cycle.cycle_start)} -{" "}
+              {formatDate(row.cycle.cycle_end)}
             </p>
           )}
         </div>
       ),
     },
+    // {
+    //   name: 'Reviewer',
+    //   selector: (row) => row.reviewer?.name || 'Not assigned',
+    //   sortable: true,
+    // },
     {
-      name: 'Reviewer',
-      selector: (row) => row.reviewer?.name || 'Not assigned',
-      sortable: true,
-    },
-    {
-      name: 'Rating',
+      name: "Rating",
       cell: (row) => renderRating(row.overall_rating),
     },
     {
-      name: 'Status',
+      name: "Status",
       cell: (row) => getRecordStatusBadge(row.status),
       sortable: true,
     },
     {
-      name: 'Last Updated',
+      name: "Last Updated",
       cell: (row) => formatDate(row.updated_at),
       sortable: true,
     },
     {
-      name: 'Actions',
+      name: "Actions",
       cell: (row) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -636,71 +734,80 @@ export default function Appraisals() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => {
-              setSelectedRecord(row);
-              setIsViewDialogOpen(true);
-            }}>
+            <DropdownMenuItem
+              onClick={() => {
+                setSelectedRecord(row);
+                setIsViewDialogOpen(true);
+              }}
+            >
               <Eye className="mr-2 h-4 w-4" />
               View
             </DropdownMenuItem>
 
-            {row.status === 'pending' && (
-              <DropdownMenuItem onClick={() => {
-                setSelectedRecord(row);
-                setIsSelfReviewDialogOpen(true);
-                setFieldErrors({});
-              }}>
+            {row.status === "pending" && (
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedRecord(row);
+                  setIsSelfReviewDialogOpen(true);
+                  setFieldErrors({});
+                }}
+              >
                 <FileText className="mr-2 h-4 w-4" />
                 Submit Self Review
               </DropdownMenuItem>
             )}
 
-            {(row.status === 'pending' || row.status === 'self_review') && (
-              <DropdownMenuItem onClick={() => {
-                setSelectedRecord(row);
-                setIsManagerReviewDialogOpen(true);
-                setFieldErrors({});
-              }}>
-                <Star className="mr-2 h-4 w-4" />
-                Submit Manager Review
-              </DropdownMenuItem>
-            )}
+            {canManage &&
+              (row.status === "pending" || row.status === "self_review") && (
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSelectedRecord(row);
+                    setIsManagerReviewDialogOpen(true);
+                    setFieldErrors({});
+                  }}
+                >
+                  <Star className="mr-2 h-4 w-4" />
+                  Submit Manager Review
+                </DropdownMenuItem>
+              )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
       ignoreRowClick: true,
-      width: '80px',
+      width: "80px",
     },
   ];
 
   const cyclesColumns: TableColumn<AppraisalCycle>[] = [
     {
-      name: 'Title',
+      name: "Title",
       selector: (row) => row.title,
       cell: (row) => (
         <div>
-          <p className="font-medium text-gray-900 dark:text-gray-100">{row.title}</p>
+          <p className="font-medium text-gray-900 dark:text-gray-100">
+            {row.title}
+          </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {formatDate(row.cycle_start)} - {formatDate(row.cycle_end)}
           </p>
         </div>
       ),
       sortable: true,
-      minWidth: '250px',
+      minWidth: "250px",
     },
     {
-      name: 'Review Deadline',
-      selector: (row) => row.review_deadline || 'Not set',
-      cell: (row) => formatDate(row.review_deadline) || 'Not set',
+      name: "Review Deadline",
+      selector: (row) => row.review_deadline || "Not set",
+      cell: (row) => formatDate(row.review_deadline) || "Not set",
       sortable: true,
     },
     {
-      name: 'Status',
+      name: "Status",
       cell: (row) => getCycleStatusBadge(row.status),
       sortable: true,
     },
     {
-      name: 'Records',
+      name: "Records",
       cell: (row) => (
         <StatusBadge status="default" className="text-sm">
           {row.records_count || 0} records
@@ -708,11 +815,11 @@ export default function Appraisals() {
       ),
     },
     {
-      name: 'Created By',
-      selector: (row) => row.author?.name || 'System',
+      name: "Created By",
+      selector: (row) => row.author?.name || "System",
     },
     {
-      name: 'Actions',
+      name: "Actions",
       cell: (row) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -721,27 +828,33 @@ export default function Appraisals() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => {
-              setSelectedCycle(row);
-              setIsViewDialogOpen(true);
-            }}>
+            <DropdownMenuItem
+              onClick={() => {
+                setSelectedCycle(row);
+                setIsViewDialogOpen(true);
+              }}
+            >
               <Eye className="mr-2 h-4 w-4" />
               View
             </DropdownMenuItem>
 
-            {row.status === 'draft' && (
+            {row.status === "draft" && (
               <>
-                <DropdownMenuItem onClick={() => {
-                  setEditingCycle(row);
-                  setCycleForm({
-                    title: row.title,
-                    cycle_start: formatDateForInput(row.cycle_start),
-                    cycle_end: formatDateForInput(row.cycle_end),
-                    review_deadline: row.review_deadline ? formatDateForInput(row.review_deadline) : '',
-                    notes: row.notes || '',
-                  });
-                  setIsCycleDialogOpen(true);
-                }}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setEditingCycle(row);
+                    setCycleForm({
+                      title: row.title,
+                      cycle_start: formatDateForInput(row.cycle_start),
+                      cycle_end: formatDateForInput(row.cycle_end),
+                      review_deadline: row.review_deadline
+                        ? formatDateForInput(row.review_deadline)
+                        : "",
+                      notes: row.notes || "",
+                    });
+                    setIsCycleDialogOpen(true);
+                  }}
+                >
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
@@ -753,7 +866,7 @@ export default function Appraisals() {
               </>
             )}
 
-            {row.status === 'active' && (
+            {row.status === "active" && (
               <DropdownMenuItem onClick={() => handleCloseCycle(row.id)}>
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Close Cycle
@@ -762,7 +875,7 @@ export default function Appraisals() {
 
             <DropdownMenuSeparator />
 
-            {row.status === 'draft' && (
+            {row.status === "draft" && (
               <DropdownMenuItem
                 onClick={() => handleDeleteCycle(row.id)}
                 className="text-red-600 dark:text-red-400"
@@ -775,7 +888,7 @@ export default function Appraisals() {
         </DropdownMenu>
       ),
       ignoreRowClick: true,
-      width: '80px',
+      width: "80px",
     },
   ];
 
@@ -783,25 +896,25 @@ export default function Appraisals() {
   const customStyles = {
     headRow: {
       style: {
-        backgroundColor: '#f9fafb',
-        borderBottomWidth: '1px',
-        borderBottomColor: '#e5e7eb',
-        borderBottomStyle: 'solid' as const,
-        minHeight: '56px',
+        backgroundColor: "#f9fafb",
+        borderBottomWidth: "1px",
+        borderBottomColor: "#e5e7eb",
+        borderBottomStyle: "solid" as const,
+        minHeight: "56px",
       },
     },
     headCells: {
       style: {
-        fontSize: '14px',
-        fontWeight: '600',
-        color: '#374151',
-        paddingLeft: '16px',
-        paddingRight: '16px',
+        fontSize: "14px",
+        fontWeight: "600",
+        color: "#374151",
+        paddingLeft: "16px",
+        paddingRight: "16px",
       },
     },
     cells: {
       style: {
-        padding: '16px',
+        padding: "16px",
       },
     },
   };
@@ -809,24 +922,28 @@ export default function Appraisals() {
   // ============ STATS CALCULATION ============
   const recordsStats = {
     total: recordsMeta?.total || records.length,
-    pending: records.filter(r => r.status === 'pending').length,
-    selfReview: records.filter(r => r.status === 'self_review').length,
-    completed: records.filter(r => r.status === 'completed').length,
-    avgRating: records.length > 0
-      ? (records.reduce((sum, r) => {
-        const rating = typeof r.overall_rating === 'string'
-          ? parseFloat(r.overall_rating)
-          : r.overall_rating || 0;
-        return sum + rating;
-      }, 0) / records.length).toFixed(1)
-      : '0.0'
+    pending: records.filter((r) => r.status === "pending").length,
+    selfReview: records.filter((r) => r.status === "self_review").length,
+    completed: records.filter((r) => r.status === "completed").length,
+    avgRating:
+      records.length > 0
+        ? (
+            records.reduce((sum, r) => {
+              const rating =
+                typeof r.overall_rating === "string"
+                  ? parseFloat(r.overall_rating)
+                  : r.overall_rating || 0;
+              return sum + rating;
+            }, 0) / records.length
+          ).toFixed(1)
+        : "0.0",
   };
 
   const cyclesStats = {
     total: cyclesMeta?.total || cycles.length,
-    draft: cycles.filter(c => c.status === 'draft').length,
-    active: cycles.filter(c => c.status === 'active').length,
-    closed: cycles.filter(c => c.status === 'closed').length,
+    draft: cycles.filter((c) => c.status === "draft").length,
+    active: cycles.filter((c) => c.status === "active").length,
+    closed: cycles.filter((c) => c.status === "closed").length,
   };
 
   // ============ HANDLERS ============
@@ -836,7 +953,7 @@ export default function Appraisals() {
   };
 
   const handleClearRecordsSearch = () => {
-    setRecordsSearch('');
+    setRecordsSearch("");
     setRecordsPage(1);
   };
 
@@ -846,7 +963,7 @@ export default function Appraisals() {
   };
 
   const handleClearCyclesSearch = () => {
-    setCyclesSearch('');
+    setCyclesSearch("");
     setCyclesPage(1);
   };
 
@@ -874,14 +991,16 @@ export default function Appraisals() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Performance Appraisals
+            {canManage ? "Performance Appraisals" : "My Appraisals"}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Manage appraisal cycles and performance reviews
+            {canManage
+              ? "Manage appraisal cycles and performance reviews"
+              : "Review your appraisals and submit your self review"}
           </p>
         </div>
 
-        {activeTab === 'cycles' && (
+        {canManage && activeTab === "cycles" && (
           <Dialog open={isCycleDialogOpen} onOpenChange={setIsCycleDialogOpen}>
             <DialogTrigger asChild>
               <Button
@@ -898,56 +1017,96 @@ export default function Appraisals() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>{editingCycle ? 'Edit Cycle' : 'Create Appraisal Cycle'}</DialogTitle>
+                <DialogTitle>
+                  {editingCycle ? "Edit Cycle" : "Create Appraisal Cycle"}
+                </DialogTitle>
                 <DialogDescription>
-                  {editingCycle ? 'Update the appraisal cycle details.' : 'Create a new appraisal cycle.'}
+                  {editingCycle
+                    ? "Update the appraisal cycle details."
+                    : "Create a new appraisal cycle."}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateCycle}>
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="title" className={fieldErrors.title ? 'text-red-500' : ''}>Cycle Title *</Label>
+                    <Label
+                      htmlFor="title"
+                      className={fieldErrors.title ? "text-red-500" : ""}
+                    >
+                      Cycle Title *
+                    </Label>
                     <Input
                       id="title"
                       value={cycleForm.title}
                       onChange={(e) => {
                         setCycleForm({ ...cycleForm, title: e.target.value });
-                        if (fieldErrors.title) setFieldErrors(prev => ({ ...prev, title: '' }));
+                        if (fieldErrors.title)
+                          setFieldErrors((prev) => ({ ...prev, title: "" }));
                       }}
                       placeholder="e.g., Q1 2024 Performance Review"
-                      className={fieldErrors.title ? 'border-red-500' : ''}
+                      className={fieldErrors.title ? "border-red-500" : ""}
                     />
-                    {renderError('title')}
+                    {renderError("title")}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="cycle_start" className={fieldErrors.cycle_start ? 'text-red-500' : ''}>Start Date *</Label>
+                      <Label
+                        htmlFor="cycle_start"
+                        className={
+                          fieldErrors.cycle_start ? "text-red-500" : ""
+                        }
+                      >
+                        Start Date *
+                      </Label>
                       <Input
                         id="cycle_start"
                         type="date"
                         value={cycleForm.cycle_start}
                         onChange={(e) => {
-                          setCycleForm({ ...cycleForm, cycle_start: e.target.value });
-                          if (fieldErrors.cycle_start) setFieldErrors(prev => ({ ...prev, cycle_start: '' }));
+                          setCycleForm({
+                            ...cycleForm,
+                            cycle_start: e.target.value,
+                          });
+                          if (fieldErrors.cycle_start)
+                            setFieldErrors((prev) => ({
+                              ...prev,
+                              cycle_start: "",
+                            }));
                         }}
-                        className={fieldErrors.cycle_start ? 'border-red-500' : ''}
+                        className={
+                          fieldErrors.cycle_start ? "border-red-500" : ""
+                        }
                       />
-                      {renderError('cycle_start')}
+                      {renderError("cycle_start")}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="cycle_end" className={fieldErrors.cycle_end ? 'text-red-500' : ''}>End Date *</Label>
+                      <Label
+                        htmlFor="cycle_end"
+                        className={fieldErrors.cycle_end ? "text-red-500" : ""}
+                      >
+                        End Date *
+                      </Label>
                       <Input
                         id="cycle_end"
                         type="date"
                         value={cycleForm.cycle_end}
                         onChange={(e) => {
-                          setCycleForm({ ...cycleForm, cycle_end: e.target.value });
-                          if (fieldErrors.cycle_end) setFieldErrors(prev => ({ ...prev, cycle_end: '' }));
+                          setCycleForm({
+                            ...cycleForm,
+                            cycle_end: e.target.value,
+                          });
+                          if (fieldErrors.cycle_end)
+                            setFieldErrors((prev) => ({
+                              ...prev,
+                              cycle_end: "",
+                            }));
                         }}
-                        className={fieldErrors.cycle_end ? 'border-red-500' : ''}
+                        className={
+                          fieldErrors.cycle_end ? "border-red-500" : ""
+                        }
                       />
-                      {renderError('cycle_end')}
+                      {renderError("cycle_end")}
                     </div>
                   </div>
 
@@ -957,7 +1116,12 @@ export default function Appraisals() {
                       id="review_deadline"
                       type="date"
                       value={cycleForm.review_deadline}
-                      onChange={(e) => setCycleForm({ ...cycleForm, review_deadline: e.target.value })}
+                      onChange={(e) =>
+                        setCycleForm({
+                          ...cycleForm,
+                          review_deadline: e.target.value,
+                        })
+                      }
                     />
                   </div>
 
@@ -966,18 +1130,27 @@ export default function Appraisals() {
                     <Textarea
                       id="notes"
                       value={cycleForm.notes}
-                      onChange={(e) => setCycleForm({ ...cycleForm, notes: e.target.value })}
+                      onChange={(e) =>
+                        setCycleForm({ ...cycleForm, notes: e.target.value })
+                      }
                       placeholder="Additional notes or instructions..."
                       rows={3}
                     />
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsCycleDialogOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsCycleDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-solarized-blue hover:bg-solarized-blue/90 text-white">
-                    {editingCycle ? 'Update' : 'Create'}
+                  <Button
+                    type="submit"
+                    className="bg-solarized-blue hover:bg-solarized-blue/90 text-white"
+                  >
+                    {editingCycle ? "Update" : "Create"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -986,17 +1159,25 @@ export default function Appraisals() {
         )}
       </div>
 
-      {/* TABS */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+      {/* TABS — staff only see Records; cycles are admin-only */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as any)}
+        className="space-y-6"
+      >
+        <TabsList
+          className={`grid w-full max-w-md ${canManage ? "grid-cols-2" : "grid-cols-1"}`}
+        >
           <TabsTrigger value="records" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Appraisal Records
+            {canManage ? "Appraisal Records" : "My Appraisals"}
           </TabsTrigger>
-          <TabsTrigger value="cycles" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Appraisal Cycles
-          </TabsTrigger>
+          {canManage && (
+            <TabsTrigger value="cycles" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Appraisal Cycles
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* ============ RECORDS TAB ============ */}
@@ -1010,8 +1191,12 @@ export default function Appraisals() {
                     <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Appraisals</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{recordsStats.total}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Total Appraisals
+                    </p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                      {recordsStats.total}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -1024,8 +1209,12 @@ export default function Appraisals() {
                     <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Pending</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{recordsStats.pending}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Pending
+                    </p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                      {recordsStats.pending}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -1038,8 +1227,12 @@ export default function Appraisals() {
                     <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Completed</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{recordsStats.completed}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Completed
+                    </p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                      {recordsStats.completed}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -1052,8 +1245,12 @@ export default function Appraisals() {
                     <Star className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Avg Rating</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{recordsStats.avgRating}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Avg Rating
+                    </p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                      {recordsStats.avgRating}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -1099,11 +1296,13 @@ export default function Appraisals() {
               ) : records.length === 0 ? (
                 <div className="text-center py-12">
                   <Users className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No appraisal records found</h3>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    No appraisal records found
+                  </h3>
                   <p className="text-gray-600 dark:text-gray-400 mt-1">
                     {recordsSearch
-                      ? 'No records match your search. Try a different search term.'
-                      : 'Create an appraisal cycle and activate it to generate records.'}
+                      ? "No records match your search. Try a different search term."
+                      : "Create an appraisal cycle and activate it to generate records."}
                   </p>
                 </div>
               ) : (
@@ -1138,8 +1337,12 @@ export default function Appraisals() {
                     <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Cycles</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{cyclesStats.total}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Total Cycles
+                    </p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                      {cyclesStats.total}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -1152,8 +1355,12 @@ export default function Appraisals() {
                     <FileText className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Draft</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{cyclesStats.draft}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Draft
+                    </p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                      {cyclesStats.draft}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -1166,8 +1373,12 @@ export default function Appraisals() {
                     <PlayCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Active</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{cyclesStats.active}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Active
+                    </p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                      {cyclesStats.active}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -1180,8 +1391,12 @@ export default function Appraisals() {
                     <CheckCircle className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Closed</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{cyclesStats.closed}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Closed
+                    </p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                      {cyclesStats.closed}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -1227,11 +1442,13 @@ export default function Appraisals() {
               ) : cycles.length === 0 ? (
                 <div className="text-center py-12">
                   <Calendar className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No appraisal cycles found</h3>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    No appraisal cycles found
+                  </h3>
                   <p className="text-gray-600 dark:text-gray-400 mt-1">
                     {cyclesSearch
-                      ? 'No cycles match your search. Try a different search term.'
-                      : 'Create an appraisal cycle to start the performance review process.'}
+                      ? "No cycles match your search. Try a different search term."
+                      : "Create an appraisal cycle to start the performance review process."}
                   </p>
                   <Button
                     className="mt-4 bg-solarized-blue hover:bg-solarized-blue/90 text-white"
@@ -1270,7 +1487,9 @@ export default function Appraisals() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {selectedRecord ? 'Appraisal Record Details' : 'Appraisal Cycle Details'}
+              {selectedRecord
+                ? "Appraisal Record Details"
+                : "Appraisal Cycle Details"}
             </DialogTitle>
           </DialogHeader>
 
@@ -1278,13 +1497,17 @@ export default function Appraisals() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Employee</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Employee
+                  </Label>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
                     {selectedRecord.staff_member?.full_name}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Appraisal Cycle</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Appraisal Cycle
+                  </Label>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
                     {selectedRecord.cycle?.title}
                   </p>
@@ -1293,13 +1516,17 @@ export default function Appraisals() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Status</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Status
+                  </Label>
                   <div className="mt-1">
                     {getRecordStatusBadge(selectedRecord.status)}
                   </div>
                 </div>
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Overall Rating</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Overall Rating
+                  </Label>
                   <div className="mt-1">
                     {renderRating(selectedRecord.overall_rating)}
                   </div>
@@ -1308,7 +1535,9 @@ export default function Appraisals() {
 
               {selectedRecord.self_assessment && (
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Self Assessment</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Self Assessment
+                  </Label>
                   <p className="font-medium text-gray-900 dark:text-gray-100 mt-1 whitespace-pre-wrap">
                     {selectedRecord.self_assessment}
                   </p>
@@ -1317,7 +1546,9 @@ export default function Appraisals() {
 
               {selectedRecord.career_goals && (
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Career Goals</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Career Goals
+                  </Label>
                   <p className="font-medium text-gray-900 dark:text-gray-100 mt-1 whitespace-pre-wrap">
                     {selectedRecord.career_goals}
                   </p>
@@ -1326,7 +1557,9 @@ export default function Appraisals() {
 
               {selectedRecord.manager_feedback && (
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Manager Feedback</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Manager Feedback
+                  </Label>
                   <p className="font-medium text-gray-900 dark:text-gray-100 mt-1 whitespace-pre-wrap">
                     {selectedRecord.manager_feedback}
                   </p>
@@ -1335,15 +1568,23 @@ export default function Appraisals() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Self Submitted</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Self Submitted
+                  </Label>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
-                    {selectedRecord.self_submitted_at ? formatDate(selectedRecord.self_submitted_at) : 'Not submitted'}
+                    {selectedRecord.self_submitted_at
+                      ? formatDate(selectedRecord.self_submitted_at)
+                      : "Not submitted"}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Manager Submitted</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Manager Submitted
+                  </Label>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
-                    {selectedRecord.manager_submitted_at ? formatDate(selectedRecord.manager_submitted_at) : 'Not submitted'}
+                    {selectedRecord.manager_submitted_at
+                      ? formatDate(selectedRecord.manager_submitted_at)
+                      : "Not submitted"}
                   </p>
                 </div>
               </div>
@@ -1354,11 +1595,17 @@ export default function Appraisals() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Title</Label>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{selectedCycle.title}</p>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Title
+                  </Label>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                    {selectedCycle.title}
+                  </p>
                 </div>
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Status</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Status
+                  </Label>
                   <div className="mt-1">
                     {getCycleStatusBadge(selectedCycle.status)}
                   </div>
@@ -1367,43 +1614,57 @@ export default function Appraisals() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Start Date</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Start Date
+                  </Label>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
                     {formatDate(selectedCycle.cycle_start)}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">End Date</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    End Date
+                  </Label>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
                     {formatDate(selectedCycle.cycle_end)}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Review Deadline</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Review Deadline
+                  </Label>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
-                    {selectedCycle.review_deadline ? formatDate(selectedCycle.review_deadline) : 'Not set'}
+                    {selectedCycle.review_deadline
+                      ? formatDate(selectedCycle.review_deadline)
+                      : "Not set"}
                   </p>
                 </div>
               </div>
 
               <div>
-                <Label className="text-gray-600 dark:text-gray-400">Notes</Label>
+                <Label className="text-gray-600 dark:text-gray-400">
+                  Notes
+                </Label>
                 <p className="font-medium text-gray-900 dark:text-gray-100 mt-1 whitespace-pre-wrap">
-                  {selectedCycle.notes || 'No notes'}
+                  {selectedCycle.notes || "No notes"}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Appraisal Records</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Appraisal Records
+                  </Label>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
                     {selectedCycle.records_count || 0} records
                   </p>
                 </div>
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">Created by</Label>
+                  <Label className="text-gray-600 dark:text-gray-400">
+                    Created by
+                  </Label>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
-                    {selectedCycle.author?.name || 'System'}
+                    {selectedCycle.author?.name || "System"}
                   </p>
                 </div>
               </div>
@@ -1411,7 +1672,10 @@ export default function Appraisals() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsViewDialogOpen(false)}
+            >
               Close
             </Button>
           </DialogFooter>
@@ -1419,7 +1683,10 @@ export default function Appraisals() {
       </Dialog>
 
       {/* Self Review Dialog */}
-      <Dialog open={isSelfReviewDialogOpen} onOpenChange={setIsSelfReviewDialogOpen}>
+      <Dialog
+        open={isSelfReviewDialogOpen}
+        onOpenChange={setIsSelfReviewDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Submit Self Review</DialogTitle>
@@ -1434,7 +1701,12 @@ export default function Appraisals() {
                 <Textarea
                   id="self_assessment"
                   value={selfReviewForm.self_assessment}
-                  onChange={(e) => setSelfReviewForm({ ...selfReviewForm, self_assessment: e.target.value })}
+                  onChange={(e) =>
+                    setSelfReviewForm({
+                      ...selfReviewForm,
+                      self_assessment: e.target.value,
+                    })
+                  }
                   placeholder="Describe your achievements, challenges, and learnings..."
                   rows={4}
                   required
@@ -1446,17 +1718,29 @@ export default function Appraisals() {
                 <Textarea
                   id="career_goals"
                   value={selfReviewForm.career_goals}
-                  onChange={(e) => setSelfReviewForm({ ...selfReviewForm, career_goals: e.target.value })}
+                  onChange={(e) =>
+                    setSelfReviewForm({
+                      ...selfReviewForm,
+                      career_goals: e.target.value,
+                    })
+                  }
                   placeholder="What are your career goals for the next period?"
                   rows={3}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsSelfReviewDialogOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsSelfReviewDialogOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-solarized-blue hover:bg-solarized-blue/90 text-white">
+              <Button
+                type="submit"
+                className="bg-solarized-blue hover:bg-solarized-blue/90 text-white"
+              >
                 Submit Self Review
               </Button>
             </DialogFooter>
@@ -1465,7 +1749,10 @@ export default function Appraisals() {
       </Dialog>
 
       {/* Manager Review Dialog */}
-      <Dialog open={isManagerReviewDialogOpen} onOpenChange={setIsManagerReviewDialogOpen}>
+      <Dialog
+        open={isManagerReviewDialogOpen}
+        onOpenChange={setIsManagerReviewDialogOpen}
+      >
         <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Submit Manager Review</DialogTitle>
@@ -1476,40 +1763,70 @@ export default function Appraisals() {
           <form onSubmit={handleSubmitManagerReview}>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="manager_feedback" className={fieldErrors.manager_feedback ? 'text-red-500' : ''}>Manager Feedback *</Label>
+                <Label
+                  htmlFor="manager_feedback"
+                  className={fieldErrors.manager_feedback ? "text-red-500" : ""}
+                >
+                  Manager Feedback *
+                </Label>
                 <Textarea
                   id="manager_feedback"
                   value={managerReviewForm.manager_feedback}
                   onChange={(e) => {
-                    setManagerReviewForm({ ...managerReviewForm, manager_feedback: e.target.value });
-                    if (fieldErrors.manager_feedback) setFieldErrors(prev => ({ ...prev, manager_feedback: '' }));
+                    setManagerReviewForm({
+                      ...managerReviewForm,
+                      manager_feedback: e.target.value,
+                    });
+                    if (fieldErrors.manager_feedback)
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        manager_feedback: "",
+                      }));
                   }}
                   placeholder="Provide constructive feedback..."
                   rows={4}
-                  className={fieldErrors.manager_feedback ? 'border-red-500' : ''}
+                  className={
+                    fieldErrors.manager_feedback ? "border-red-500" : ""
+                  }
                 />
-                {renderError('manager_feedback')}
+                {renderError("manager_feedback")}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="overall_rating" className={fieldErrors.overall_rating ? 'text-red-500' : ''}>Overall Rating *</Label>
+                <Label
+                  htmlFor="overall_rating"
+                  className={fieldErrors.overall_rating ? "text-red-500" : ""}
+                >
+                  Overall Rating *
+                </Label>
                 <div className="flex items-center gap-2">
                   {[1, 2, 3, 4, 5].map((rating) => (
                     <Button
                       key={rating}
                       type="button"
-                      variant={managerReviewForm.overall_rating === rating ? "default" : "outline"}
+                      variant={
+                        managerReviewForm.overall_rating === rating
+                          ? "default"
+                          : "outline"
+                      }
                       className="h-10 w-10 p-0"
-                      onClick={() => setManagerReviewForm({ ...managerReviewForm, overall_rating: rating })}
+                      onClick={() =>
+                        setManagerReviewForm({
+                          ...managerReviewForm,
+                          overall_rating: rating,
+                        })
+                      }
                     >
-                      <Star className={`h-5 w-5 ${managerReviewForm.overall_rating >= rating ? 'fill-current' : ''}`} />
+                      <Star
+                        className={`h-5 w-5 ${managerReviewForm.overall_rating >= rating ? "fill-current" : ""}`}
+                      />
                     </Button>
                   ))}
                   <span className="ml-2 text-sm font-medium">
                     {managerReviewForm.overall_rating}.0
                   </span>
                 </div>
-                {renderError('overall_rating')}
+                {renderError("overall_rating")}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1518,7 +1835,12 @@ export default function Appraisals() {
                   <Textarea
                     id="strengths"
                     value={managerReviewForm.strengths}
-                    onChange={(e) => setManagerReviewForm({ ...managerReviewForm, strengths: e.target.value })}
+                    onChange={(e) =>
+                      setManagerReviewForm({
+                        ...managerReviewForm,
+                        strengths: e.target.value,
+                      })
+                    }
                     placeholder="Key strengths..."
                     rows={3}
                   />
@@ -1528,7 +1850,12 @@ export default function Appraisals() {
                   <Textarea
                     id="improvements"
                     value={managerReviewForm.improvements}
-                    onChange={(e) => setManagerReviewForm({ ...managerReviewForm, improvements: e.target.value })}
+                    onChange={(e) =>
+                      setManagerReviewForm({
+                        ...managerReviewForm,
+                        improvements: e.target.value,
+                      })
+                    }
                     placeholder="Areas for improvement..."
                     rows={3}
                   />
@@ -1536,10 +1863,17 @@ export default function Appraisals() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsManagerReviewDialogOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsManagerReviewDialogOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">
+              <Button
+                type="submit"
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
                 Submit Manager Review
               </Button>
             </DialogFooter>

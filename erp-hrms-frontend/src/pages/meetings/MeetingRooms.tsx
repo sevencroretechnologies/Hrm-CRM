@@ -60,7 +60,8 @@ interface MeetingRoom {
 export default function MeetingRooms() {
     const [rooms, setRooms] = useState<MeetingRoom[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = useState('');         // what user types
+    const [appliedSearch, setAppliedSearch] = useState(''); // applied on Search click
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
@@ -91,7 +92,7 @@ export default function MeetingRooms() {
                 const params: Record<string, unknown> = {
                     page: currentPage,
                     per_page: perPage,
-                    search,
+                    search: appliedSearch,
                 };
 
                 const response = await meetingRoomService.getAll(params);
@@ -117,7 +118,7 @@ export default function MeetingRooms() {
                 setIsLoading(false);
             }
         },
-        [perPage, search]
+        [perPage, appliedSearch]
     );
 
     useEffect(() => {
@@ -199,6 +200,13 @@ export default function MeetingRooms() {
     // ================= SEARCH =================
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setAppliedSearch(search.trim());
+        setPage(1);
+    };
+
+    const handleClearSearch = () => {
+        setSearch('');
+        setAppliedSearch('');
         setPage(1);
     };
 
@@ -499,16 +507,30 @@ export default function MeetingRooms() {
 
             <Card>
                 <CardHeader>
-                    <form onSubmit={handleSearchSubmit} className="flex gap-4">
-                        <Input
-                            placeholder="Search meeting rooms..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                        <Button type="submit" variant="outline">
+                    <form onSubmit={handleSearchSubmit} className="flex gap-2">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search meeting rooms..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
+                        <Button type="submit" variant="outline" className="shrink-0">
                             <Search className="mr-2 h-4 w-4" /> Search
                         </Button>
+                        {appliedSearch && (
+                            <Button type="button" variant="ghost" onClick={handleClearSearch} className="shrink-0">
+                                ✕
+                            </Button>
+                        )}
                     </form>
+                    {appliedSearch && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                            Results for: <span className="font-medium text-foreground">"{appliedSearch}"</span>
+                        </p>
+                    )}
                 </CardHeader>
 
                 <CardContent>

@@ -19,6 +19,11 @@ export const showAlert = (
     },
     allowOutsideClick: false,
     allowEscapeKey: false,
+    didOpen: () => {
+      // Force SweetAlert above any open modal/dialog backdrop
+      const container = document.querySelector('.swal2-container') as HTMLElement;
+      if (container) container.style.zIndex = '999999';
+    },
   };
 
   if (isHtml) {
@@ -56,6 +61,10 @@ export const showConfirmDialog = async (
     },
     allowOutsideClick: false,
     allowEscapeKey: false,
+    didOpen: () => {
+      const container = document.querySelector('.swal2-container') as HTMLElement;
+      if (container) container.style.zIndex = '999999';
+    },
   });
 };
 
@@ -73,6 +82,10 @@ export const showLogoutDialog = async () => {
       popup: 'swal-solarized',
       title: 'swal-title',
       htmlContainer: 'swal-text',
+    },
+    didOpen: () => {
+      const container = document.querySelector('.swal2-container') as HTMLElement;
+      if (container) container.style.zIndex = '999999';
     },
   });
 };

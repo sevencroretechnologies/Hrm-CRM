@@ -35,6 +35,7 @@ export default function ParticipantForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [sessions, setSessions] = useState<Session[]>([]);
+    const [isLoadingSessions, setIsLoadingSessions] = useState(false);
     const [staffMembers, setStaffMembers] = useState<Staff[]>([]);
     const [trainingPrograms, setTrainingPrograms] = useState<TrainingProgram[]>([]);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -151,9 +152,13 @@ export default function ParticipantForm() {
         const loadData = async () => {
             setIsLoading(true);
             try {
-                await Promise.all([fetchSessions(), fetchStaff(), fetchTrainingPrograms()]);
                 if (isEditMode) {
+                    // Edit mode: load everything including all sessions for display
+                    await Promise.all([fetchSessions(), fetchStaff(), fetchTrainingPrograms()]);
                     await fetchParticipant();
+                } else {
+                    // Create mode: only load staff and programs; sessions load after program is chosen
+                    await Promise.all([fetchStaff(), fetchTrainingPrograms()]);
                 }
             } catch (error) {
                 console.error("Error loading data", error);
@@ -165,13 +170,42 @@ export default function ParticipantForm() {
         loadData();
     }, [id]);
 
-    const fetchSessions = async () => {
+    const fetchSessions = async (programId?: string) => {
         try {
-            const response = await trainingService.getSessions({ paginate: 'false' } as any);
+            const params: any = { paginate: 'false' };
+            if (programId) params.training_program_id = programId;
+            const response = await trainingService.getSessions(params);
             const data = response.data.data || response.data;
             setSessions(Array.isArray(data) ? data : (data.data || []));
         } catch (error) {
             console.error('Failed to fetch sessions:', error);
+        }
+    };
+
+    const fetchSessionsByProgram = async (programId: string) => {
+        setIsLoadingSessions(true);
+        try {
+            const response = await trainingService.getSessions({
+                training_program_id: programId,
+                paginate: 'false',
+            } as any);
+            const data = response.data.data || response.data;
+            setSessions(Array.isArray(data) ? data : (data.data || []));
+        } catch (error) {
+            console.error('Failed to fetch sessions for program:', error);
+            setSessions([]);
+        } finally {
+            setIsLoadingSessions(false);
+        }
+    };
+
+    const handleProgramChange = (programId: string) => {
+        updateFormField('training_program_id', programId);
+        // Reset session and reload sessions for the selected program
+        updateFormField('training_session_id', '');
+        setSessions([]);
+        if (programId) {
+            fetchSessionsByProgram(programId);
         }
     };
 
@@ -255,14 +289,14 @@ export default function ParticipantForm() {
             } else {
                 // For new enrollment, include staff_member_id
                 payload.staff_member_id = Number(formData.staff_member_id);
-                
+
                 await trainingService.enrollInSession(Number(formData.training_session_id), payload);
                 showAlert('success', 'Success', 'Participant enrolled successfully', 2000);
             }
             navigate('/training/participants');
         } catch (error: any) {
             console.error('Failed to save:', error);
-            
+
             if (error.response?.data?.errors) {
                 // Handle API validation errors
                 const apiErrors: Record<string, string> = {};
@@ -313,30 +347,32 @@ export default function ParticipantForm() {
                         <CardDescription>Select the session and the employee to enroll.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-6 md:grid-cols-3">
-                        {/* Training Program (Optional) */}
-                        <div className="space-y-2">
-                            <Label htmlFor="training_program" className={fieldErrors.training_program_id ? 'text-red-500' : ''}>
-                                Training Program (Optional)
-                            </Label>
-                            <Select
-                                value={formData.training_program_id}
-                                onValueChange={(val) => updateFormField('training_program_id', val)}
-                            >
-                                <SelectTrigger className={`bg-white ${fieldErrors.training_program_id ? 'border-red-500' : ''}`}>
-                                    <SelectValue placeholder="Select program (optional)" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {trainingPrograms.map((program) => (
-                                        <SelectItem key={program.id} value={String(program.id)}>
-                                            {program.title}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {renderError('training_program_id')}
-                        </div>
+                        {/* Training Program — dropdown in create, read-only in edit */}
+                        {!isEditMode && (
+                            <div className="space-y-2">
+                                <Label htmlFor="training_program" className={fieldErrors.training_program_id ? 'text-red-500' : ''}>
+                                    Training Program *
+                                </Label>
+                                <Select
+                                    value={formData.training_program_id}
+                                    onValueChange={handleProgramChange}
+                                >
+                                    <SelectTrigger className={`bg-white ${fieldErrors.training_program_id ? 'border-red-500' : ''}`}>
+                                        <SelectValue placeholder="Select program" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {trainingPrograms.map((program) => (
+                                            <SelectItem key={program.id} value={String(program.id)}>
+                                                {program.title}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {renderError('training_program_id')}
+                            </div>
+                        )}
 
-                        {/* Session (Required for new enrollment) */}
+                        {/* Session — only shown after program is selected */}
                         {!isEditMode && (
                             <div className="space-y-2">
                                 <Label htmlFor="session" className={fieldErrors.training_session_id ? 'text-red-500' : ''}>
@@ -345,10 +381,20 @@ export default function ParticipantForm() {
                                 <Select
                                     value={formData.training_session_id}
                                     onValueChange={(val) => updateFormField('training_session_id', val)}
-                                    disabled={isEditMode}
+                                    disabled={!formData.training_program_id || isLoadingSessions}
                                 >
                                     <SelectTrigger className={`bg-white ${fieldErrors.training_session_id ? 'border-red-500' : ''}`}>
-                                        <SelectValue placeholder="Select session" />
+                                        <SelectValue
+                                            placeholder={
+                                                !formData.training_program_id
+                                                    ? 'Select a program first'
+                                                    : isLoadingSessions
+                                                    ? 'Loading sessions...'
+                                                    : sessions.length === 0
+                                                    ? 'No sessions available'
+                                                    : 'Select session'
+                                            }
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {sessions.map((session) => (
@@ -388,9 +434,15 @@ export default function ParticipantForm() {
                             </div>
                         )}
 
-                        {/* In edit mode, show read-only session and employee info */}
+                        {/* In edit mode, show read-only fields: Training Program → Session → Employee */}
                         {isEditMode && (
                             <>
+                                <div className="space-y-2">
+                                    <Label className="text-solarized-base01">Training Program</Label>
+                                    <div className="p-2 bg-solarized-base03/10 rounded text-sm">
+                                        {trainingPrograms.find(p => p.id.toString() === formData.training_program_id)?.title || '—'}
+                                    </div>
+                                </div>
                                 <div className="space-y-2">
                                     <Label className="text-solarized-base01">Session</Label>
                                     <div className="p-2 bg-solarized-base03/10 rounded text-sm">

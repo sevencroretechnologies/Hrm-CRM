@@ -29,6 +29,7 @@ import {
     MapPin,
     User,
     Search,
+    X,
     MoreHorizontal,
     Eye,
     Edit,
@@ -50,8 +51,7 @@ interface Program {
 
 interface Staff {
     id: number;
-    first_name: string;
-    last_name: string;
+    full_name: string;
 }
 
 interface Session {
@@ -59,7 +59,8 @@ interface Session {
     training_program_id: number;
     session_name: string;
     date: string;
-    time: string | null;
+    start_time: string | null;
+    end_time: string | null;
     location: string | null;
     trainer_id: number | null;
     max_participants: number;
@@ -76,6 +77,8 @@ export default function Sessions() {
     const [staffMembers, setStaffMembers] = useState<Staff[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [search, setSearch] = useState('');
+    const [programSearchInput, setProgramSearchInput] = useState('');   // what user types
+    const [programSearchQuery, setProgramSearchQuery] = useState('');   // applied on Search click
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
@@ -88,7 +91,8 @@ export default function Sessions() {
         training_program_id: '',
         session_name: '',
         date: '',
-        time: '',
+        start_time: '',
+        end_time: '',
         location: '',
         trainer_id: '',
         max_participants: '20',
@@ -137,12 +141,20 @@ export default function Sessions() {
             }
         }
 
-        // Time validation (nullable, must be in HH:MM format if provided)
-        if (formData.time && formData.time.trim() !== '') {
-            // Check if time is in HH:MM format (24-hour)
+        // Start time validation (nullable, must be in HH:MM format if provided)
+        if (formData.start_time && formData.start_time.trim() !== '') {
             const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-            if (!timeRegex.test(formData.time)) {
-                errors.time = 'Time must be in 24-hour format (HH:MM)';
+            if (!timeRegex.test(formData.start_time)) {
+                errors.start_time = 'Start time must be in 24-hour format (HH:MM)';
+                isValid = false;
+            }
+        }
+
+        // End time validation (nullable, must be in HH:MM format if provided)
+        if (formData.end_time && formData.end_time.trim() !== '') {
+            const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+            if (!timeRegex.test(formData.end_time)) {
+                errors.end_time = 'End time must be in 24-hour format (HH:MM)';
                 isValid = false;
             }
         }
@@ -261,7 +273,6 @@ export default function Sessions() {
                 const params: Record<string, unknown> = {
                     page: currentPage,
                     per_page: perPage,
-                    search,
                 };
 
                 const response = await trainingService.getSessions(params);
@@ -279,14 +290,13 @@ export default function Sessions() {
                 }
             } catch (error) {
                 console.error('Failed to fetch sessions:', error);
-                // showAlert('error', 'Error', 'Failed to fetch training sessions');
                 setSessions([]);
                 setTotalRows(0);
             } finally {
                 setIsLoading(false);
             }
         },
-        [perPage, search]
+        [perPage]
     );
 
     const fetchPrograms = async () => {
@@ -339,8 +349,11 @@ export default function Sessions() {
             };
 
             // Add optional fields only if they have values
-            if (formData.time && formData.time.trim() !== '') {
-                payload.time = formData.time;
+            if (formData.start_time && formData.start_time.trim() !== '') {
+                payload.start_time = formData.start_time;
+            }
+            if (formData.end_time && formData.end_time.trim() !== '') {
+                payload.end_time = formData.end_time;
             }
             if (formData.location && formData.location.trim() !== '') {
                 payload.location = formData.location;
@@ -391,8 +404,9 @@ export default function Sessions() {
         setFormData({
             training_program_id: String(session.training_program_id),
             session_name: session.session_name,
-            date: formatDateForInput(session.date), // Use the helper function
-            time: formatTimeForInput(session.time), // Use the helper function
+            date: formatDateForInput(session.date),
+            start_time: formatTimeForInput(session.start_time),
+            end_time: formatTimeForInput((session as any).end_time),
             location: session.location || '',
             trainer_id: session.trainer_id ? String(session.trainer_id) : '',
             max_participants: String(session.max_participants),
@@ -426,7 +440,8 @@ export default function Sessions() {
             training_program_id: '',
             session_name: '',
             date: '',
-            time: '',
+            start_time: '',
+            end_time: '',
             location: '',
             trainer_id: '',
             max_participants: '20',
@@ -457,11 +472,23 @@ export default function Sessions() {
         return dateString;
     };
 
-    // ================= SEARCH =================
-    const handleSearchSubmit = (e: React.FormEvent) => {
+    // ================= PROGRAM SEARCH FILTER =================
+    const handleProgramSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        setPage(1);
+        setProgramSearchQuery(programSearchInput.trim());
     };
+
+    const handleClearFilter = () => {
+        setProgramSearchInput('');
+        setProgramSearchQuery('');
+    };
+
+    // Client-side filter: match sessions whose program title contains the query
+    const filteredSessions = programSearchQuery
+        ? sessions.filter((s) =>
+              s.program?.title?.toLowerCase().includes(programSearchQuery.toLowerCase())
+          )
+        : sessions;
 
     // ================= PAGINATION =================
     const handlePageChange = (newPage: number) => {
@@ -509,18 +536,24 @@ export default function Sessions() {
             width: '150px',
         },
         {
-            name: 'Time',
-            selector: (row) => row.time || '',
+            name: 'Start — End Time',
+            selector: (row) => row.start_time || '',
             cell: (row) => (
                 <div className="text-sm">
-                    {row.time && (
+                    {row.start_time ? (
                         <p className="flex items-center gap-1 text-muted-foreground">
-                            <Clock className="h-3 w-3" /> {formatTimeForInput(row.time)}
+                            <Clock className="h-3 w-3" />
+                            <span>{formatTimeForInput(row.start_time)}</span>
+                            {row.end_time && (
+                                <span className="text-xs">— {formatTimeForInput(row.end_time)}</span>
+                            )}
                         </p>
+                    ) : (
+                        <span className="text-muted-foreground">—</span>
                     )}
                 </div>
             ),
-            width: '150px',
+            width: '190px',
         },
         {
             name: 'Location',
@@ -678,7 +711,7 @@ export default function Sessions() {
                                         />
                                         {renderError('session_name')}
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-3 gap-3">
                                         <div className="space-y-2">
                                             <Label htmlFor="date" className={fieldErrors.date ? 'text-red-500' : ''}>
                                                 Date *
@@ -696,20 +729,36 @@ export default function Sessions() {
                                             {renderError('date')}
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="time" className={fieldErrors.time ? 'text-red-500' : ''}>
-                                                Time
+                                            <Label htmlFor="start_time" className={fieldErrors.start_time ? 'text-red-500' : ''}>
+                                                Start Time
                                             </Label>
                                             <Input
-                                                id="time"
+                                                id="start_time"
                                                 type="time"
-                                                value={formData.time}
+                                                value={formData.start_time}
                                                 onChange={(e) => {
-                                                    setFormData({ ...formData, time: e.target.value });
-                                                    clearFieldError('time');
+                                                    setFormData({ ...formData, start_time: e.target.value });
+                                                    clearFieldError('start_time');
                                                 }}
-                                                className={fieldErrors.time ? 'border-red-500' : ''}
+                                                className={fieldErrors.start_time ? 'border-red-500' : ''}
                                             />
-                                            {renderError('time')}
+                                            {renderError('start_time')}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="end_time" className={fieldErrors.end_time ? 'text-red-500' : ''}>
+                                                End Time
+                                            </Label>
+                                            <Input
+                                                id="end_time"
+                                                type="time"
+                                                value={formData.end_time}
+                                                onChange={(e) => {
+                                                    setFormData({ ...formData, end_time: e.target.value });
+                                                    clearFieldError('end_time');
+                                                }}
+                                                className={fieldErrors.end_time ? 'border-red-500' : ''}
+                                            />
+                                            {renderError('end_time')}
                                         </div>
                                     </div>
                                     <div className="space-y-2">
@@ -746,7 +795,7 @@ export default function Sessions() {
                                                 <SelectContent>
                                                     {staffMembers.map((staff) => (
                                                         <SelectItem key={staff.id} value={String(staff.id)}>
-                                                            {staff.first_name} {staff.last_name}
+                                                            {staff.full_name}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -830,49 +879,75 @@ export default function Sessions() {
                     </DialogHeader>
                     {viewingSession && (
                         <div className="space-y-4">
-                            <div>
-                                <p className="text-sm text-solarized-base01">Session Name</p>
-                                <p className="font-medium text-lg">{viewingSession.session_name}</p>
+
+                            {/* Row 1: Session Name | Program | Status */}
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="col-span-2">
+                                    <p className="text-sm text-solarized-base01">Session Name</p>
+                                    <p className="font-medium text-lg">{viewingSession.session_name}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-solarized-base01">Status</p>
+                                    <StatusBadge status={viewingSession.status} />
+                                </div>
                             </div>
+
+                            {/* Row 2: Program full width */}
                             <div>
                                 <p className="text-sm text-solarized-base01">Program</p>
                                 <p>{viewingSession.program?.title || 'Unknown Program'}</p>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+
+                            {/* Row 3: Date | Start Time | End Time */}
+                            <div className="grid grid-cols-3 gap-4">
                                 <div>
-                                    <p className="text-sm text-solarized-base01">Date & Time</p>
+                                    <p className="text-sm text-solarized-base01">Date</p>
                                     <p className="flex items-center gap-1">
                                         <Calendar className="h-4 w-4 text-solarized-blue" />
                                         {formatDisplayDate(viewingSession.date)}
                                     </p>
-                                    <p className="flex items-center gap-1 mt-1">
+                                </div>
+                                <div>
+                                    <p className="text-sm text-solarized-base01">Start Time</p>
+                                    <p className="flex items-center gap-1">
                                         <Clock className="h-4 w-4 text-solarized-blue" />
-                                        {viewingSession.time ? formatTimeForInput(viewingSession.time) : 'TBD'}
+                                        {viewingSession.start_time ? formatTimeForInput(viewingSession.start_time) : <span className="text-muted-foreground">—</span>}
                                     </p>
                                 </div>
+                                <div>
+                                    <p className="text-sm text-solarized-base01">End Time</p>
+                                    <p className="flex items-center gap-1">
+                                        <Clock className="h-4 w-4 text-solarized-blue" />
+                                        {viewingSession.end_time ? formatTimeForInput(viewingSession.end_time) : <span className="text-muted-foreground">—</span>}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Row 4: Trainer | Location | Participants */}
+                            <div className="grid grid-cols-3 gap-4">
                                 <div>
                                     <p className="text-sm text-solarized-base01">Trainer</p>
                                     <p className="flex items-center gap-1">
                                         <User className="h-4 w-4 text-solarized-green" />
-                                        {viewingSession.trainer ? `${viewingSession.trainer.first_name} ${viewingSession.trainer.last_name}` : 'No trainer assigned'}
+                                        {viewingSession.trainer ? viewingSession.trainer.full_name : <span className="text-muted-foreground">Not assigned</span>}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-solarized-base01">Location</p>
+                                    <p className="flex items-center gap-1">
+                                        <MapPin className="h-4 w-4 text-solarized-red" />
+                                        {viewingSession.location || <span className="text-muted-foreground">Not set</span>}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-solarized-base01">Participants</p>
+                                    <p className="font-medium">
+                                        {viewingSession.participants_count || 0}
+                                        <span className="text-muted-foreground text-sm"> / {viewingSession.max_participants} enrolled</span>
                                     </p>
                                 </div>
                             </div>
-                            <div>
-                                <p className="text-sm text-solarized-base01">Location</p>
-                                <p className="flex items-center gap-1">
-                                    <MapPin className="h-4 w-4 text-solarized-red" />
-                                    {viewingSession.location || 'No location set'}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-solarized-base01">Status</p>
-                                <StatusBadge status={viewingSession.status} />
-                            </div>
-                            <div>
-                                <p className="text-sm text-solarized-base01">Participants</p>
-                                <p>{viewingSession.participants_count || 0} / {viewingSession.max_participants} enrolled</p>
-                            </div>
+
                         </div>
                     )}
                     <DialogFooter>
@@ -885,33 +960,56 @@ export default function Sessions() {
 
             <Card className="border-0 shadow-md">
                 <CardHeader>
-                    <form onSubmit={handleSearchSubmit} className="flex gap-4">
-                        <Input
-                            placeholder="Search sessions..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                        <Button type="submit" variant="outline">
+                    <form onSubmit={handleProgramSearch} className="flex gap-2">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search by training program name..."
+                                value={programSearchInput}
+                                onChange={(e) => setProgramSearchInput(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
+                        <Button type="submit" variant="outline" className="shrink-0">
                             <Search className="mr-2 h-4 w-4" /> Search
                         </Button>
+                        {programSearchQuery && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={handleClearFilter}
+                                className="shrink-0"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        )}
                     </form>
+                    {programSearchQuery && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                            Showing sessions for: <span className="font-medium text-foreground">"{programSearchQuery}"</span>
+                            <span className="ml-2">({filteredSessions.length} result{filteredSessions.length !== 1 ? 's' : ''})</span>
+                        </p>
+                    )}
                 </CardHeader>
 
                 <CardContent>
-                    {!isLoading && sessions.length === 0 ? (
+                    {!isLoading && filteredSessions.length === 0 ? (
                         <div className="text-center py-12">
                             <Calendar className="mx-auto h-12 w-12 text-solarized-base01 mb-4" />
-                            <h3 className="text-lg font-medium text-solarized-base02">No training sessions found</h3>
-                            <p className="text-solarized-base01 mt-1">Create your first session to get started.</p>
+                            <h3 className="text-lg font-medium text-solarized-base02">
+                                {programSearchQuery ? `No sessions found for "${programSearchQuery}"` : 'No training sessions found'}
+                            </h3>
+                            <p className="text-solarized-base01 mt-1">
+                                {programSearchQuery ? 'Try a different program name.' : 'Create your first session to get started.'}
+                            </p>
                         </div>
                     ) : (
                         <DataTable
                             columns={columns}
-                            data={sessions}
+                            data={filteredSessions}
                             progressPending={isLoading}
                             pagination
-                            paginationServer
-                            paginationTotalRows={totalRows}
+                            paginationTotalRows={filteredSessions.length}
                             paginationPerPage={perPage}
                             paginationDefaultPage={page}
                             onChangePage={handlePageChange}

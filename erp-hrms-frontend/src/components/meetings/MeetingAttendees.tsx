@@ -67,6 +67,7 @@ export default function MeetingAttendees() {
     const [attendees, setAttendees] = useState<MeetingAttendee[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [search, setSearch] = useState('');
+    const [appliedSearch, setAppliedSearch] = useState('');
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
@@ -181,7 +182,7 @@ export default function MeetingAttendees() {
             const response = await meetingAttendeeService.getAll({
                 page: currentPage,
                 per_page: perPage,
-                search,
+                search: appliedSearch,
             });
             const resData = response.data.data;
             if (Array.isArray(resData)) {
@@ -197,7 +198,7 @@ export default function MeetingAttendees() {
         } finally {
             setIsLoading(false);
         }
-    }, [perPage, search]);
+    }, [perPage, appliedSearch]);
 
     useEffect(() => {
         fetchAttendees(page);
@@ -206,6 +207,19 @@ export default function MeetingAttendees() {
     useEffect(() => {
         fetchMetadata();
     }, [fetchMetadata]);
+
+    // ================= SEARCH =================
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setAppliedSearch(search.trim());
+        setPage(1);
+    };
+
+    const handleClearSearch = () => {
+        setSearch('');
+        setAppliedSearch('');
+        setPage(1);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -452,20 +466,30 @@ export default function MeetingAttendees() {
 
             <Card>
                 <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                        {/* <CardTitle className="text-lg font-semibold">Attendee List</CardTitle> */}
-                        <div className="flex items-center gap-4">
+                    <form onSubmit={handleSearchSubmit} className="flex gap-2">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search attendees..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                // className="w-64"
+                                className="pl-9"
                             />
-                            <Button variant="outline" size="icon" className='w-40'>
-                                <Search className="mr-2 h-4 w-4" /> Search
-                            </Button>
                         </div>
-                    </div>
+                        <Button type="submit" variant="outline" className="shrink-0">
+                            <Search className="mr-2 h-4 w-4" /> Search
+                        </Button>
+                        {appliedSearch && (
+                            <Button type="button" variant="ghost" onClick={handleClearSearch} className="shrink-0">
+                                ✕
+                            </Button>
+                        )}
+                    </form>
+                    {appliedSearch && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                            Results for: <span className="font-medium text-foreground">"{appliedSearch}"</span>
+                        </p>
+                    )}
                 </CardHeader>
                 <CardContent>
                     <DataTable

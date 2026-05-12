@@ -7,6 +7,13 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { StatusBadge } from '../../components/ui/status-badge';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '../../components/ui/select';
+import {
     Dialog,
     DialogContent,
     DialogHeader,
@@ -26,6 +33,7 @@ import {
     Search,
     Calendar,
     Clock,
+    X,
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -42,6 +50,10 @@ interface Session {
     date: string;
     time: string | null;
     location: string | null;
+    program?: {
+        id: number;
+        title: string;
+    };
 }
 
 interface Staff {
@@ -53,6 +65,12 @@ interface Staff {
 interface TrainingProgram {
     id: number;
     title: string;
+}
+
+interface FilterSession {
+    id: number;
+    session_name: string;
+    date: string;
 }
 
 interface Participant {
@@ -74,7 +92,12 @@ interface Participant {
 export default function Participants() {
     const { hasPermission } = useAuth();
     const [participants, setParticipants] = useState<Participant[]>([]);
+    const [programs, setPrograms] = useState<TrainingProgram[]>([]);
+    const [filterSessions, setFilterSessions] = useState<FilterSession[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+    const [selectedProgramId, setSelectedProgramId] = useState('');
+    const [selectedSessionId, setSelectedSessionId] = useState('');
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
@@ -92,8 +115,15 @@ export default function Participants() {
                 const params: Record<string, unknown> = {
                     page: currentPage,
                     per_page: perPage,
-                    search,
                 };
+
+                // Apply both filters when selected
+                if (selectedProgramId) {
+                    params.training_program_id = selectedProgramId;
+                }
+                if (selectedSessionId) {
+                    params.training_session_id = selectedSessionId;
+                }
 
                 const response = await trainingService.getParticipants(params);
                 const payload = response.data.data;
@@ -117,12 +147,44 @@ export default function Participants() {
                 setIsLoading(false);
             }
         },
-        [perPage, search]
+        [perPage, selectedProgramId, selectedSessionId]
     );
+
+    const fetchPrograms = async () => {
+        try {
+            const response = await trainingService.getPrograms({ paginate: 'false' } as any);
+            const data = response.data.data || response.data;
+            setPrograms(Array.isArray(data) ? data : (data.data || []));
+        } catch (error) {
+            console.error('Failed to fetch programs:', error);
+        }
+    };
+
+    const fetchSessionsByProgram = async (programId: string) => {
+        setIsLoadingSessions(true);
+        try {
+            const response = await trainingService.getSessions({
+                training_program_id: programId,
+                paginate: 'false',
+            } as any);
+            const data = response.data.data || response.data;
+            const list = Array.isArray(data) ? data : (data.data || []);
+            setFilterSessions(list);
+        } catch (error) {
+            console.error('Failed to fetch sessions:', error);
+            setFilterSessions([]);
+        } finally {
+            setIsLoadingSessions(false);
+        }
+    };
 
     useEffect(() => {
         fetchParticipants(page);
     }, [page, fetchParticipants]);
+
+    useEffect(() => {
+        fetchPrograms();
+    }, []);
 
     const handleView = (participant: Participant) => {
         setViewingParticipant(participant);
@@ -196,6 +258,26 @@ export default function Participants() {
         return timeString;
     };
 
+    // ================= FILTER HANDLERS =================
+    const handleProgramChange = (programId: string) => {
+        setSelectedProgramId(programId);
+        setSelectedSessionId(''); // reset session when program changes
+        setFilterSessions([]);
+        fetchSessionsByProgram(programId);
+    };
+
+    const handleSessionChange = (sessionId: string) => {
+        setSelectedSessionId(sessionId);
+        setPage(1);
+    };
+
+    const handleClearFilters = () => {
+        setSelectedProgramId('');
+        setSelectedSessionId('');
+        setFilterSessions([]);
+        setPage(1);
+    };
+
     // ================= SEARCH =================
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -235,12 +317,15 @@ export default function Participants() {
         },
         {
             name: 'Training Program',
-            selector: (row) => row.training_program?.title || '',
-            cell: (row) => (
-                <span className="text-sm font-medium">
-                    {row.training_program?.title || '-'}
-                </span>
-            ),
+            selector: (row) => row.session?.program?.title || row.training_program?.title || '',
+            cell: (row) => {
+                const programTitle = row.session?.program?.title || row.training_program?.title;
+                return (
+                    <span className="text-sm font-medium">
+                        {programTitle || '-'}
+                    </span>
+                );
+            },
             sortable: true,
             minWidth: '180px',
         },
@@ -423,13 +508,15 @@ export default function Participants() {
 
                             {/* Training Details */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Training Program */}
-                                {viewingParticipant.training_program && (
+                                {/* Training Program - from session's program (source of truth) */}
+                                {(viewingParticipant.session?.program || viewingParticipant.training_program) && (
                                     <div className="space-y-2">
                                         <Label className="text-sm text-solarized-base01">Training Program</Label>
                                         <div className="flex items-center gap-2 p-3 bg-solarized-base3/10 rounded">
                                             <GraduationCap className="h-5 w-5 text-solarized-blue" />
-                                            <span className="font-medium">{viewingParticipant.training_program.title}</span>
+                                            <span className="font-medium">
+                                                {viewingParticipant.session?.program?.title || viewingParticipant.training_program?.title}
+                                            </span>
                                         </div>
                                     </div>
                                 )}
@@ -554,24 +641,86 @@ export default function Participants() {
 
             <Card className="border-0 shadow-md">
                 <CardHeader>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex-1">
-                            <form onSubmit={handleSearchSubmit} className="flex gap-2">
-                                <Input
-                                    placeholder="Search by employee name, program, or session..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    className="flex-1"
-                                />
-                                <Button type="submit" variant="outline">
-                                    <Search className="mr-2 h-4 w-4" /> Search
-                                </Button>
-                            </form>
-                        </div>
-                        {participants.length > 0 && (
-                            <div className="text-sm text-solarized-base01">
-                                Showing {participants.length} of {totalRows} participants
+                    <div className="flex flex-col gap-3">
+                        {/* Row 1: Program + Session dropdowns */}
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            {/* Program Dropdown */}
+                            <div className="flex-1">
+                                <Select
+                                    value={selectedProgramId}
+                                    onValueChange={handleProgramChange}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Training Program..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {programs.map((p) => (
+                                            <SelectItem key={p.id} value={String(p.id)}>
+                                                {p.title}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
+
+                            {/* Session Dropdown - shown once program is selected */}
+                            <div className="flex-1">
+                                <Select
+                                    value={selectedSessionId}
+                                    onValueChange={handleSessionChange}
+                                    disabled={!selectedProgramId || isLoadingSessions}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue
+                                            placeholder={
+                                                !selectedProgramId
+                                                    ? 'Select a program first'
+                                                    : isLoadingSessions
+                                                    ? 'Loading sessions...'
+                                                    : filterSessions.length === 0
+                                                    ? 'No sessions available'
+                                                    : 'Select Session...'
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {filterSessions.map((s) => (
+                                            <SelectItem key={s.id} value={String(s.id)}>
+                                                {s.session_name}
+                                                {s.date && (
+                                                    <span className="ml-2 text-xs text-muted-foreground">
+                                                        ({new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
+                                                    </span>
+                                                )}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Clear button */}
+                            {(selectedProgramId || selectedSessionId) && (
+                                <Button
+                                    variant="ghost"
+                                    onClick={handleClearFilters}
+                                    className="shrink-0"
+                                >
+                                    <X className="h-4 w-4 mr-1" /> Clear
+                                </Button>
+                            )}
+                        </div>
+
+                        {/* Active filter info */}
+                        {selectedSessionId && (
+                            <p className="text-sm text-muted-foreground">
+                                Showing participants for session: <span className="font-medium text-foreground">{filterSessions.find(s => String(s.id) === selectedSessionId)?.session_name}</span>
+                                <span className="ml-2">({participants.length} participant{participants.length !== 1 ? 's' : ''})</span>
+                            </p>
+                        )}
+                        {selectedProgramId && !selectedSessionId && (
+                            <p className="text-sm text-amber-600">
+                                Please select a session to view its participants.
+                            </p>
                         )}
                     </div>
                 </CardHeader>

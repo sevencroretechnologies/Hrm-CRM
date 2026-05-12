@@ -329,21 +329,13 @@ function App() {
             <Route path="/recruitment/custom-questions" element={<CustomQuestions />} />
 
             {/* Performance */}
-            <Route path="/performance/goals" element={
-              <ProtectedRoute requiredPermission="manage_goals">
-                <Goals />
-              </ProtectedRoute>
-            } />
+            <Route path="/performance/goals" element={<Goals />} />
             <Route path="/performance/competencies" element={
               <ProtectedRoute requiredPermission="view_staff_performance">
                 <Competencies />
               </ProtectedRoute>
             } />
-            <Route path="/performance/appraisals" element={
-              <ProtectedRoute requiredPermission="manage_appraisals">
-                <Appraisals />
-              </ProtectedRoute>
-            } />
+            <Route path="/performance/appraisals" element={<Appraisals />} />
 
             {/* Assets */}
             <Route path="/assets" element={<AssetsList />} />

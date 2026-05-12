@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { trainingService } from '../../services/api';
+import { trainingService, staffService } from '../../services/api';
 import { showAlert, showConfirmDialog, getErrorMessage } from '../../lib/sweetalert';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -45,6 +45,11 @@ interface TrainingType {
   title: string;
 }
 
+interface Staff {
+  id: number;
+  full_name: string;
+}
+
 interface Program {
   id: number;
   title: string;
@@ -65,8 +70,10 @@ interface Program {
 export default function Programs() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [trainingTypes, setTrainingTypes] = useState<TrainingType[]>([]);
+  const [staffMembers, setStaffMembers] = useState<Staff[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // what the user types
+  const [search, setSearch] = useState('');            // only applied on button click
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
@@ -83,6 +90,7 @@ export default function Programs() {
     cost: '',
     trainer_name: '',
     trainer_type: 'internal',
+    trainer_id: '',
     status: 'active',
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -195,6 +203,7 @@ export default function Programs() {
         duration: formData.duration || null,
         trainer_name: formData.trainer_name || null,
         trainer_type: formData.trainer_type || null,
+        trainer_id: formData.trainer_type === 'internal' && formData.trainer_id ? Number(formData.trainer_id) : null,
       };
 
       // Add cost only if provided and valid
@@ -249,6 +258,7 @@ export default function Programs() {
       cost: program.cost ? String(program.cost) : '',
       trainer_name: program.trainer_name || '',
       trainer_type: program.trainer_type || 'internal',
+      trainer_id: (program as any).trainer_id ? String((program as any).trainer_id) : '',
       status: program.status,
     });
     setFieldErrors({});
@@ -283,6 +293,7 @@ export default function Programs() {
       cost: '',
       trainer_name: '',
       trainer_type: 'internal',
+      trainer_id: '',
       status: 'active',
     });
     setFieldErrors({});
@@ -333,9 +344,20 @@ export default function Programs() {
     }
   };
 
+  const fetchStaff = async () => {
+    try {
+      const response = await staffService.getAll({ paginate: 'false' } as any);
+      const data = response.data.data || response.data;
+      setStaffMembers(Array.isArray(data) ? data : (data.data || []));
+    } catch (error) {
+      console.error('Failed to fetch staff members:', error);
+    }
+  };
+
   useEffect(() => {
     fetchPrograms(page);
     fetchTrainingTypes();
+    fetchStaff();
   }, [page, fetchPrograms]);
 
 
@@ -343,6 +365,7 @@ export default function Programs() {
   // ================= SEARCH =================
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setSearch(searchInput); // apply the typed value as the actual search query
     setPage(1);
   };
 
@@ -579,22 +602,7 @@ export default function Programs() {
                     {renderError('cost')}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="trainer_name" className={fieldErrors.trainer_name ? 'text-red-500' : ''}>
-                    Trainer Name
-                  </Label>
-                  <Input
-                    id="trainer_name"
-                    value={formData.trainer_name}
-                    onChange={(e) => {
-                      setFormData({ ...formData, trainer_name: e.target.value });
-                      clearFieldError('trainer_name');
-                    }}
-                    placeholder="e.g., John Smith"
-                    className={fieldErrors.trainer_name ? 'border-red-500' : ''}
-                  />
-                  {renderError('trainer_name')}
-                </div>
+                {/* Trainer Type */}
                 <div className="space-y-2">
                   <Label htmlFor="trainer_type" className={fieldErrors.trainer_type ? 'text-red-500' : ''}>
                     Trainer Type
@@ -602,8 +610,10 @@ export default function Programs() {
                   <Select
                     value={formData.trainer_type}
                     onValueChange={(value) => {
-                      setFormData({ ...formData, trainer_type: value });
+                      // Clear trainer selection when switching type
+                      setFormData({ ...formData, trainer_type: value, trainer_name: '', trainer_id: '' });
                       clearFieldError('trainer_type');
+                      clearFieldError('trainer_name');
                     }}
                   >
                     <SelectTrigger className={fieldErrors.trainer_type ? 'border-red-500' : ''}>
@@ -615,6 +625,50 @@ export default function Programs() {
                     </SelectContent>
                   </Select>
                   {renderError('trainer_type')}
+                </div>
+
+                {/* Trainer Name — conditional on type */}
+                <div className="space-y-2">
+                  <Label htmlFor="trainer_name" className={fieldErrors.trainer_name ? 'text-red-500' : ''}>
+                    {formData.trainer_type === 'internal' ? 'Select Trainer (Staff)' : 'Trainer Name'}
+                  </Label>
+                  {formData.trainer_type === 'internal' ? (
+                    <Select
+                      value={formData.trainer_id}
+                      onValueChange={(value) => {
+                        const selected = staffMembers.find(s => String(s.id) === value);
+                        setFormData({
+                          ...formData,
+                          trainer_id: value,
+                          trainer_name: selected ? selected.full_name : '',
+                        });
+                        clearFieldError('trainer_name');
+                      }}
+                    >
+                      <SelectTrigger className={fieldErrors.trainer_name ? 'border-red-500' : ''}>
+                        <SelectValue placeholder="Select staff member as trainer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {staffMembers.map((staff) => (
+                          <SelectItem key={staff.id} value={String(staff.id)}>
+                            {staff.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id="trainer_name"
+                      value={formData.trainer_name}
+                      onChange={(e) => {
+                        setFormData({ ...formData, trainer_name: e.target.value });
+                        clearFieldError('trainer_name');
+                      }}
+                      placeholder="e.g., John Smith"
+                      className={fieldErrors.trainer_name ? 'border-red-500' : ''}
+                    />
+                  )}
+                  {renderError('trainer_name')}
                 </div>
                 {editingProgram && (
                   <div className="space-y-2">
@@ -724,8 +778,8 @@ export default function Programs() {
           <form onSubmit={handleSearchSubmit} className="flex gap-4">
             <Input
               placeholder="Search programs..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
             />
             <Button type="submit" variant="outline">
               <Search className="mr-2 h-4 w-4" /> Search

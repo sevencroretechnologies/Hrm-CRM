@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { performanceService, staffService } from '../../services/api';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -107,6 +108,12 @@ const formatDateForDisplay = (isoDate: string): string => {
 };
 
 export default function Goals() {
+  const { user, hasAnyRole } = useAuth();
+  // Managers/HR/Admins get full CRUD; staff get a read-only list filtered to their own
+  // objectives with View + Update Progress only.
+  const canManage = hasAnyRole(['admin', 'company', 'hr', 'org']);
+  const currentStaffMemberId = user?.staff_member_id;
+
   const [goals, setGoals] = useState<Goal[]>([]);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
@@ -163,6 +170,7 @@ export default function Goals() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Update the fetchGoals function to handle empty staff_member_id properly
+  // Note: include canManage/currentStaffMemberId in deps so the forced-filter is reactive.
   const fetchGoals = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -172,8 +180,12 @@ export default function Goals() {
       };
 
       // Add backend filters
-      // Only add staff_member_id if it's a valid number (not empty or "all")
-      if (filters.staff_member_id && filters.staff_member_id !== "all") {
+      // Staff users are always forced to their own staff_member_id; managers can pick any.
+      if (!canManage) {
+        if (currentStaffMemberId) {
+          params.staff_member_id = currentStaffMemberId;
+        }
+      } else if (filters.staff_member_id && filters.staff_member_id !== "all") {
         const staffId = parseInt(filters.staff_member_id);
         if (!isNaN(staffId)) {
           params.staff_member_id = staffId;
@@ -246,15 +258,19 @@ export default function Goals() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, filters, sortField, sortDirection]);
+  }, [page, perPage, filters, sortField, sortDirection, canManage, currentStaffMemberId]);
 
   useEffect(() => {
     fetchGoals();
   }, [fetchGoals]);
 
+  // Only managers need the staff dropdown (Create dialog, filter). Staff users get a
+  // 403 from /staff-members, so don't even attempt it for them.
   useEffect(() => {
-    fetchAllStaffMembers();
-  }, []);
+    if (canManage) {
+      fetchAllStaffMembers();
+    }
+  }, [canManage]);
 
   const fetchAllStaffMembers = async () => {
     setIsLoadingStaff(true);
@@ -290,8 +306,22 @@ export default function Goals() {
     const errors: Record<string, string> = {};
     let isValid = true;
 
-    if (!formData.title.trim()) {
+    // Title — required, length-bounded, must contain non-space content.
+    const trimmedTitle = formData.title.trim();
+    if (!trimmedTitle) {
       errors.title = 'Title is required';
+      isValid = false;
+    } else if (trimmedTitle.length < 3) {
+      errors.title = 'Title must be at least 3 characters';
+      isValid = false;
+    } else if (trimmedTitle.length > 255) {
+      errors.title = 'Title must be 255 characters or fewer';
+      isValid = false;
+    }
+
+    // Description — optional, but cap length so it doesn't blow up the DB column.
+    if (formData.description && formData.description.length > 1000) {
+      errors.description = 'Description must be 1000 characters or fewer';
       isValid = false;
     }
 
@@ -305,29 +335,70 @@ export default function Goals() {
       isValid = false;
     }
 
+    // Measurement unit — optional, short text.
+    if (formData.measurement_unit && formData.measurement_unit.trim().length > 50) {
+      errors.measurement_unit = 'Measurement unit must be 50 characters or fewer';
+      isValid = false;
+    }
+
+    // Target value — optional, but must be a non-negative number when supplied.
+    if (formData.target_value !== '' && formData.target_value != null) {
+      const target = Number(formData.target_value);
+      if (isNaN(target)) {
+        errors.target_value = 'Target value must be a valid number';
+        isValid = false;
+      } else if (target < 0) {
+        errors.target_value = 'Target value cannot be negative';
+        isValid = false;
+      } else if (target > 1_000_000_000) {
+        errors.target_value = 'Target value is too large';
+        isValid = false;
+      }
+    }
+
+    // Weight % — optional, must be an integer between 1 and 100.
+    if (formData.weight_percentage !== '' && formData.weight_percentage != null) {
+      const weight = Number(formData.weight_percentage);
+      if (isNaN(weight)) {
+        errors.weight_percentage = 'Weight must be a valid number';
+        isValid = false;
+      } else if (weight < 1 || weight > 100) {
+        errors.weight_percentage = 'Weight must be between 1 and 100';
+        isValid = false;
+      } else if (!Number.isInteger(weight)) {
+        errors.weight_percentage = 'Weight must be a whole number';
+        isValid = false;
+      }
+    }
+
     if (!formData.start_date) {
       errors.start_date = 'Start date is required';
+      isValid = false;
+    } else if (isNaN(new Date(formData.start_date).getTime())) {
+      errors.start_date = 'Start date is invalid';
       isValid = false;
     }
 
     if (!formData.due_date) {
       errors.due_date = 'Due date is required';
       isValid = false;
+    } else if (isNaN(new Date(formData.due_date).getTime())) {
+      errors.due_date = 'Due date is invalid';
+      isValid = false;
     } else if (formData.start_date && new Date(formData.due_date) < new Date(formData.start_date)) {
       errors.due_date = 'Due date cannot be before start date';
       isValid = false;
     }
 
-    if (formData.weight_percentage) {
-      const weight = Number(formData.weight_percentage);
-      if (isNaN(weight) || weight < 1 || weight > 100) {
-        errors.weight_percentage = 'Weight must be between 1 and 100';
-        isValid = false;
-      }
-    }
-
     setFieldErrors(errors);
     return isValid;
+  };
+
+  // Block "-", "+", and "e" in number inputs so users can't type negatives or scientific notation.
+  const blockInvalidNumberKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (['-', '+', 'e', 'E'].includes(e.key)) {
+      e.preventDefault();
+    }
   };
 
   const validateProgressForm = () => {
@@ -720,26 +791,31 @@ export default function Goals() {
               <Eye className="mr-2 h-4 w-4" />
               View
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleEdit(row)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </DropdownMenuItem>
+            {canManage && (
+              <DropdownMenuItem onClick={() => handleEdit(row)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => handleUpdateProgress(row)}>
               <TrendingUp className="mr-2 h-4 w-4" />
               Update Progress
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleRate(row)}>
-              <Star className="mr-2 h-4 w-4" />
-              Rate
-            </DropdownMenuItem>
-            {/* <DropdownMenuSeparator /> */}
-            <DropdownMenuItem
-              onClick={() => handleDelete(row.id)}
-              className="text-red-600 dark:text-red-400"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
+            {canManage && (
+              <DropdownMenuItem onClick={() => handleRate(row)}>
+                <Star className="mr-2 h-4 w-4" />
+                Rate
+              </DropdownMenuItem>
+            )}
+            {canManage && (
+              <DropdownMenuItem
+                onClick={() => handleDelete(row.id)}
+                className="text-red-600 dark:text-red-400"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -793,25 +869,33 @@ export default function Goals() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Performance Objectives</h1>
-          <p className="text-gray-600 dark:text-gray-400">Set and track performance objectives</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {canManage ? 'Performance Objectives' : 'My Objectives'}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            {canManage
+              ? 'Set and track performance objectives'
+              : 'View your assigned objectives and update progress'}
+          </p>
         </div>
 
-        {/* Create Goal Dialog Trigger */}
-        <Dialog open={isGoalDialogOpen} onOpenChange={setIsGoalDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              className="bg-solarized-blue hover:bg-solarized-blue/90 text-white"
-              onClick={() => {
-                setEditingGoal(null);
-                resetForm();
-                setFieldErrors({});
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Objective
-            </Button>
-          </DialogTrigger>
+        {/* Create Goal Dialog Trigger — admin/manager only */}
+        <Dialog open={canManage && isGoalDialogOpen} onOpenChange={canManage ? setIsGoalDialogOpen : undefined}>
+          {canManage && (
+            <DialogTrigger asChild>
+              <Button
+                className="bg-solarized-blue hover:bg-solarized-blue/90 text-white"
+                onClick={() => {
+                  setEditingGoal(null);
+                  resetForm();
+                  setFieldErrors({});
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Objective
+              </Button>
+            </DialogTrigger>
+          )}
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>{editingGoal ? 'Edit Objective' : 'Create Objective'}</DialogTitle>
@@ -833,6 +917,7 @@ export default function Goals() {
                       }}
                       placeholder="Objective title"
                       className={fieldErrors.title ? 'border-red-500' : ''}
+                      maxLength={255}
                     />
                     {renderError('title')}
                   </div>
@@ -867,14 +952,20 @@ export default function Goals() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description" className={fieldErrors.description ? 'text-red-500' : ''}>Description</Label>
                   <Textarea
                     id="description"
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, description: e.target.value });
+                      if (fieldErrors.description) setFieldErrors(prev => ({ ...prev, description: '' }));
+                    }}
                     placeholder="Objective description..."
                     rows={3}
+                    maxLength={1000}
+                    className={fieldErrors.description ? 'border-red-500' : ''}
                   />
+                  {renderError('description')}
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
@@ -909,6 +1000,7 @@ export default function Goals() {
                       }}
                       placeholder="e.g., %, units, hours"
                       className={fieldErrors.measurement_unit ? 'border-red-500' : ''}
+                      maxLength={50}
                     />
                     {renderError('measurement_unit')}
                   </div>
@@ -919,7 +1011,9 @@ export default function Goals() {
                       type="number"
                       min="1"
                       max="100"
+                      step="1"
                       value={formData.weight_percentage}
+                      onKeyDown={blockInvalidNumberKeys}
                       onChange={(e) => {
                         setFormData({ ...formData, weight_percentage: e.target.value });
                         if (fieldErrors.weight_percentage) setFieldErrors(prev => ({ ...prev, weight_percentage: '' }));
@@ -940,6 +1034,7 @@ export default function Goals() {
                       min="0"
                       step="0.01"
                       value={formData.target_value}
+                      onKeyDown={blockInvalidNumberKeys}
                       onChange={(e) => {
                         setFormData({ ...formData, target_value: e.target.value });
                         if (fieldErrors.target_value) setFieldErrors(prev => ({ ...prev, target_value: '' }));
@@ -1101,6 +1196,7 @@ export default function Goals() {
                       min="0"
                       step="0.01"
                       value={progressData.current_value}
+                      onKeyDown={blockInvalidNumberKeys}
                       onChange={(e) => {
                         setProgressData({ ...progressData, current_value: e.target.value });
                         if (fieldErrors.current_value) setFieldErrors(prev => ({ ...prev, current_value: '' }));
@@ -1256,26 +1352,28 @@ export default function Goals() {
         <CardHeader className="pb-4">
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Staff Member Filter */}
-              <div className="space-y-2">
-                <Label htmlFor="filter-staff" className="text-sm font-medium">Staff Member</Label>
-                <Select
-                  value={filters.staff_member_id}
-                  onValueChange={(value) => handleFilterChange('staff_member_id', value)}
-                >
-                  <SelectTrigger id="filter-staff" className="w-full">
-                    <SelectValue placeholder="All staff members" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Staff Members</SelectItem>
-                    {staffMembers.map((staff) => (
-                      <SelectItem key={staff.id} value={staff.id.toString()}>
-                        {staff.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Staff Member Filter — admin/manager only */}
+              {canManage && (
+                <div className="space-y-2">
+                  <Label htmlFor="filter-staff" className="text-sm font-medium">Staff Member</Label>
+                  <Select
+                    value={filters.staff_member_id}
+                    onValueChange={(value) => handleFilterChange('staff_member_id', value)}
+                  >
+                    <SelectTrigger id="filter-staff" className="w-full">
+                      <SelectValue placeholder="All staff members" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Staff Members</SelectItem>
+                      {staffMembers.map((staff) => (
+                        <SelectItem key={staff.id} value={staff.id.toString()}>
+                          {staff.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Type Filter */}
               <div className="space-y-2">
@@ -1384,7 +1482,9 @@ export default function Goals() {
               <p className="text-gray-600 dark:text-gray-400 mt-1">
                 {hasActiveFilters
                   ? 'No objectives match your filters. Try changing your filter criteria.'
-                  : 'Create performance objectives to track employee performance.'}
+                  : canManage
+                    ? 'Create performance objectives to track employee performance.'
+                    : 'No objectives have been assigned to you yet.'}
               </p>
               {hasActiveFilters ? (
                 <Button
@@ -1394,7 +1494,7 @@ export default function Goals() {
                 >
                   Clear Filters
                 </Button>
-              ) : (
+              ) : canManage ? (
                 <Button
                   className="mt-4 bg-solarized-blue hover:bg-solarized-blue/90 text-white"
                   onClick={() => setIsGoalDialogOpen(true)}
@@ -1402,7 +1502,7 @@ export default function Goals() {
                   <Plus className="mr-2 h-4 w-4" />
                   Create Objective
                 </Button>
-              )}
+              ) : null}
             </div>
           ) : (
             <DataTable

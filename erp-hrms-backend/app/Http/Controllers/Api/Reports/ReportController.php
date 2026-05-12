@@ -668,12 +668,21 @@ class ReportController extends Controller
 
             // CSV Data
             foreach ($requests as $request) {
+                // Carbon objects stringify to full timestamps which Excel renders as ###### in
+                // a narrow column; format explicitly so the cell is a clean date string.
+                $startDate = $request->start_date
+                    ? \Carbon\Carbon::parse($request->start_date)->format('Y-m-d')
+                    : 'N/A';
+                $endDate = $request->end_date
+                    ? \Carbon\Carbon::parse($request->end_date)->format('Y-m-d')
+                    : 'N/A';
+
                 fputcsv($output, [
                     $request->staffMember->staff_code ?? 'N/A',
                     $request->staffMember->full_name ?? 'N/A',
                     $request->category->title ?? 'N/A',
-                    $request->start_date,
-                    $request->end_date,
+                    $startDate,
+                    $endDate,
                     $request->total_days,
                     $request->reason ?? 'N/A',
                     $request->approval_status,
