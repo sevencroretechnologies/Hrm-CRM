@@ -39,8 +39,24 @@ interface StaffMember {
   division: { title: string } | null;
   office_location: { title: string } | null;
   employment_status: string;
+  employment_type: string;
   hire_date: string;
 }
+
+const EMPLOYMENT_TYPE_LABELS: Record<string, string> = {
+  full_time: 'Full Time',
+  part_time: 'Part Time',
+  contract: 'Contract',
+  intern: 'Intern',
+};
+
+const formatEmploymentType = (value?: string | null): string => {
+  if (!value) return '-';
+  return (
+    EMPLOYMENT_TYPE_LABELS[value] ??
+    value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  );
+};
 
 export default function StaffList() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -145,6 +161,7 @@ export default function StaffList() {
         'Job Title': member.job_title?.title || '-',
         'Department': member.division?.title || '-',
         'Office Location': member.office_location?.title || '-',
+        'Employment Type': formatEmploymentType(member.employment_type),
         'Employment Status': member.employment_status || '-',
         'Hire Date': member.hire_date || '-',
       }));
@@ -233,6 +250,11 @@ export default function StaffList() {
     {
       name: 'Location',
       selector: (row) => row.office_location?.title || '-',
+    },
+    {
+      name: 'Employment Type',
+      selector: (row) => row.employment_type || '',
+      cell: (row) => <span>{formatEmploymentType(row.employment_type)}</span>,
     },
     {
       name: 'Status',
