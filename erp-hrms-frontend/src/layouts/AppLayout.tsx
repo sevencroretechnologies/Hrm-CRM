@@ -145,6 +145,11 @@ const navigation: NavItem[] = [
         href: "/attendance/half-day-rules",
         permission: "view_attendance",
       },
+      {
+        name: "Attendance Settings",
+        href: "/attendance/settings",
+        permission: "view_attendance",
+      },
     ],
   },
   {
@@ -152,8 +157,20 @@ const navigation: NavItem[] = [
     href: "/leave/requests",
     icon: Calendar,
     children: [
-      { name: "My Requests", href: "/leave/requests" },
+      {
+        name: "Leave Type",
+        href: "/leave/categories",
+        check: (user) =>
+          (!!user?.company_id &&
+            !!user?.org_id &&
+            (user?.roles?.includes("hr") ||
+              user?.roles?.includes("company"))) ||
+          user?.permissions?.includes("manage_time_off_categories") ||
+          user?.roles?.includes("admin"),
+      },
       { name: "Apply Leave", href: "/leave/apply" },
+      { name: "My Requests", href: "/leave/requests" },
+
       { name: "My Balances", href: "/leave/my-balances" },
       // Admin-only items (hidden for user role)
       {
@@ -170,18 +187,6 @@ const navigation: NavItem[] = [
         name: "Balances",
         href: "/leave/balances",
         permission: "view_time_off",
-      },
-
-      {
-        name: "Leave Type",
-        href: "/leave/categories",
-        check: (user) =>
-          (!!user?.company_id &&
-            !!user?.org_id &&
-            (user?.roles?.includes("hr") ||
-              user?.roles?.includes("company"))) ||
-          user?.permissions?.includes("manage_time_off_categories") ||
-          user?.roles?.includes("admin"),
       },
     ],
   },
@@ -252,6 +257,16 @@ const navigation: NavItem[] = [
         permission: "view_recruitment",
       },
       {
+        name: "Candidate Sources",
+        href: "/recruitment/candidate-sources",
+        permission: "view_recruitment",
+      },
+      {
+        name: "Interview Types",
+        href: "/recruitment/job/stages",
+        permission: "view_recruitment",
+      },
+      {
         name: "Candidates",
         href: "/recruitment/candidates",
         permission: "view_recruitment",
@@ -264,6 +279,11 @@ const navigation: NavItem[] = [
       {
         name: "Applications",
         href: "/recruitment/applications",
+        permission: "view_recruitment",
+      },
+      {
+        name: "Interview Schedule",
+        href: "/recruitment/interviews",
         permission: "view_recruitment",
       },
       // {
@@ -302,31 +322,18 @@ const navigation: NavItem[] = [
         href: "/recruitment/custom-questions",
         permission: "view_recruitment",
       },
-      {
-        name: "Interview Schedule",
-        href: "/recruitment/interviews",
-        permission: "view_recruitment",
-      },
+
       // {
       //   name: "Onboarding Checklists",
       //   href: "/recruitment/onboarding-checklists",
       //   permission: "view_recruitment",
       // },
-      {
-        name: "Candidate Sources",
-        href: "/recruitment/candidate-sources",
-        permission: "view_recruitment",
-      },
-      {
-        name: "Interview Types",
-        href: "/recruitment/job/stages",
-        permission: "view_recruitment",
-      },
-      {
-        name: "Career",
-        href: "/recruitment/career",
-        permission: "view_recruitment",
-      },
+
+      // {
+      //   name: "Career",
+      //   href: "/recruitment/career",
+      //   permission: "view_recruitment",
+      // },
     ],
   },
   {
@@ -372,13 +379,12 @@ const navigation: NavItem[] = [
     icon: GraduationCap,
     permission: "view_staff_training",
     children: [
-     
       {
         name: "Training Types",
         href: "/training/types",
         permission: "view_staff_training",
       },
-       {
+      {
         name: "Training Programs",
         href: "/training/programs",
         permission: "view_staff_training",
@@ -413,7 +419,7 @@ const navigation: NavItem[] = [
     permission: "view_meetings",
     children: [
       { name: "All Meetings", href: "/meetings", permission: "view_meetings" },
-       {
+      {
         name: "Meeting Types",
         href: "/meetings/types",
         permission: "manage_meeting_types",
@@ -439,8 +445,6 @@ const navigation: NavItem[] = [
         permission: "view_meetings",
       },
       // { name: 'Meeting Calendar', href: '/meetings/calendar', permission: "view_meetings" },
-      
-     
     ],
   },
   {
@@ -530,20 +534,131 @@ const navigation: NavItem[] = [
     icon: Target,
     check: crmCheck("view_crm_dashboard"),
     children: [
-      { name: "Dashboard", href: "/crm/dashboard", check: crmCheck("view_crm_dashboard") },
+      {
+        name: "Dashboard",
+        href: "/crm/dashboard",
+        check: crmCheck("view_crm_dashboard"),
+      },
       { name: "Leads", href: "/crm/leads", check: crmCheck("view_leads") },
-      { name: "Customer from Lead or Opportunity", href: "/crm/customers", check: crmCheck("view_customers") },
-      { name: "Opportunities", href: "/crm/opportunities", check: crmCheck("view_opportunities") },
-      { name: "Prospects", href: "/crm/prospects", check: crmCheck("view_prospects") },
-      { name: "New Customer", href: "/crm/contacts", check: crmCheck("create_customers") },
-      { name: "Campaigns", href: "/crm/campaigns", check: crmCheck("view_campaigns") },
-      { name: "Sales Task", href: "/crm/sales-tasks", check: crmCheck("view_sales_tasks") },
-      { name: "Sources", href: "/crm/sources", check: crmCheck("manage_crm_masters") },
-      { name: "Product List", href: "/crm/products", check: crmCheck("manage_crm_masters") },
-      { name: "Product Categories", href: "/crm/product-categories", check: crmCheck("manage_crm_masters") },
-      { name: "Opportunity Lost Reasons", href: "/crm/opportunity-lost-reasons", check: crmCheck("manage_crm_masters") },
-      { name: "Sales Stages", href: "/crm/sales-stages", check: crmCheck("manage_crm_masters") },
-      { name: "Settings", href: "/crm/settings", check: crmCheck("manage_crm_masters") },
+      {
+        name: "Customer from Lead or Opportunity",
+        href: "/crm/customers",
+        check: crmCheck("view_customers"),
+      },
+      {
+        name: "Opportunities",
+        href: "/crm/opportunities",
+        check: crmCheck("view_opportunities"),
+      },
+      {
+        name: "Prospects",
+        href: "/crm/prospects",
+        check: crmCheck("view_prospects"),
+      },
+      {
+        name: "New Customer",
+        href: "/crm/contacts",
+        check: crmCheck("create_customers"),
+      },
+      {
+        name: "Campaigns",
+        href: "/crm/campaigns",
+        check: crmCheck("view_campaigns"),
+      },
+      {
+        name: "Sales Task",
+        href: "/crm/sales-tasks",
+        check: crmCheck("view_sales_tasks"),
+      },
+      {
+        name: "Sources",
+        href: "/crm/sources",
+        check: crmCheck("manage_crm_masters"),
+      },
+      {
+        name: "Product List",
+        href: "/crm/products",
+        check: crmCheck("manage_crm_masters"),
+      },
+      {
+        name: "Product Categories",
+        href: "/crm/product-categories",
+        check: crmCheck("manage_crm_masters"),
+      },
+      {
+        name: "Opportunity Lost Reasons",
+        href: "/crm/opportunity-lost-reasons",
+        check: crmCheck("manage_crm_masters"),
+      },
+      {
+        name: "Sales Stages",
+        href: "/crm/sales-stages",
+        check: crmCheck("manage_crm_masters"),
+      },
+      {
+        name: "Settings",
+        href: "/crm/settings",
+        check: crmCheck("manage_crm_masters"),
+      },
+      {
+        name: "Dashboard",
+        href: "/crm/dashboard",
+        permission: "view_crm_dashboard",
+      },
+      { name: "Leads", href: "/crm/leads", permission: "view_leads" },
+      {
+        name: "Prospects",
+        href: "/crm/prospects",
+        permission: "view_prospects",
+      },
+      {
+        name: "Opportunities",
+        href: "/crm/opportunities",
+        permission: "view_opportunities",
+      },
+      {
+        name: "Opportunity Lost Reasons",
+        href: "/crm/opportunity-lost-reasons",
+        permission: "manage_crm_masters",
+      },
+      {
+        name: "Customer from Lead or Opportunity",
+        href: "/crm/customers",
+        permission: "view_customers",
+      },
+      {
+        name: "New Customer",
+        href: "/crm/contacts",
+        permission: "create_customers",
+      },
+      {
+        name: "Product List",
+        href: "/crm/products",
+        permission: "manage_crm_masters",
+      },
+      {
+        name: "Product Categories",
+        href: "/crm/product-categories",
+        permission: "manage_crm_masters",
+      },
+      {
+        name: "Sales Task",
+        href: "/crm/sales-tasks",
+        permission: "view_sales_tasks",
+      },
+      {
+        name: "Campaigns",
+        href: "/crm/campaigns",
+        permission: "view_campaigns",
+      },
+      {
+        name: "Sources",
+        href: "/crm/sources",
+        permission: "manage_crm_masters",
+      },
+
+      // { name: "Sales Stages", href: "/crm/sales-stages", permission: "manage_crm_masters" },
+      // { name: "Settings", href: "/crm/settings", permission: "manage_crm_masters" },
     ],
   },
   {
@@ -594,10 +709,11 @@ function NavItemComponent({
       <div className="space-y-1">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive
-            ? "bg-solarized-blue/10 text-solarized-blue"
-            : "text-solarized-base01 hover:bg-solarized-base2 hover:text-solarized-base02"
-            }`}
+          className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+            isActive
+              ? "bg-solarized-blue/10 text-solarized-blue"
+              : "text-solarized-base01 hover:bg-solarized-base2 hover:text-solarized-base02"
+          }`}
         >
           <div className="flex items-center gap-3">
             <Icon className="h-5 w-5" />
@@ -613,10 +729,11 @@ function NavItemComponent({
               <Link
                 key={child.href}
                 to={child.href}
-                className={`block px-3 py-2 text-sm rounded-lg transition-colors ${location.pathname === child.href
-                  ? "bg-solarized-blue/10 text-solarized-blue"
-                  : "text-solarized-base01 hover:bg-solarized-base2 hover:text-solarized-base02"
-                  }`}
+                className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                  location.pathname === child.href
+                    ? "bg-solarized-blue/10 text-solarized-blue"
+                    : "text-solarized-base01 hover:bg-solarized-base2 hover:text-solarized-base02"
+                }`}
               >
                 {child.name}
               </Link>
@@ -630,10 +747,11 @@ function NavItemComponent({
   return (
     <Link
       to={item.href}
-      className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive
-        ? "bg-solarized-blue/10 text-solarized-blue"
-        : "text-solarized-base01 hover:bg-solarized-base2 hover:text-solarized-base02"
-        }`}
+      className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+        isActive
+          ? "bg-solarized-blue/10 text-solarized-blue"
+          : "text-solarized-base01 hover:bg-solarized-base2 hover:text-solarized-base02"
+      }`}
       title={isCollapsed ? item.name : undefined}
     >
       <Icon className="h-5 w-5 flex-shrink-0" />
@@ -707,8 +825,9 @@ export default function AppLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full bg-white border-r border-solarized-base2 transition-all duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          } lg:translate-x-0 ${sidebarCollapsed ? "lg:w-16" : "lg:w-64"}`}
+        className={`fixed top-0 left-0 z-50 h-full bg-white border-r border-solarized-base2 transition-all duration-300 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0 ${sidebarCollapsed ? "lg:w-16" : "lg:w-64"}`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -754,17 +873,17 @@ export default function AppLayout() {
                 // Also filter children based on permissions
                 const filteredItem = item.children
                   ? {
-                    ...item,
-                    children: item.children.filter((child) => {
-                      if (
-                        child.permission &&
-                        !hasPermission(child.permission)
-                      )
-                        return false;
-                      if (child.check && !child.check(user)) return false;
-                      return true;
-                    }),
-                  }
+                      ...item,
+                      children: item.children.filter((child) => {
+                        if (
+                          child.permission &&
+                          !hasPermission(child.permission)
+                        )
+                          return false;
+                        if (child.check && !child.check(user)) return false;
+                        return true;
+                      }),
+                    }
                   : item;
                 // Only show parent if it has visible children or no children
                 if (
