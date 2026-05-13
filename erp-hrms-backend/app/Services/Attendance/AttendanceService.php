@@ -114,7 +114,7 @@ class AttendanceService extends BaseService
                 $dateStr = $workLog->log_date instanceof Carbon ? $workLog->log_date->format('Y-m-d') : $workLog->log_date;
                 $clockInDateTime = Carbon::parse($dateStr . ' ' . $workLog->clock_in, $timezone);
                 $workLog->clock_in = $clockInDateTime->format('Y-m-d\TH:i:s');
-                $workLog->clock_in_display = $clockInDateTime->format('H:i');
+                $workLog->clock_in_display = $clockInDateTime->format('h:i A');
             }
 
             // Format clock_out - Use local time instead of UTC
@@ -123,7 +123,7 @@ class AttendanceService extends BaseService
                 $dateStr = $workLog->log_date instanceof Carbon ? $workLog->log_date->format('Y-m-d') : $workLog->log_date;
                 $clockOutDateTime = Carbon::parse($dateStr . ' ' . $workLog->clock_out, $timezone);
                 $workLog->clock_out = $clockOutDateTime->format('Y-m-d\TH:i:s');
-                $workLog->clock_out_display = $clockOutDateTime->format('H:i');
+                $workLog->clock_out_display = $clockOutDateTime->format('h:i A');
             }
 
             // If shift is loaded, format the shift times for display
@@ -472,13 +472,15 @@ class AttendanceService extends BaseService
             'clock_out' => $workLog->clock_out_full, // Use accessor
             'clock_in_time' => $workLog->clock_in,
             'clock_out_time' => $workLog->clock_out,
+            'clock_in_display' => $workLog->clock_in_display,
+            'clock_out_display' => $workLog->clock_out_display,
             'total_hours' => $workLog->total_hours,
             'late_minutes' => $workLog->late_minutes,
             'early_leave_minutes' => $workLog->early_leave_minutes,
             'overtime_minutes' => $workLog->overtime_minutes,
             'break_minutes' => $workLog->break_minutes,
             'shift' => $shiftInfo,
-            'current_time' => Carbon::now($timezone)->format('H:i:s'),
+            'current_time' => Carbon::now($timezone)->format('h:i A'),
             'server_timezone' => $timezone,
             'log_date_formatted' => $logDate->format('Y-m-d'), // For debugging
         ];
