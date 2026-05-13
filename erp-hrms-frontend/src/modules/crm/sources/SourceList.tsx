@@ -32,7 +32,9 @@ interface Source {
 export default function SourceList() {
   const [items, setItems] = useState<Source[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  // searchInput = what's typed in the box; searchQuery = what's actually applied (on submit).
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
@@ -54,7 +56,7 @@ export default function SourceList() {
       const params: Record<string, unknown> = {
         page: currentPage,
         per_page: perPage,
-        search,
+        search: searchQuery,
       };
       const response = await crmSourceService.getAll(params);
 
@@ -85,7 +87,7 @@ export default function SourceList() {
     } finally {
       setIsLoading(false);
     }
-  }, [perPage, search]);
+  }, [perPage, searchQuery]);
 
   useEffect(() => {
     fetchItems(page);
@@ -93,6 +95,7 @@ export default function SourceList() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setSearchQuery(searchInput.trim());
     setPage(1);
   };
 
@@ -288,8 +291,8 @@ export default function SourceList() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search sources..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="pl-9"
               />
             </div>

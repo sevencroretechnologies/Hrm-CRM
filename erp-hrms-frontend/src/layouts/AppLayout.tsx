@@ -51,6 +51,17 @@ interface NavItem {
   }[];
 }
 
+// Roles that get full CRM access regardless of fine-grained CRM permissions.
+const CRM_FULL_ACCESS_ROLES = ["admin", "org", "company"];
+
+/**
+ * Build a `check` for CRM nav items: visible if the user is a super/org/company admin,
+ * or otherwise holds the given CRM permission.
+ */
+const crmCheck = (permission?: string) => (user: any) =>
+  CRM_FULL_ACCESS_ROLES.some((r) => user?.roles?.includes(r)) ||
+  (permission ? user?.permissions?.includes(permission) : false);
+
 const navigation: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   {
@@ -517,22 +528,22 @@ const navigation: NavItem[] = [
     name: "CRM",
     href: "/crm",
     icon: Target,
-    permission: "view_crm_dashboard",
+    check: crmCheck("view_crm_dashboard"),
     children: [
-      { name: "Dashboard", href: "/crm/dashboard", permission: "view_crm_dashboard" },
-      { name: "Leads", href: "/crm/leads", permission: "view_leads" },
-      { name: "Customer from Lead or Opportunity", href: "/crm/customers", permission: "view_customers" },
-      { name: "Opportunities", href: "/crm/opportunities", permission: "view_opportunities" },
-      { name: "Prospects", href: "/crm/prospects", permission: "view_prospects" },
-      { name: "New Customer", href: "/crm/contacts", permission: "create_customers" },
-      { name: "Campaigns", href: "/crm/campaigns", permission: "view_campaigns" },
-      { name: "Sales Task", href: "/crm/sales-tasks", permission: "view_sales_tasks" },
-      { name: "Sources", href: "/crm/sources", permission: "manage_crm_masters" },
-      { name: "Product List", href: "/crm/products", permission: "manage_crm_masters" },
-      { name: "Product Categories", href: "/crm/product-categories", permission: "manage_crm_masters" },
-      { name: "Opportunity Lost Reasons", href: "/crm/opportunity-lost-reasons", permission: "manage_crm_masters" },
-      { name: "Sales Stages", href: "/crm/sales-stages", permission: "manage_crm_masters" },
-      { name: "Settings", href: "/crm/settings", permission: "manage_crm_masters" },
+      { name: "Dashboard", href: "/crm/dashboard", check: crmCheck("view_crm_dashboard") },
+      { name: "Leads", href: "/crm/leads", check: crmCheck("view_leads") },
+      { name: "Customer from Lead or Opportunity", href: "/crm/customers", check: crmCheck("view_customers") },
+      { name: "Opportunities", href: "/crm/opportunities", check: crmCheck("view_opportunities") },
+      { name: "Prospects", href: "/crm/prospects", check: crmCheck("view_prospects") },
+      { name: "New Customer", href: "/crm/contacts", check: crmCheck("create_customers") },
+      { name: "Campaigns", href: "/crm/campaigns", check: crmCheck("view_campaigns") },
+      { name: "Sales Task", href: "/crm/sales-tasks", check: crmCheck("view_sales_tasks") },
+      { name: "Sources", href: "/crm/sources", check: crmCheck("manage_crm_masters") },
+      { name: "Product List", href: "/crm/products", check: crmCheck("manage_crm_masters") },
+      { name: "Product Categories", href: "/crm/product-categories", check: crmCheck("manage_crm_masters") },
+      { name: "Opportunity Lost Reasons", href: "/crm/opportunity-lost-reasons", check: crmCheck("manage_crm_masters") },
+      { name: "Sales Stages", href: "/crm/sales-stages", check: crmCheck("manage_crm_masters") },
+      { name: "Settings", href: "/crm/settings", check: crmCheck("manage_crm_masters") },
     ],
   },
   {
