@@ -374,21 +374,14 @@ export default function AdminDashboard() {
         </Card>
 
         <Card className="border-0 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest updates in the system</CardDescription>
-            </div>
-            <Link to="/reports">
-              <Button variant="ghost" size="sm">
-                View all
-              </Button>
-            </Link>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>Latest updates in the system</CardDescription>
           </CardHeader>
           <CardContent>
             {dashboardData?.recent_activities?.length ? (
-              <div className="space-y-4">
-                {dashboardData.recent_activities.slice(0, 5).map((activity) => {
+              <div className="space-y-4 max-h-[280px] overflow-y-auto pr-2">
+                {dashboardData.recent_activities.map((activity) => {
                   const style = activityStyles[activity.type] ?? {
                     icon: Activity,
                     bg: 'bg-solarized-base02/10',
