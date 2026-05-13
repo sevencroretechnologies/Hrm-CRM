@@ -480,7 +480,7 @@ export default function LeadForm() {
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select Industry" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent side="bottom" className="max-h-[250px]">
                                     {industries.map((i) => (
                                         <SelectItem key={i.id} value={i.id.toString()}>{i.name}</SelectItem>
                                     ))}

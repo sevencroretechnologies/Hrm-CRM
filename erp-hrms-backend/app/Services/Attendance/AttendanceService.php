@@ -35,12 +35,17 @@ class AttendanceService extends BaseService
 
     protected ShiftService $shiftService;
     protected LeaveService $leaveService;
+    protected AttendanceSettingService $attendanceSettingService;
 
-    public function __construct(ShiftService $shiftService, LeaveService $leaveService)
-    {
+    public function __construct(
+        ShiftService $shiftService,
+        LeaveService $leaveService,
+        AttendanceSettingService $attendanceSettingService
+    ) {
         // parent::__construct();
         $this->shiftService = $shiftService;
         $this->leaveService = $leaveService;
+        $this->attendanceSettingService = $attendanceSettingService;
 
         // Initialize any parent properties that need to be set
         $this->perPage = config('app.per_page', 15);
@@ -182,28 +187,38 @@ class AttendanceService extends BaseService
 
         // Get employee's shift for today
         $shift = $this->shiftService->getEmployeeShift($staffMemberId, $today);
+        
+        // Get company/org
+        $staffMember = StaffMember::find($staffMemberId);
+        $setting = $this->attendanceSettingService->getSetting($staffMember->company_id, $staffMember->org_id);
 
         $lateMinutes = 0;
-        $status = 'present'; // Status remains 'present', late_minutes tracks lateness
+        $status = 'present';
+
+        $appTimezone = config('app.timezone') === 'UTC' ? 'Asia/Kolkata' : config('app.timezone');
+        $currentTimeInAppZone = Carbon::now($appTimezone);
+
+        $targetStartTime = null;
+        $graceMinutes = 0;
 
         if ($shift) {
-            // Calculate if late based on shift
-            // Parse shift time with today's date for proper comparison in the Application Timezone
-            // We assume Shift Time is defined in the Application/Local Timezone found in config or default to 'Asia/Kolkata' for this user context
-            $appTimezone = config('app.timezone') === 'UTC' ? 'Asia/Kolkata' : config('app.timezone'); 
-            
-            // Current time in the target timezone
-            $currentTimeInAppZone = Carbon::now($appTimezone);
-            
-            // Shift Start in the target timezone
-            $shiftStart = Carbon::parse($today . ' ' . $shift->start_time, $appTimezone);
-            
-            $isLate = $currentTimeInAppZone->gt($shiftStart);
+            $targetStartTime = $shift->start_time;
+            // Shift grace period not implemented yet, using 0 or could be added to Shift model later
+        } elseif ($setting) {
+            $targetStartTime = $setting->default_clock_in_time;
+            $graceMinutes = $setting->grace_minutes;
+        }
 
-            if ($isLate) {
-                // Calculate how many minutes after shift start
-                $lateMinutes = $shiftStart->diffInMinutes($currentTimeInAppZone);
-                // Status remains 'present', late_minutes field tracks how late they are
+        if ($targetStartTime) {
+            $startTime = Carbon::parse($today . ' ' . $targetStartTime, $appTimezone);
+            
+            // Add grace minutes if any
+            if ($graceMinutes > 0) {
+                $startTime->addMinutes($graceMinutes);
+            }
+
+            if ($currentTimeInAppZone->gt($startTime)) {
+                $lateMinutes = $startTime->diffInMinutes($currentTimeInAppZone);
             }
         }
 
@@ -287,27 +302,37 @@ class AttendanceService extends BaseService
 
         // Get shift for calculation
         $shift = $this->shiftService->getEmployeeShift($staffMemberId, $today);
+        
+        // Get company/org
+        $staffMember = $workLog->staffMember;
+        $setting = $this->attendanceSettingService->getSetting($staffMember->company_id, $staffMember->org_id);
+
+        $appTimezone = config('app.timezone') === 'UTC' ? 'Asia/Kolkata' : config('app.timezone');
+        $currentTimeInAppZone = Carbon::now($appTimezone);
+        $clockOutInAppZone = $currentTimeInAppZone;
+
+        $targetEndTime = null;
 
         if ($shift) {
-            // Use specific timezone logic
-            $appTimezone = config('app.timezone') === 'UTC' ? 'Asia/Kolkata' : config('app.timezone');
-            $currentTimeInAppZone = Carbon::now($appTimezone);
-            $clockOutInAppZone = $currentTimeInAppZone; // Since clocking out now
+            $targetEndTime = $shift->end_time;
+        } elseif ($setting) {
+            $targetEndTime = $setting->default_clock_out_time;
+        }
 
-            // Parse shift time with today's date for proper comparison
-            $shiftEnd = Carbon::createFromFormat('Y-m-d H:i:s', $today . ' ' . $shift->end_time, $appTimezone);
+        if ($targetEndTime) {
+            $endTime = Carbon::parse($today . ' ' . $targetEndTime, $appTimezone);
 
             // Calculate early leave
-            if ($clockOutInAppZone->lt($shiftEnd)) {
-                $earlyLeaveMinutes = $clockOutInAppZone->diffInMinutes($shiftEnd);
+            if ($clockOutInAppZone->lt($endTime)) {
+                $earlyLeaveMinutes = $clockOutInAppZone->diffInMinutes($endTime);
             }
 
             // Calculate overtime (after shift end)
-            if ($clockOutInAppZone->gt($shiftEnd)) {
-                $overtimeMinutes = $clockOutInAppZone->diffInMinutes($shiftEnd);
+            if ($clockOutInAppZone->gt($endTime)) {
+                $overtimeMinutes = $clockOutInAppZone->diffInMinutes($endTime);
 
                 // If shift has overtime threshold, adjust
-                if ($shift->overtime_after_hours > 0) {
+                if ($shift && $shift->overtime_after_hours > 0) {
                     $regularHours = $shift->overtime_after_hours * 60; // Convert to minutes
                     $actualWorkMinutes = $totalMinutes - ($workLog->break_minutes ?? 0);
 
@@ -357,10 +382,12 @@ class AttendanceService extends BaseService
             return;
         }
 
-        // NEW: If the employee has no shift assigned, skip half-day logic
+        // NEW: If the employee has no shift assigned, check for attendance settings
         $shiftId = $workLog->shift_id ?: $this->shiftService->getEmployeeShift($staffMember->id, $workLog->log_date->toDateString())?->id;
-        if (!$shiftId) {
-            \Illuminate\Support\Facades\Log::info("HalfDay: No shift found, skipping");
+        $setting = $this->attendanceSettingService->getSetting($staffMember->company_id, $staffMember->org_id);
+        
+        if (!$shiftId && !$setting) {
+            \Illuminate\Support\Facades\Log::info("HalfDay: No shift or company settings found, skipping");
             return;
         }
 

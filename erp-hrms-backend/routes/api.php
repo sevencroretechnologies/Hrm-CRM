@@ -52,6 +52,7 @@ use App\Http\Controllers\Api\Attendance\TimesheetProjectController;
 // Attendance Controllers
 use App\Http\Controllers\Api\Attendance\WorkLogController;
 use App\Http\Controllers\Api\Attendance\HalfDayRuleConfigController;
+use App\Http\Controllers\Api\Attendance\AttendanceSettingController;
 use App\Http\Controllers\Api\Auth\AccessController;
 use App\Http\Controllers\Api\Company\CompanyEventController;
 use App\Http\Controllers\Api\Company\CompanyHolidayController;
@@ -722,6 +723,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/attendance-regularizations-pending', [AttendanceRegularizationController::class , 'pending'])->middleware('permission:view_attendance');
         Route::get('/my-regularization-requests', [AttendanceRegularizationController::class , 'myRequests']);
         Route::apiResource('half-day-rules', HalfDayRuleConfigController::class);
+        Route::get('/attendance-settings/effective', [AttendanceSettingController::class, 'getEffective']);
+        Route::apiResource('attendance-settings', AttendanceSettingController::class);
 
         // ============================================
         // DYNAMIC STORAGE DOCUMENTS & CRUD
