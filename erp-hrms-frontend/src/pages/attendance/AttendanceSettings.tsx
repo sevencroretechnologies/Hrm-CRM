@@ -30,6 +30,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { attendanceSettingService } from '@/services/api';
 import { showAlert, showConfirmDialog, getErrorMessage } from '@/lib/sweetalert';
 import DataTable, { TableColumn } from 'react-data-table-component';
@@ -37,8 +44,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface AttendanceSetting {
   id: number;
-  default_clock_in_time: string;
-  default_clock_out_time: string;
+  default_clock_in_time: string; // Now stores "HH:MM AM/PM"
+  default_clock_out_time: string; // Now stores "HH:MM AM/PM"
   grace_minutes: number;
   company_id?: number | null;
   org_id?: number | null;
@@ -52,13 +59,13 @@ const AttendanceSettings: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [editingSetting, setEditingSetting] = useState<AttendanceSetting | null>(null);
   
-  const [formData, setFormData] = useState({
-    default_clock_in_time: '09:00:00',
-    default_clock_out_time: '18:00:00',
-    grace_minutes: 15
-  });
+  // Manual AM/PM States for UI
+  const [inTime, setInTime] = useState("09:00");
+  const [inPeriod, setInPeriod] = useState("AM");
+  const [outTime, setOutTime] = useState("06:00");
+  const [outPeriod, setOutPeriod] = useState("PM");
+  const [grace, setGrace] = useState(15);
 
-  const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [user, setUser] = useState<any>(null);
 
@@ -81,18 +88,34 @@ const AttendanceSettings: React.FC = () => {
     }
   }, []);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSearch(searchInput);
+  // Parse "HH:MM AM/PM" into { time, period }
+  const parseTimeString = (timeStr: string) => {
+    if (!timeStr) return { time: "09:00", period: "AM" };
+    // Handle old format if any (HH:MM:SS)
+    if (timeStr.includes(':') && timeStr.split(':').length === 3 && !timeStr.includes(' ')) {
+        const [hours, minutes] = timeStr.split(':');
+        const h = parseInt(hours);
+        const period = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        const formattedH = h12 < 10 ? `0${h12}` : `${h12}`;
+        return { time: `${formattedH}:${minutes}`, period };
+    }
+    // New format: "HH:MM AM"
+    const [time, period] = timeStr.split(' ');
+    return { time: time || "09:00", period: period || "AM" };
   };
 
   const handleEdit = (setting: AttendanceSetting) => {
     setEditingSetting(setting);
-    setFormData({
-      default_clock_in_time: setting.default_clock_in_time,
-      default_clock_out_time: setting.default_clock_out_time,
-      grace_minutes: setting.grace_minutes
-    });
+    const clockIn = parseTimeString(setting.default_clock_in_time);
+    const clockOut = parseTimeString(setting.default_clock_out_time);
+    
+    setInTime(clockIn.time);
+    setInPeriod(clockIn.period);
+    setOutTime(clockOut.time);
+    setOutPeriod(clockOut.period);
+    setGrace(setting.grace_minutes);
+    
     setIsDialogOpen(true);
   };
 
@@ -118,8 +141,11 @@ const AttendanceSettings: React.FC = () => {
     e.preventDefault();
     setIsSaving(true);
     try {
+      // Merge time and period into a single string "09:00 AM"
       const payload = {
-        ...formData,
+        default_clock_in_time: `${inTime} ${inPeriod}`,
+        default_clock_out_time: `${outTime} ${outPeriod}`,
+        grace_minutes: grace,
         company_id: user?.company_id,
         org_id: user?.org_id,
       };
@@ -146,23 +172,27 @@ const AttendanceSettings: React.FC = () => {
       name: "Clock-In Time",
       selector: (row) => row.default_clock_in_time,
       sortable: true,
-      cell: (row) => (
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-solarized-blue" />
-          <span className="font-medium text-solarized-base02">{row.default_clock_in_time}</span>
-        </div>
-      )
+      cell: (row) => {
+        return (
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-solarized-blue" />
+            <span className="font-medium text-solarized-base02">{row.default_clock_in_time}</span>
+          </div>
+        );
+      }
     },
     {
       name: "Clock-Out Time",
       selector: (row) => row.default_clock_out_time,
       sortable: true,
-      cell: (row) => (
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-solarized-orange" />
-          <span className="font-medium text-solarized-base02">{row.default_clock_out_time}</span>
-        </div>
-      )
+      cell: (row) => {
+        return (
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-solarized-orange" />
+            <span className="font-medium text-solarized-base02">{row.default_clock_out_time}</span>
+          </div>
+        );
+      }
     },
     {
       name: "Grace (Min)",
@@ -216,11 +246,11 @@ const AttendanceSettings: React.FC = () => {
               className="bg-solarized-blue hover:bg-solarized-blue/90"
               onClick={() => {
                 setEditingSetting(null);
-                setFormData({
-                  default_clock_in_time: '09:00:00',
-                  default_clock_out_time: '18:00:00',
-                  grace_minutes: 15
-                });
+                setInTime("09:00");
+                setInPeriod("AM");
+                setOutTime("06:00");
+                setOutPeriod("PM");
+                setGrace(15);
               }}
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -239,40 +269,61 @@ const AttendanceSettings: React.FC = () => {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-6 py-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="clock-in" className="text-solarized-base01 font-semibold uppercase tracking-wider text-[11px]">
-                      Clock-In Time *
-                    </Label>
-                    <div className="relative">
+                {/* Clock In Row */}
+                <div className="space-y-2">
+                  <Label className="text-solarized-base01 font-semibold uppercase tracking-wider text-[11px]">
+                    Clock-In Time *
+                  </Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
                       <Clock className="absolute left-3 top-3 h-4 w-4 text-solarized-base01" />
                       <Input
-                        id="clock-in"
-                        type="time"
-                        step="1"
+                        type="text"
+                        placeholder="HH:MM"
                         className="pl-10 border-solarized-base2 focus:border-solarized-blue transition-all"
-                        value={formData.default_clock_in_time}
-                        onChange={(e) => setFormData({ ...formData, default_clock_in_time: e.target.value })}
+                        value={inTime}
+                        onChange={(e) => setInTime(e.target.value)}
                         required
                       />
                     </div>
+                    <Select value={inPeriod} onValueChange={setInPeriod}>
+                      <SelectTrigger className="w-[100px] border-solarized-base2">
+                        <SelectValue placeholder="Period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="AM">AM</SelectItem>
+                        <SelectItem value="PM">PM</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="clock-out" className="text-solarized-base01 font-semibold uppercase tracking-wider text-[11px]">
-                      Clock-Out Time *
-                    </Label>
-                    <div className="relative">
+                </div>
+
+                {/* Clock Out Row */}
+                <div className="space-y-2">
+                  <Label className="text-solarized-base01 font-semibold uppercase tracking-wider text-[11px]">
+                    Clock-Out Time *
+                  </Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
                       <Clock className="absolute left-3 top-3 h-4 w-4 text-solarized-base01" />
                       <Input
-                        id="clock-out"
-                        type="time"
-                        step="1"
+                        type="text"
+                        placeholder="HH:MM"
                         className="pl-10 border-solarized-base2 focus:border-solarized-blue transition-all"
-                        value={formData.default_clock_out_time}
-                        onChange={(e) => setFormData({ ...formData, default_clock_out_time: e.target.value })}
+                        value={outTime}
+                        onChange={(e) => setOutTime(e.target.value)}
                         required
                       />
                     </div>
+                    <Select value={outPeriod} onValueChange={setOutPeriod}>
+                      <SelectTrigger className="w-[100px] border-solarized-base2">
+                        <SelectValue placeholder="Period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="AM">AM</SelectItem>
+                        <SelectItem value="PM">PM</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -286,8 +337,8 @@ const AttendanceSettings: React.FC = () => {
                       id="grace"
                       type="number"
                       className="pl-10 border-solarized-base2 focus:border-solarized-blue transition-all"
-                      value={formData.grace_minutes}
-                      onChange={(e) => setFormData({ ...formData, grace_minutes: parseInt(e.target.value) || 0 })}
+                      value={grace}
+                      onChange={(e) => setGrace(parseInt(e.target.value) || 0)}
                       required
                     />
                   </div>
@@ -325,7 +376,7 @@ const AttendanceSettings: React.FC = () => {
 
       <Card className="border-0 shadow-md">
         <CardContent className="pt-6">
-          {/* <form onSubmit={handleSearchSubmit} className="flex gap-4 mb-6">
+          <div className="flex gap-4 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-solarized-base01" />
               <Input
@@ -335,16 +386,13 @@ const AttendanceSettings: React.FC = () => {
                 className="pl-10 border-solarized-base2"
               />
             </div>
-            <Button type="submit" variant="outline" className="border-solarized-base2 text-solarized-base01">
-              <Search className="mr-2 h-4 w-4" /> Search
-            </Button>
-          </form> */}
+          </div>
 
           <DataTable
             columns={columns}
             data={settings.filter(s => 
-              s.default_clock_in_time.includes(search) || 
-              s.default_clock_out_time.includes(search)
+              s.default_clock_in_time.toLowerCase().includes(searchInput.toLowerCase()) || 
+              s.default_clock_out_time.toLowerCase().includes(searchInput.toLowerCase())
             )}
             progressPending={isLoading}
             pagination

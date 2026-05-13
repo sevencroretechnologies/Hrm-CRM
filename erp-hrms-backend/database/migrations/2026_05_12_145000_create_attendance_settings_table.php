@@ -13,8 +13,8 @@ return new class extends Migration {
         Schema::create('attendance_settings', function (Blueprint $table) {
             $table->id();
 
-            $table->time('default_clock_in_time');
-            $table->time('default_clock_out_time');
+            $table->string('default_clock_in_time')->default('09:00 AM');
+            $table->string('default_clock_out_time')->default('06:00 PM');
             $table->integer('grace_minutes')->default(0);
 
             $table->unsignedBigInteger('org_id')->nullable();

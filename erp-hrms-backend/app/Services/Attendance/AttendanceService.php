@@ -95,7 +95,7 @@ class AttendanceService extends BaseService
         $query->orderBy($orderBy, $order);
 
         $paginate = ($params['paginate'] ?? 'true') !== 'false';
-        $perPage = isset($params['per_page']) ? (int)$params['per_page'] : $this->perPage;
+        $perPage = isset($params['per_page']) ? (int) $params['per_page'] : $this->perPage;
 
         $result = $paginate
             ? $query->paginate($perPage)
@@ -111,30 +111,18 @@ class AttendanceService extends BaseService
             // Format clock_in - Use local time instead of UTC
             if ($workLog->clock_in) {
                 $workLog->clock_in_time = $workLog->clock_in;
-                // Create full datetime with timezone for proper display
-                $clockInDateTime = Carbon::createFromFormat(
-                    'Y-m-d H:i:s',
-                    $workLog->log_date->format('Y-m-d') . ' ' . $workLog->clock_in,
-                    $timezone
-                );
-                // Send local time in ISO format without 'Z' (which indicates UTC)
+                $dateStr = $workLog->log_date instanceof Carbon ? $workLog->log_date->format('Y-m-d') : $workLog->log_date;
+                $clockInDateTime = Carbon::parse($dateStr . ' ' . $workLog->clock_in, $timezone);
                 $workLog->clock_in = $clockInDateTime->format('Y-m-d\TH:i:s');
-                // Also format just the time part for easy display
                 $workLog->clock_in_display = $clockInDateTime->format('H:i');
             }
 
             // Format clock_out - Use local time instead of UTC
             if ($workLog->clock_out) {
                 $workLog->clock_out_time = $workLog->clock_out;
-                // Create full datetime with timezone for proper display
-                $clockOutDateTime = Carbon::createFromFormat(
-                    'Y-m-d H:i:s',
-                    $workLog->log_date->format('Y-m-d') . ' ' . $workLog->clock_out,
-                    $timezone
-                );
-                // Send local time in ISO format without 'Z' (which indicates UTC)
+                $dateStr = $workLog->log_date instanceof Carbon ? $workLog->log_date->format('Y-m-d') : $workLog->log_date;
+                $clockOutDateTime = Carbon::parse($dateStr . ' ' . $workLog->clock_out, $timezone);
                 $workLog->clock_out = $clockOutDateTime->format('Y-m-d\TH:i:s');
-                // Also format just the time part for easy display
                 $workLog->clock_out_display = $clockOutDateTime->format('H:i');
             }
 
@@ -171,10 +159,9 @@ class AttendanceService extends BaseService
      */
     public function clockIn(int $staffMemberId, array $data = []): array
     {
-        // Set the timezone for this operation
-        $timezone = config('app.timezone', 'UTC');
-        $today = Carbon::now($timezone)->toDateString();
-        $currentTime = Carbon::now($timezone);
+        $appTimezone = config('app.timezone', 'UTC');
+        $currentTime = Carbon::now($appTimezone);
+        $today = $currentTime->toDateString();
 
         // Check if already clocked in today
         $existing = WorkLog::where('staff_member_id', $staffMemberId)
@@ -187,43 +174,44 @@ class AttendanceService extends BaseService
 
         // Get employee's shift for today
         $shift = $this->shiftService->getEmployeeShift($staffMemberId, $today);
-        
-        // Get company/org
+
+        // Get company/org settings
         $staffMember = StaffMember::find($staffMemberId);
         $setting = $this->attendanceSettingService->getSetting($staffMember->company_id, $staffMember->org_id);
 
         $lateMinutes = 0;
-        $status = 'present';
-
-        $appTimezone = config('app.timezone') === 'UTC' ? 'Asia/Kolkata' : config('app.timezone');
-        $currentTimeInAppZone = Carbon::now($appTimezone);
-
         $targetStartTime = null;
         $graceMinutes = 0;
 
+        // 1. Determine the source of the start time (Shift takes priority)
         if ($shift) {
             $targetStartTime = $shift->start_time;
-            // Shift grace period not implemented yet, using 0 or could be added to Shift model later
+            $graceMinutes = $shift->grace_minutes ?? 0;
         } elseif ($setting) {
             $targetStartTime = $setting->default_clock_in_time;
-            $graceMinutes = $setting->grace_minutes;
+            $graceMinutes = $setting->grace_minutes ?? 0;
         }
 
+        // 2. Calculate Late Minutes
         if ($targetStartTime) {
-            $startTime = Carbon::parse($today . ' ' . $targetStartTime, $appTimezone);
-            
-            // Add grace minutes if any
+            // Construct target datetime using the same date and timezone
+            // Carbon::parse handles "HH:MM AM/PM" format correctly
+            $targetStartDateTime = Carbon::parse($today . ' ' . $targetStartTime, $appTimezone);
+
+            // Add grace period if any
             if ($graceMinutes > 0) {
-                $startTime->addMinutes($graceMinutes);
+                $targetStartDateTime->addMinutes($graceMinutes);
             }
 
-            if ($currentTimeInAppZone->gt($startTime)) {
-                $lateMinutes = $startTime->diffInMinutes($currentTimeInAppZone);
+            // If current time is after the start time, calculate late minutes
+            if ($currentTime->gt($targetStartDateTime)) {
+                $lateMinutes = (int) $targetStartDateTime->diffInMinutes($currentTime);
             }
         }
 
-        // If exists but clocked out, update
+        // 3. Update or Create Work Log
         if ($existing && $existing->clock_out) {
+            // Re-clocking in after a clock-out (if allowed)
             $existing->update([
                 'clock_in' => $currentTime->format('H:i:s'),
                 'clock_in_ip' => $data['ip_address'] ?? null,
@@ -231,7 +219,7 @@ class AttendanceService extends BaseService
                 'clock_in_longitude' => $data['longitude'] ?? null,
                 'clock_in_accuracy' => $data['accuracy'] ?? null,
                 'late_minutes' => $lateMinutes,
-                'status' => $status,
+                'status' => 'present',
                 'clock_out' => null,
                 'clock_out_ip' => null,
                 'clock_out_latitude' => null,
@@ -242,13 +230,11 @@ class AttendanceService extends BaseService
                 'total_hours' => null,
                 'author_id' => $data['author_id'] ?? null,
             ]);
-
             $workLog = $existing;
         } else {
-            // Create new work log
             $workLog = WorkLog::create([
                 'staff_member_id' => $staffMemberId,
-                'shift_id' => $shift ? $shift->id : null, // Save shift ID for later rule checking
+                'shift_id' => $shift ? $shift->id : null,
                 'log_date' => $today,
                 'clock_in' => $currentTime->format('H:i:s'),
                 'clock_in_ip' => $data['ip_address'] ?? null,
@@ -256,13 +242,13 @@ class AttendanceService extends BaseService
                 'clock_in_longitude' => $data['longitude'] ?? null,
                 'clock_in_accuracy' => $data['accuracy'] ?? null,
                 'late_minutes' => $lateMinutes,
-                'status' => $status,
+                'status' => 'present',
                 'author_id' => $data['author_id'] ?? null,
             ]);
-
-            // Apply half-day logic after creation
-            $this->applyHalfDayLogic($workLog);
         }
+
+        // 4. Apply half-day logic
+        $this->applyHalfDayLogic($workLog);
 
         return $this->getCurrentStatus($staffMemberId);
     }
@@ -272,9 +258,9 @@ class AttendanceService extends BaseService
      */
     public function clockOut(int $staffMemberId, array $data = []): array
     {
-        $timezone = config('app.timezone', 'UTC');
-        $today = Carbon::now($timezone)->toDateString();
-        $currentTime = Carbon::now($timezone);
+        $appTimezone = config('app.timezone', 'UTC');
+        $currentTime = Carbon::now($appTimezone);
+        $today = $currentTime->toDateString();
 
         $workLog = WorkLog::where('staff_member_id', $staffMemberId)
             ->whereDate('log_date', $today)
@@ -285,68 +271,51 @@ class AttendanceService extends BaseService
             throw new \Exception('No active clock-in found for today');
         }
 
-        // FIX: Use proper method to combine date and time
-        $clockInDateTime = Carbon::createFromFormat(
-            'Y-m-d H:i:s',
-            $workLog->log_date->format('Y-m-d') . ' ' . $workLog->clock_in,
-            $timezone
-        );
+        // Construct clock-in datetime for duration calculation
+        $clockInDateTime = Carbon::parse($workLog->log_date->format('Y-m-d') . ' ' . $workLog->clock_in, $appTimezone);
 
-        $clockOut = $currentTime;
-
-        $totalMinutes = $clockInDateTime->diffInMinutes($clockOut);
+        $totalMinutes = $clockInDateTime->diffInMinutes($currentTime);
         $totalHours = round($totalMinutes / 60, 2);
 
         $earlyLeaveMinutes = 0;
         $overtimeMinutes = 0;
 
-        // Get shift for calculation
+        // Get shift or settings
         $shift = $this->shiftService->getEmployeeShift($staffMemberId, $today);
-        
-        // Get company/org
         $staffMember = $workLog->staffMember;
         $setting = $this->attendanceSettingService->getSetting($staffMember->company_id, $staffMember->org_id);
 
-        $appTimezone = config('app.timezone') === 'UTC' ? 'Asia/Kolkata' : config('app.timezone');
-        $currentTimeInAppZone = Carbon::now($appTimezone);
-        $clockOutInAppZone = $currentTimeInAppZone;
-
         $targetEndTime = null;
-
         if ($shift) {
             $targetEndTime = $shift->end_time;
         } elseif ($setting) {
             $targetEndTime = $setting->default_clock_out_time;
         }
 
+        // Calculate Early Leave / Overtime
         if ($targetEndTime) {
-            $endTime = Carbon::parse($today . ' ' . $targetEndTime, $appTimezone);
+            $targetEndDateTime = Carbon::parse($today . ' ' . $targetEndTime, $appTimezone);
 
-            // Calculate early leave
-            if ($clockOutInAppZone->lt($endTime)) {
-                $earlyLeaveMinutes = $clockOutInAppZone->diffInMinutes($endTime);
+            // 1. Early Leave
+            if ($currentTime->lt($targetEndDateTime)) {
+                $earlyLeaveMinutes = $currentTime->diffInMinutes($targetEndDateTime);
             }
 
-            // Calculate overtime (after shift end)
-            if ($clockOutInAppZone->gt($endTime)) {
-                $overtimeMinutes = $clockOutInAppZone->diffInMinutes($endTime);
+            // 2. Overtime
+            if ($currentTime->gt($targetEndDateTime)) {
+                $overtimeMinutes = $currentTime->diffInMinutes($targetEndDateTime);
 
-                // If shift has overtime threshold, adjust
-                if ($shift && $shift->overtime_after_hours > 0) {
-                    $regularHours = $shift->overtime_after_hours * 60; // Convert to minutes
-                    $actualWorkMinutes = $totalMinutes - ($workLog->break_minutes ?? 0);
-
-                    if ($actualWorkMinutes > $regularHours) {
-                        $overtimeMinutes = $actualWorkMinutes - $regularHours;
-                    } else {
-                        $overtimeMinutes = 0;
-                    }
+                // Handle shift-specific overtime threshold if applicable
+                if ($shift && ($shift->overtime_after_hours ?? 0) > 0) {
+                    $regularMinutes = $shift->overtime_after_hours * 60;
+                    $actualMinutes = $totalMinutes - ($workLog->break_minutes ?? 0);
+                    $overtimeMinutes = max(0, $actualMinutes - $regularMinutes);
                 }
             }
         }
 
         $workLog->update([
-            'clock_out' => $clockOut->format('H:i:s'),
+            'clock_out' => $currentTime->format('H:i:s'),
             'clock_out_ip' => $data['ip_address'] ?? null,
             'clock_out_latitude' => $data['latitude'] ?? null,
             'clock_out_longitude' => $data['longitude'] ?? null,
@@ -357,7 +326,7 @@ class AttendanceService extends BaseService
             'author_id' => $data['author_id'] ?? null,
         ]);
 
-        // Apply half-day logic after clock-out
+        // Re-apply half-day logic (in case early leaving triggers it)
         $this->applyHalfDayLogic($workLog);
 
         return $this->getCurrentStatus($staffMemberId);
@@ -385,7 +354,7 @@ class AttendanceService extends BaseService
         // NEW: If the employee has no shift assigned, check for attendance settings
         $shiftId = $workLog->shift_id ?: $this->shiftService->getEmployeeShift($staffMember->id, $workLog->log_date->toDateString())?->id;
         $setting = $this->attendanceSettingService->getSetting($staffMember->company_id, $staffMember->org_id);
-        
+
         if (!$shiftId && !$setting) {
             \Illuminate\Support\Facades\Log::info("HalfDay: No shift or company settings found, skipping");
             return;
@@ -396,13 +365,13 @@ class AttendanceService extends BaseService
         // might be filtered out by the HasOrgAndCompany trait.
         $rule = HalfDayRuleConfig::withoutGlobalScopes()
             ->where('is_active', true)
-            ->where(function($query) use ($staffMember) {
+            ->where(function ($query) use ($staffMember) {
                 $query->where('company_id', $staffMember->company_id)
-                      ->orWhereNull('company_id');
+                    ->orWhereNull('company_id');
             })
-            ->where(function($query) use ($staffMember) {
+            ->where(function ($query) use ($staffMember) {
                 $query->where('org_id', $staffMember->org_id)
-                      ->orWhereNull('org_id');
+                    ->orWhereNull('org_id');
             })
             ->orderByRaw('company_id DESC, org_id DESC')
             ->first();
@@ -850,7 +819,8 @@ class AttendanceService extends BaseService
      */
     private function formatTime($time): ?string
     {
-        if (!$time) return null;
+        if (!$time)
+            return null;
 
         try {
             if (is_string($time)) {
@@ -882,7 +852,7 @@ class AttendanceService extends BaseService
         $current = $start->copy();
 
         while ($current <= $end) {
-            if (! $current->isWeekend() && ! isset($holidayLookup[$current->format('Y-m-d')])) {
+            if (!$current->isWeekend() && !isset($holidayLookup[$current->format('Y-m-d')])) {
                 $days++;
             }
             $current->addDay();

@@ -42,8 +42,8 @@ class AttendanceSettingController extends Controller
         $validator = Validator::make($request->all(), [
             'company_id' => 'nullable|exists:companies,id',
             'org_id' => 'nullable|exists:organizations,id',
-            'default_clock_in_time' => 'required|date_format:H:i:s',
-            'default_clock_out_time' => 'required|date_format:H:i:s',
+            'default_clock_in_time' => 'required|string',
+            'default_clock_out_time' => 'required|string',
             'grace_minutes' => 'nullable|integer|min:0',
         ]);
 
@@ -64,8 +64,8 @@ class AttendanceSettingController extends Controller
     public function update(Request $request, AttendanceSetting $attendanceSetting)
     {
         $validator = Validator::make($request->all(), [
-            'default_clock_in_time' => 'date_format:H:i:s',
-            'default_clock_out_time' => 'date_format:H:i:s',
+            'default_clock_in_time' => 'string',
+            'default_clock_out_time' => 'string',
             'grace_minutes' => 'integer|min:0',
         ]);
 
