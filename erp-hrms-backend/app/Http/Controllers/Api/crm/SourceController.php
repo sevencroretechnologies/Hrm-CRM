@@ -9,10 +9,41 @@ use Illuminate\Http\Request;
 
 class SourceController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $sources = Source::all();
-        return response()->json($sources);
+        $query = Source::query();
+
+        // Search across name and source code.
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('source_code', 'like', "%{$search}%");
+            });
+        }
+
+        // Optional ordering (defaults to newest first).
+        $orderBy = $request->input('order_by', 'created_at');
+        $order = $request->input('order', 'desc');
+        $query->orderBy($orderBy, $order);
+
+        // Allow callers to opt out of pagination.
+        if ($request->boolean('paginate', true) === false || $request->input('paginate') === 'false') {
+            return response()->json(['data' => $query->get()]);
+        }
+
+        $perPage = (int) $request->input('per_page', 15);
+        $paginator = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ]);
     }
 
     public function store(Request $request): JsonResponse

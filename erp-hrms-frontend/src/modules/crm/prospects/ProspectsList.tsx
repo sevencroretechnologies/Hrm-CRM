@@ -26,6 +26,7 @@ export default function ProspectList() {
   const [items, setItems] = useState<Prospect[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(15);
   const [totalRows, setTotalRows] = useState(0);
@@ -42,8 +43,8 @@ export default function ProspectList() {
         per_page: perPage,
       };
 
-      if (search.trim()) {
-        params.search = search.trim();
+      if (appliedSearch.trim()) {
+        params.search = appliedSearch.trim();
       }
 
       const response = await prospectApi.list(params);
@@ -67,17 +68,21 @@ export default function ProspectList() {
     } finally {
       setIsLoading(false);
     }
-  }, [perPage, search]);
+  }, [perPage, appliedSearch]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchItems(page);
-    }, 300);
-    return () => clearTimeout(timer);
+    fetchItems(page);
   }, [page, fetchItems]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setAppliedSearch(search.trim());
+    setPage(1);
+  };
+
+  const handleClearSearch = () => {
+    setSearch('');
+    setAppliedSearch('');
     setPage(1);
   };
 
@@ -177,19 +182,27 @@ export default function ProspectList() {
       </div>
 
       <Card>
-        <CardHeader>
-          <form onSubmit={handleSearchSubmit} className="flex gap-4">
+        <CardHeader className="pb-3">
+          <form onSubmit={handleSearchSubmit} className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search prospects..."
-                className="pl-8"
+                className="pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Button type="submit" variant="outline">Search</Button>
+            <Button type="submit" variant="outline" className="shrink-0"><Search className="mr-2 h-4 w-4" /> Search</Button>
+            {appliedSearch && (
+              <Button type="button" variant="ghost" onClick={handleClearSearch} className="shrink-0">✕</Button>
+            )}
           </form>
+          {appliedSearch && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Results for: <span className="font-medium text-foreground">"{appliedSearch}"</span>
+            </p>
+          )}
         </CardHeader>
         <CardContent>
           {!isLoading && items.length === 0 ? (

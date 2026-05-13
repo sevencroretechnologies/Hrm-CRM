@@ -60,6 +60,7 @@ export default function OpportunityLostReasonList() {
     const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [appliedSearch, setAppliedSearch] = useState("");
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
@@ -77,7 +78,7 @@ export default function OpportunityLostReasonList() {
             const params: Record<string, unknown> = {
                 page: currentPage,
                 per_page: perPage,
-                search
+                search: appliedSearch
             };
             const response = await lostReasonApi.getAll(params);
             setReasons(extractList<OpportunityLostReason>(response.data));
@@ -88,7 +89,7 @@ export default function OpportunityLostReasonList() {
         } finally {
             setLoading(false);
         }
-    }, [search, perPage]);
+    }, [appliedSearch, perPage]);
 
     const fetchOpportunities = useCallback(async () => {
         try {
@@ -106,8 +107,14 @@ export default function OpportunityLostReasonList() {
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setAppliedSearch(search.trim());
         setPage(1);
-        fetchReasons(1);
+    };
+
+    const handleClearSearch = () => {
+        setSearch("");
+        setAppliedSearch("");
+        setPage(1);
     };
 
     /* const handleAddClick = () => {
@@ -249,7 +256,7 @@ export default function OpportunityLostReasonList() {
 
             <Card className="shadow-sm">
                 <CardHeader className="pb-3 text-2xl font-bold">
-                    <form onSubmit={handleSearchSubmit} className="flex gap-4">
+                    <form onSubmit={handleSearchSubmit} className="flex gap-2">
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
@@ -259,10 +266,20 @@ export default function OpportunityLostReasonList() {
                                 className="pl-9 h-10"
                             />
                         </div>
-                        <Button type="submit" variant="outline" className="h-10">
-                            Search
+                        <Button type="submit" variant="outline" className="h-10 shrink-0">
+                            <Search className="mr-2 h-4 w-4" /> Search
                         </Button>
+                        {appliedSearch && (
+                            <Button type="button" variant="ghost" onClick={handleClearSearch} className="h-10 shrink-0">
+                                ✕
+                            </Button>
+                        )}
                     </form>
+                    {appliedSearch && (
+                        <p className="text-sm text-muted-foreground mt-2 font-normal text-base">
+                            Results for: <span className="font-medium text-foreground">"{appliedSearch}"</span>
+                        </p>
+                    )}
                 </CardHeader>
                 <CardContent>
                     {!loading && reasons.length === 0 ? (

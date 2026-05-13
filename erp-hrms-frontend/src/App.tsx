@@ -416,152 +416,152 @@ function App() {
             {/* CRM */}
             {/* CRM */}
             <Route path="/crm" element={
-              <ProtectedRoute requiredPermission="view_crm_dashboard">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="view_crm_dashboard">
                 <CrmDashboard />
               </ProtectedRoute>
             } />
             <Route path="/crm/dashboard" element={
-              <ProtectedRoute requiredPermission="view_crm_dashboard">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="view_crm_dashboard">
                 <CrmDashboard />
               </ProtectedRoute>
             } />
             <Route path="/crm/leads" element={
-              <ProtectedRoute requiredPermission="view_leads">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="view_leads">
                 <LeadsList />
               </ProtectedRoute>
             } />
             <Route path="/crm/leads/create" element={
-              <ProtectedRoute requiredPermission="create_leads">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="create_leads">
                 <LeadForm />
               </ProtectedRoute>
             } />
             <Route path="/crm/leads/:id/edit" element={
-              <ProtectedRoute requiredPermission="edit_leads">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="edit_leads">
                 <LeadForm />
               </ProtectedRoute>
             } />
             <Route path="/crm/customers" element={
-              <ProtectedRoute requiredPermission="view_customers">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="view_customers">
                 <CustomerList />
               </ProtectedRoute>
             } />
             <Route path="/crm/customers/create" element={
-              <ProtectedRoute requiredPermission="create_customers">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="create_customers">
                 <CustomerForm />
               </ProtectedRoute>
             } />
             <Route path="/crm/customers/:id/edit" element={
-              <ProtectedRoute requiredPermission="edit_customers">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="edit_customers">
                 <CustomerForm />
               </ProtectedRoute>
             } />
             <Route path="/crm/opportunities" element={
-              <ProtectedRoute requiredPermission="view_opportunities">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="view_opportunities">
                 <OpportunitiesList />
               </ProtectedRoute>
             } />
             <Route path="/crm/opportunities/create" element={
-              <ProtectedRoute requiredPermission="create_opportunities">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="create_opportunities">
                 <OpportunityForm />
               </ProtectedRoute>
             } />
             <Route path="/crm/opportunities/:id/edit" element={
-              <ProtectedRoute requiredPermission="edit_opportunities">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="edit_opportunities">
                 <OpportunityForm />
               </ProtectedRoute>
             } />
             <Route path="/crm/opportunity-lost-reasons" element={
-              <ProtectedRoute requiredPermission="manage_crm_masters">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="manage_crm_masters">
                 <OpportunityLostReasonList />
               </ProtectedRoute>
             } />
             <Route path="/crm/campaigns" element={
-              <ProtectedRoute requiredPermission="view_campaigns">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="view_campaigns">
                 <CampaignsList />
               </ProtectedRoute>
             } />
             <Route path="/crm/sources" element={
-              <ProtectedRoute requiredPermission="manage_crm_masters">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="manage_crm_masters">
                 <SourceList />
               </ProtectedRoute>
             } />
             <Route path="/crm/territories" element={
-              <ProtectedRoute requiredPermission="manage_crm_masters">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="manage_crm_masters">
                 <TerritoryList />
               </ProtectedRoute>
             } />
             <Route path="/crm/products" element={
-              <ProtectedRoute requiredPermission="manage_crm_masters">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="manage_crm_masters">
                 <ProductList />
               </ProtectedRoute>
             } />
             <Route path="/crm/product-categories" element={
-              <ProtectedRoute requiredPermission="manage_crm_masters">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="manage_crm_masters">
                 <ProductCategoryList />
               </ProtectedRoute>
             } />
             <Route path="/crm/appointments" element={
-              <ProtectedRoute requiredPermission="view_sales_tasks">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="view_sales_tasks">
                 <AppointmentsList />
               </ProtectedRoute>
             } />
             <Route path="/crm/prospects" element={
-              <ProtectedRoute requiredPermission="view_prospects">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="view_prospects">
                 <ProspectsList />
               </ProtectedRoute>
             } />
             <Route path="/crm/prospects/create" element={
-              <ProtectedRoute requiredPermission="create_prospects">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="create_prospects">
                 <ProspectForm />
               </ProtectedRoute>
             } />
             <Route path="/crm/prospects/:id/edit" element={
-              <ProtectedRoute requiredPermission="edit_prospects">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="edit_prospects">
                 <ProspectForm />
               </ProtectedRoute>
             } />
             <Route path="/crm/contacts" element={
-              <ProtectedRoute requiredPermission="view_customers">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="view_customers">
                 <ContactList />
               </ProtectedRoute>
             } />
             <Route path="/crm/contacts/create" element={
-              <ProtectedRoute requiredPermission="create_customers">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="create_customers">
                 <ContactForm />
               </ProtectedRoute>
             } />
             <Route path="/crm/contacts/:id/edit" element={
-              <ProtectedRoute requiredPermission="edit_customers">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="edit_customers">
                 <ContactForm />
               </ProtectedRoute>
             } />
             <Route path="/crm/sales-tasks" element={
-              <ProtectedRoute requiredPermission="view_sales_tasks">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="view_sales_tasks">
                 <SalesTaskList />
               </ProtectedRoute>
             } />
             <Route path="/crm/sales-task-details" element={
-              <ProtectedRoute requiredPermission="view_sales_tasks">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="view_sales_tasks">
                 <SalesTaskDetailList />
               </ProtectedRoute>
             } />
             <Route path="/crm/sales-tasks/:id" element={
-              <ProtectedRoute requiredPermission="view_sales_tasks">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="view_sales_tasks">
                 <SalesTaskDetail />
               </ProtectedRoute>
             } />
             <Route path="/crm/contracts" element={
-              <ProtectedRoute requiredPermission="view_opportunities">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="view_opportunities">
                 <ContractsList />
               </ProtectedRoute>
             } />
             <Route path="/crm/sales-stages" element={
-              <ProtectedRoute requiredPermission="manage_crm_masters">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="manage_crm_masters">
                 <SalesStagesList />
               </ProtectedRoute>
             } />
             <Route path="/crm/settings" element={
-              <ProtectedRoute requiredPermission="manage_crm_masters">
+              <ProtectedRoute allowedRoles={["admin", "org", "company"]} requiredPermission="manage_crm_masters">
                 <CrmSettings />
               </ProtectedRoute>
             } />

@@ -54,7 +54,9 @@ export default function ProductList() {
   const [items, setItems] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  // searchInput = what's typed; searchQuery = what's actually applied (on submit).
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
@@ -81,7 +83,7 @@ export default function ProductList() {
       const params: any = {
         page: currentPage,
         per_page: perPage,
-        search,
+        search: searchQuery,
       };
       if (categoryFilter !== 'all') {
         params.category_id = categoryFilter;
@@ -104,7 +106,7 @@ export default function ProductList() {
     } finally {
       setIsLoading(false);
     }
-  }, [perPage, search, categoryFilter]);
+  }, [perPage, searchQuery, categoryFilter]);
 
   useEffect(() => {
     fetchItems(page);
@@ -113,6 +115,7 @@ export default function ProductList() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setSearchQuery(searchInput.trim());
     setPage(1);
   };
 
@@ -265,8 +268,8 @@ export default function ProductList() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search products..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   className="pl-10"
                 />
               </div>

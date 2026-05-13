@@ -33,7 +33,9 @@ interface ProductCategory {
 export default function ProductCategoryList() {
   const [items, setItems] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  // searchInput = what's typed; searchQuery = what's actually applied (on submit).
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
@@ -55,7 +57,7 @@ export default function ProductCategoryList() {
       const response = await crmProductCategoryService.getAll({
         page: currentPage,
         per_page: perPage,
-        search,
+        search: searchQuery,
       });
       const responseData = response.data;
       // Handle Laravel pagination: response.data.data.data
@@ -74,7 +76,7 @@ export default function ProductCategoryList() {
     } finally {
       setIsLoading(false);
     }
-  }, [perPage, search]);
+  }, [perPage, searchQuery]);
 
   useEffect(() => {
     fetchItems(page);
@@ -82,7 +84,8 @@ export default function ProductCategoryList() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchItems();
+    setSearchQuery(searchInput.trim());
+    setPage(1);
   };
 
   const resetForm = () => setFormData({ name: '', description: '' });
@@ -278,8 +281,8 @@ export default function ProductCategoryList() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search categories..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="pl-10"
               />
             </div>
