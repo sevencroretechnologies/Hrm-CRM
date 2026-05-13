@@ -71,7 +71,7 @@ public function getClockInDisplayAttribute(): ?string
     
     // Parse the time and format it for display
     $time = Carbon::parse($this->clock_in);
-    return $time->format('H:i');
+    return $time->format('h:i A');
 }
 
 public function getClockOutDisplayAttribute(): ?string
@@ -80,7 +80,7 @@ public function getClockOutDisplayAttribute(): ?string
     
     // Parse the time and format it for display
     $time = Carbon::parse($this->clock_out);
-    return $time->format('H:i');
+    return $time->format('h:i A');
 }
 
 // Append to JSON
