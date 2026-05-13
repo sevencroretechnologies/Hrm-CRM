@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import { salesTaskApi } from '@/services/api';
 import { SalesTask } from '@/types';
 import { showAlert, showConfirmDialog, getErrorMessage } from '@/lib/sweetalert';
@@ -67,6 +68,11 @@ const getLatestStatus = (task: SalesTask) => {
 };
 
 export default function SalesTaskList() {
+    const { hasAnyRole } = useAuth();
+    // Only managers/admins can assign tasks to other staff. Regular staff see View
+    // / Add Follow-up / Close / Delete in the actions dropdown but not "Assign Staff".
+    const canAssign = hasAnyRole(['admin', 'org', 'company', 'hr']);
+
     const [salesTasks, setSalesTasks] = useState<SalesTask[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [search, setSearch] = useState('');
@@ -250,9 +256,11 @@ export default function SalesTaskList() {
                                 <DropdownMenuItem onClick={() => openFollowUpModal(row.id)}>
                                     <MessageSquarePlus className="mr-2 h-4 w-4 text-solarized-blue" /> Add Follow-up
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openEditModal(row.id)}>
-                                    <UserPlus className="mr-2 h-4 w-4 text-blue-600" /> Assign Staff
-                                </DropdownMenuItem>
+                                {canAssign && (
+                                    <DropdownMenuItem onClick={() => openEditModal(row.id)}>
+                                        <UserPlus className="mr-2 h-4 w-4 text-blue-600" /> Assign Staff
+                                    </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem 
                                     onClick={() => handleCloseTask(row.id)} 
                                     className="text-green-600 focus:text-green-600"
