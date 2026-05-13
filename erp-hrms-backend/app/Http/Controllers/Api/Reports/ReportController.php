@@ -10,6 +10,8 @@ use App\Models\StaffMember;
 use App\Models\TimeOffRequest;
 use App\Models\WorkingDay;
 use App\Models\WorkLog;
+use App\Services\Attendance\AttendanceService;
+use App\Services\Reports\DashboardService;
 use App\Traits\ApiResponse;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -421,7 +423,7 @@ class ReportController extends Controller
     /**
      * Dashboard statistics.
      */
-    public function dashboard(Request $request)
+    public function dashboard(Request $request, DashboardService $dashboardService, AttendanceService $attendanceService)
     {
         $today = now();
         $monthStart = $today->copy()->startOfMonth();
@@ -484,6 +486,8 @@ class ReportController extends Controller
                 'payroll' => $payrollStatus,
                 'upcoming_events' => $upcomingEvents,
                 'recent_announcements' => $recentAnnouncements,
+                'attendance_trend' => $attendanceService->getWeeklyAttendanceTrend(),
+                'recent_activities' => $dashboardService->getRecentActivities(),
             ],
         ]);
     }

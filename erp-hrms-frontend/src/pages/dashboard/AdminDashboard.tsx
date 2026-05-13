@@ -13,6 +13,8 @@ import {
   AlertCircle,
   CheckCircle,
   ArrowRight,
+  Clock,
+  Activity,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -46,10 +48,19 @@ interface LeaveStats {
   approved_this_month: number;
 }
 
+interface RecentActivity {
+  id: string;
+  action: string;
+  user: string;
+  time: string;
+  type: 'leave' | 'employee' | 'attendance' | string;
+}
+
 interface DashboardData {
   employees: EmployeeStats;
   attendance_today: AttendanceStats;
   leave_requests: LeaveStats;
+  recent_activities: RecentActivity[];
 }
 
 interface ApiError {
@@ -64,6 +75,13 @@ interface ApiError {
 
 interface AttendanceData {
   date: string;
+  present: number;
+  absent: number;
+}
+
+interface AttendanceTrendPoint {
+  date: string;
+  day: string;
   present: number;
   absent: number;
 }
@@ -91,21 +109,17 @@ export default function AdminDashboard() {
             employees: raw.employees ?? { total: 0, active: 0, on_leave: 0, inactive: 0, new_this_month: 0 },
             attendance_today: raw.attendance_today ?? raw.attendance ?? { present: 0, absent: 0, not_marked: 0 },
             leave_requests: raw.leave_requests ?? { pending: 0, approved_this_month: 0 },
+            recent_activities: Array.isArray(raw.recent_activities) ? raw.recent_activities : [],
           });
 
-          // Build attendance trend from real total employee count
-          const totalEmployees = raw.employees?.total || 10;
-          const trendAttendance: AttendanceData[] = [];
-          for (let i = 6; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            trendAttendance.push({
-              date: date.toLocaleDateString('en-US', { weekday: 'short' }),
-              present: Math.floor(Math.random() * (totalEmployees * 0.2)) + Math.floor(totalEmployees * 0.8),
-              absent: Math.floor(Math.random() * (totalEmployees * 0.1)) + 1,
-            });
-          }
-          setAttendanceData(trendAttendance);
+          const trend: AttendanceTrendPoint[] = Array.isArray(raw.attendance_trend) ? raw.attendance_trend : [];
+          setAttendanceData(
+            trend.map((point) => ({
+              date: point.day,
+              present: point.present,
+              absent: point.absent,
+            }))
+          );
         } else {
           setError(payload?.message || 'Failed to load dashboard data');
         }
@@ -127,6 +141,12 @@ export default function AdminDashboard() {
     { name: 'Absent', value: dashboardData.attendance_today?.absent || 0 },
     { name: 'Not Marked', value: dashboardData.attendance_today?.not_marked || 0 },
   ] : [];
+
+  const activityStyles: Record<string, { icon: typeof Activity; bg: string; color: string }> = {
+    leave: { icon: CheckCircle, bg: 'bg-solarized-green/10', color: 'text-solarized-green' },
+    employee: { icon: Users, bg: 'bg-solarized-blue/10', color: 'text-solarized-blue' },
+    attendance: { icon: Clock, bg: 'bg-solarized-yellow/10', color: 'text-solarized-yellow' },
+  };
 
   if (isLoading) {
     return (
@@ -366,38 +386,32 @@ export default function AdminDashboard() {
             </Link>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-solarized-green/10 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="h-4 w-4 text-solarized-green" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Leave request approved</p>
-                  <p className="text-xs text-solarized-base01">John Doe's leave request was approved</p>
-                  <p className="text-xs text-solarized-base00 mt-1">2 hours ago</p>
-                </div>
+            {dashboardData?.recent_activities?.length ? (
+              <div className="space-y-4">
+                {dashboardData.recent_activities.slice(0, 5).map((activity) => {
+                  const style = activityStyles[activity.type] ?? {
+                    icon: Activity,
+                    bg: 'bg-solarized-base02/10',
+                    color: 'text-solarized-base01',
+                  };
+                  const Icon = style.icon;
+                  return (
+                    <div key={activity.id} className="flex items-start gap-4">
+                      <div className={`w-8 h-8 rounded-full ${style.bg} flex items-center justify-center flex-shrink-0`}>
+                        <Icon className={`h-4 w-4 ${style.color}`} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{activity.action}</p>
+                        <p className="text-xs text-solarized-base01">{activity.user}</p>
+                        <p className="text-xs text-solarized-base00 mt-1">{activity.time}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-solarized-blue/10 flex items-center justify-center flex-shrink-0">
-                  <Users className="h-4 w-4 text-solarized-blue" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">New employee added</p>
-                  <p className="text-xs text-solarized-base01">Sarah Smith joined the Engineering team</p>
-                  <p className="text-xs text-solarized-base00 mt-1">5 hours ago</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-solarized-yellow/10 flex items-center justify-center flex-shrink-0">
-                  <DollarSign className="h-4 w-4 text-solarized-yellow" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Payroll generated</p>
-                  <p className="text-xs text-solarized-base01">January 2026 payroll has been processed</p>
-                  <p className="text-xs text-solarized-base00 mt-1">1 day ago</p>
-                </div>
-              </div>
-            </div>
+            ) : (
+              <p className="text-sm text-solarized-base01 text-center py-8">No recent activity</p>
+            )}
           </CardContent>
         </Card>
       </div>

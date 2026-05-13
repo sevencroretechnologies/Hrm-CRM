@@ -57,6 +57,7 @@ class DashboardService
             ],
             'leave_requests' => $this->getLeaveStats(),
             'payroll' => $this->getPayrollStats(),
+            'attendance_trend' => $this->attendanceService->getWeeklyAttendanceTrend(),
             'upcoming_birthdays' => $this->getUpcomingBirthdays(),
             'recent_activities' => $this->getRecentActivities(),
             'upcoming_events' => $this->getUpcomingEvents(),

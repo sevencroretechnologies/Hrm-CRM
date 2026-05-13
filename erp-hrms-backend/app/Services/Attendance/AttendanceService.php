@@ -597,6 +597,37 @@ class AttendanceService extends BaseService
     }
 
     /**
+     * Get daily attendance trend for the last N days.
+     * Used by the admin dashboard chart.
+     */
+    public function getWeeklyAttendanceTrend(int $days = 7): array
+    {
+        $startDate = now()->subDays($days - 1)->toDateString();
+        $endDate = now()->toDateString();
+        $totalEmployees = StaffMember::active()->count();
+
+        $presentByDate = WorkLog::whereBetween('log_date', [$startDate, $endDate])
+            ->selectRaw('DATE(log_date) as d, COUNT(*) as c')
+            ->groupBy('d')
+            ->pluck('c', 'd')
+            ->toArray();
+
+        $trend = [];
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = now()->subDays($i)->toDateString();
+            $present = (int) ($presentByDate[$date] ?? 0);
+            $trend[] = [
+                'date' => $date,
+                'day' => Carbon::parse($date)->format('D'),
+                'present' => $present,
+                'absent' => max(0, $totalEmployees - $present),
+            ];
+        }
+
+        return $trend;
+    }
+
+    /**
      * Get attendance summary for a date range.
      */
     public function getSummaryForDateRange(string $startDate, string $endDate, ?int $staffMemberId = null): array
