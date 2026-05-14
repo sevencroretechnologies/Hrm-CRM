@@ -75,6 +75,50 @@ class SalesTaskController extends Controller
                 $query->where('sales_assign_id', $request->sales_assign_id);
             }
 
+            // Search by keyword
+            if ($request->has('search') && $request->search) {
+                $searchTerm = $request->search;
+                $query->where(function ($q) use ($searchTerm) {
+                    // Search by Assigned Staff Name
+                    $q->orWhereHas('assignedStaff', function ($q2) use ($searchTerm) {
+                        $q2->where('full_name', 'like', "%{$searchTerm}%");
+                    });
+
+                    // Search by Task Type Name
+                    $q->orWhereHas('taskType', function ($q2) use ($searchTerm) {
+                        $q2->where('name', 'like', "%{$searchTerm}%");
+                    });
+
+                    // Search by Source Entity (Lead, Prospect, Opportunity)
+                    $q->orWhere(function ($q2) use ($searchTerm) {
+                        $q2->where('task_source_id', TaskSource::LEAD->value)
+                           ->whereIn('source_id', function ($q3) use ($searchTerm) {
+                               $q3->select('id')->from('leads')
+                                  ->where('first_name', 'like', "%{$searchTerm}%")
+                                  ->orWhere('last_name', 'like', "%{$searchTerm}%")
+                                  ->orWhere('company_name', 'like', "%{$searchTerm}%");
+                           });
+                    });
+
+                    $q->orWhere(function ($q2) use ($searchTerm) {
+                        $q2->where('task_source_id', TaskSource::PROSPECT->value)
+                           ->whereIn('source_id', function ($q3) use ($searchTerm) {
+                               $q3->select('id')->from('prospects')
+                                  ->where('company_name', 'like', "%{$searchTerm}%");
+                           });
+                    });
+
+                    $q->orWhere(function ($q2) use ($searchTerm) {
+                        $q2->where('task_source_id', TaskSource::OPPORTUNITY->value)
+                           ->whereIn('source_id', function ($q3) use ($searchTerm) {
+                               $q3->select('id')->from('opportunities')
+                                  ->where('party_name', 'like', "%{$searchTerm}%")
+                                  ->orWhere('naming_series', 'like', "%{$searchTerm}%");
+                           });
+                    });
+                });
+            }
+
             $perPage = $request->query('per_page', 15);
             $queryParameters = Arr::except($request->query(), ['user_id']);
 

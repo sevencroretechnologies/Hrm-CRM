@@ -72,7 +72,12 @@ class AuthService
         // Add full staff member details if user has a staff member record
         if ($user->staffMember) {
             $staffMember = $user->staffMember;
-            $staffMember->load(['officeLocation', 'division', 'jobTitle', 'user']);
+            $staffMember->load([
+                'officeLocation' => fn($q) => $q->withoutGlobalScopes()->withTrashed(),
+                'division' => fn($q) => $q->withoutGlobalScopes()->withTrashed(),
+                'jobTitle' => fn($q) => $q->withoutGlobalScopes()->withTrashed(),
+                'user'
+            ]);
 
             $userData['staff_member'] = [
                 'id' => $staffMember->id,
@@ -158,6 +163,19 @@ class AuthService
         }
 
         return $status;
+    }
+
+    public function changePassword(User $user, array $data): void
+    {
+        if (! Hash::check($data['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['The provided current password does not match our records.'],
+            ]);
+        }
+
+        $user->forceFill([
+            'password' => Hash::make($data['new_password']),
+        ])->save();
     }
 
     /**

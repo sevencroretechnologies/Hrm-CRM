@@ -81,4 +81,16 @@ class AccessController extends Controller
 
         return $this->success(null, 'Password has been reset successfully');
     }
+
+    public function changePassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $this->service->changePassword($request->user(), $validated);
+
+        return $this->success(null, 'Password has been changed successfully');
+    }
 }

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import DataTable, { TableColumn } from 'react-data-table-component';
-import { Plus, Search, Eye, Trash2, LayoutGrid, MoreHorizontal, CheckCircle, UserPlus, MessageSquarePlus } from 'lucide-react';
+import { Plus, Search, Eye, Trash2, LayoutGrid, MoreHorizontal, CheckCircle, UserPlus, MessageSquarePlus, X } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -76,6 +76,7 @@ export default function SalesTaskList() {
     const [salesTasks, setSalesTasks] = useState<SalesTask[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [search, setSearch] = useState('');
+    const [appliedSearch, setAppliedSearch] = useState('');
     const [sourceFilter, setSourceFilter] = useState('');
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(15);
@@ -91,6 +92,7 @@ export default function SalesTaskList() {
         try {
             const params: Record<string, any> = { page: currentPage, per_page: perPage };
             if (sourceFilter) params.task_source_id = sourceFilter;
+            if (appliedSearch) params.search = appliedSearch;
 
             const res = await salesTaskApi.list(params);
             // Depending on whether it's WrappedPaginatedResponse or PaginatedResponse
@@ -106,7 +108,7 @@ export default function SalesTaskList() {
         } finally {
             setIsLoading(false);
         }
-    }, [perPage, sourceFilter]);
+    }, [perPage, sourceFilter, appliedSearch]);
 
     useEffect(() => {
         fetchSalesTasks(page);
@@ -114,8 +116,14 @@ export default function SalesTaskList() {
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setAppliedSearch(search);
         setPage(1);
-        fetchSalesTasks(1);
+    };
+
+    const handleClearSearch = () => {
+        setSearch("");
+        setAppliedSearch("");
+        setPage(1);
     };
 
     const handlePageChange = (newPage: number) => setPage(newPage);
@@ -300,23 +308,6 @@ export default function SalesTaskList() {
         },
     };
 
-    // Simple client-side search for the current page
-    const filteredTasks = search
-        ? salesTasks.filter((task) => {
-            const searchLower = search.toLowerCase();
-            const sourceName = task.task_source?.name?.toLowerCase() || "";
-            const typeName = task.task_type?.name?.toLowerCase() || "";
-            const userName = task.assigned_staff?.full_name?.toLowerCase() || "";
-            const sourceEntity = getSourceEntityInfo(task).toLowerCase();
-            return (
-                sourceName.includes(searchLower) ||
-                typeName.includes(searchLower) ||
-                userName.includes(searchLower) ||
-                sourceEntity.includes(searchLower)
-            );
-        })
-        : salesTasks;
-
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -332,19 +323,17 @@ export default function SalesTaskList() {
             </div>
 
             <Card>
-                <CardHeader className="pb-3 text-right">
-                    <form onSubmit={handleSearchSubmit} className="flex gap-4">
-                        <div className="relative flex-1 max-w-sm ml-auto">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search tasks..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="pl-9"
-                            />
-                        </div>
+                <CardHeader className="pb-3 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div className="text-sm text-muted-foreground">
+                        {appliedSearch && (
+                            <span>
+                                Results for: <span className="font-semibold text-foreground">"{appliedSearch}"</span>
+                            </span>
+                        )}
+                    </div>
+                    <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                         <select
-                            className="bg-background border rounded-md px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="bg-background border rounded-md px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring w-full sm:w-auto"
                             value={sourceFilter}
                             onChange={(e) => {
                                 setSourceFilter(e.target.value);
@@ -356,13 +345,33 @@ export default function SalesTaskList() {
                                 <option key={s.id} value={s.id}>{s.name}</option>
                             ))}
                         </select>
-                        <Button type="submit" variant="secondary">Search</Button>
+                        <div className="relative w-full sm:max-w-sm">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search by name, type, assigned"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="pl-9 pr-9"
+                            />
+                            {search && (
+                                <button
+                                    type="button"
+                                    onClick={handleClearSearch}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
+                        <Button type="submit" variant="secondary" className="w-full sm:w-auto shrink-0 bg-solarized-blue text-white hover:bg-solarized-blue/90">
+                            Search
+                        </Button>
                     </form>
                 </CardHeader>
                 <CardContent>
                     <DataTable
                         columns={columns}
-                        data={filteredTasks}
+                        data={salesTasks}
                         progressPending={isLoading}
                         pagination
                         paginationServer

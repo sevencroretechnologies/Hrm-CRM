@@ -138,6 +138,38 @@ class AssetController extends Controller
         return $this->success($asset->load(['assetType', 'assignedEmployee']), 'Asset assigned successfully');
     }
 
+    public function updateAssignment(Request $request, Asset $asset)
+    {
+        if ($asset->status !== 'assigned') {
+            return $this->error('Asset is not currently assigned', 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'staff_member_id' => 'required|exists:staff_members,id',
+            'notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        // Find the active assignment
+        $lastAssignment = $asset->assignments()->whereNull('returned_date')->first();
+        if ($lastAssignment) {
+            $lastAssignment->update([
+                'staff_member_id' => $request->staff_member_id,
+                'notes' => $request->notes,
+            ]);
+        }
+
+        // Update asset
+        $asset->update([
+            'assigned_to' => $request->staff_member_id,
+        ]);
+
+        return $this->success($asset->load(['assetType', 'assignedEmployee']), 'Assignment updated successfully');
+    }
+
     public function returnAsset(Request $request, Asset $asset)
     {
         if ($asset->status !== 'assigned') {

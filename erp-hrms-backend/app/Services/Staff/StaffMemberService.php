@@ -155,11 +155,11 @@ class StaffMemberService extends BaseService
      */
     public function getFullProfile(int $id): StaffMember
     {
-        return $this->findOrFail($id, [
+        return $this->query()->with([
             'user',
-            'officeLocation',
-            'division',
-            'jobTitle',
+            'officeLocation' => fn($q) => $q->withoutGlobalScopes()->withTrashed(),
+            'division' => fn($q) => $q->withoutGlobalScopes()->withTrashed(),
+            'jobTitle' => fn($q) => $q->withoutGlobalScopes()->withTrashed(),
             'files.fileCategory',
             'recognitionRecords.category',
             'roleUpgrades.newJobTitle',
@@ -167,7 +167,7 @@ class StaffMemberService extends BaseService
             'businessTrips',
             'voluntaryExits',
             'salesTasks',
-        ]);
+        ])->findOrFail($id);
     }
 
     /**

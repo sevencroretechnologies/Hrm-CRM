@@ -25,9 +25,19 @@ import {
     Plus,
     Search,
     ClipboardList,
+    MoreHorizontal,
+    Eye,
+    Edit,
+    Trash2
 } from 'lucide-react';
-import { showAlert, getErrorMessage } from '../../lib/sweetalert';
+import { showAlert, getErrorMessage, showConfirmDialog } from '../../lib/sweetalert';
 import DataTable, { TableColumn } from 'react-data-table-component';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '../../components/ui/dropdown-menu';
 
 interface Asset {
     id: number;
@@ -65,6 +75,8 @@ export default function AssetAssignmentList() {
 
     // Dialog state
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [dialogMode, setDialogMode] = useState<'create' | 'view' | 'edit'>('create');
+    const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
     const [formData, setFormData] = useState({
         asset_id: '',
         staff_member_id: '',
@@ -210,6 +222,8 @@ export default function AssetAssignmentList() {
             notes: '',
         });
         setFieldErrors({});
+        setDialogMode('create');
+        setSelectedAsset(null);
     };
 
     const validateForm = () => {
@@ -240,12 +254,19 @@ export default function AssetAssignmentList() {
 
         setIsSubmitting(true);
         try {
-            await assetService.assignAsset(Number(formData.asset_id), {
-                staff_member_id: Number(formData.staff_member_id),
-                notes: formData.notes
-            });
-
-            showAlert('success', 'Success', 'Asset assigned successfully', 2000);
+            if (dialogMode === 'edit' && selectedAsset) {
+                await assetService.updateAssignment(selectedAsset.id, {
+                    staff_member_id: Number(formData.staff_member_id),
+                    notes: formData.notes
+                });
+                showAlert('success', 'Success', 'Assignment updated successfully', 2000);
+            } else {
+                await assetService.assignAsset(Number(formData.asset_id), {
+                    staff_member_id: Number(formData.staff_member_id),
+                    notes: formData.notes
+                });
+                showAlert('success', 'Success', 'Asset assigned successfully', 2000);
+            }
 
             setIsDialogOpen(false);
             resetForm();
@@ -263,6 +284,46 @@ export default function AssetAssignmentList() {
         return fieldErrors[field] ? (
             <p className="text-sm text-red-500 mt-1">{fieldErrors[field]}</p>
         ) : null;
+    };
+
+    const handleView = (asset: Asset) => {
+        setSelectedAsset(asset);
+        setFormData({
+            asset_id: String(asset.id),
+            staff_member_id: String(asset.assigned_to || ''),
+            notes: '',
+        });
+        setDialogMode('view');
+        setIsDialogOpen(true);
+    };
+
+    const handleEdit = (asset: Asset) => {
+        setSelectedAsset(asset);
+        setFormData({
+            asset_id: String(asset.id),
+            staff_member_id: String(asset.assigned_to || ''),
+            notes: '',
+        });
+        setDialogMode('edit');
+        setIsDialogOpen(true);
+    };
+
+    const handleDelete = async (asset: Asset) => {
+        const result = await showConfirmDialog(
+            'Revoke Assignment',
+            `Are you sure you want to revoke the assignment of "${asset.name}" from "${asset.assigned_employee?.full_name || 'Staff'}"?`,
+            'Yes, revoke it!'
+        );
+        if (!result.isConfirmed) return;
+
+        try {
+            await assetService.returnAsset(asset.id);
+            showAlert('success', 'Revoked!', 'Assignment revoked successfully.', 2000);
+            fetchAssignments(page);
+        } catch (error) {
+            console.error('Failed to revoke assignment:', error);
+            showAlert('error', 'Error', getErrorMessage(error, 'Failed to revoke assignment'));
+        }
     };
 
     // Table Columns
@@ -300,6 +361,34 @@ export default function AssetAssignmentList() {
                 </span>
             ),
             sortable: true,
+        },
+        {
+            name: 'Actions',
+            cell: (row) => (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleView(row)}>
+                            <Eye className="mr-2 h-4 w-4 text-solarized-blue" />
+                            View
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(row)}>
+                            <Edit className="mr-2 h-4 w-4 text-solarized-yellow" />
+                            Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDelete(row)} className="text-red-600 focus:text-red-600">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            ),
+            width: '100px',
         },
     ];
 
@@ -346,9 +435,11 @@ export default function AssetAssignmentList() {
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[425px]">
                         <DialogHeader>
-                            <DialogTitle>Assign Asset</DialogTitle>
+                            <DialogTitle>
+                                {dialogMode === 'view' ? 'View Assignment' : dialogMode === 'edit' ? 'Edit Assignment' : 'Assign Asset'}
+                            </DialogTitle>
                             <DialogDescription>
-                                Select an available asset and assign it to a staff member.
+                                {dialogMode === 'view' ? 'Details of the asset assignment.' : dialogMode === 'edit' ? 'Modify the asset assignment details.' : 'Select an available asset and assign it to a staff member.'}
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleSubmit}>
@@ -358,6 +449,7 @@ export default function AssetAssignmentList() {
                                         Asset *
                                     </Label>
                                     <Select
+                                        disabled={dialogMode === 'view' || dialogMode === 'edit'}
                                         value={formData.asset_id}
                                         onValueChange={(value) => {
                                             setFormData({ ...formData, asset_id: value });
@@ -368,7 +460,11 @@ export default function AssetAssignmentList() {
                                             <SelectValue placeholder="Select asset" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {availableAssets.length === 0 ? (
+                                            {dialogMode !== 'create' && selectedAsset ? (
+                                                <SelectItem value={String(selectedAsset.id)}>
+                                                    {selectedAsset.name} ({selectedAsset.asset_code})
+                                                </SelectItem>
+                                            ) : availableAssets.length === 0 ? (
                                                 <SelectItem value="none" disabled>No available assets</SelectItem>
                                             ) : (
                                                 availableAssets.map((asset) => (
@@ -386,6 +482,7 @@ export default function AssetAssignmentList() {
                                         Staff Member *
                                     </Label>
                                     <Select
+                                        disabled={dialogMode === 'view'}
                                         value={formData.staff_member_id}
                                         onValueChange={(value) => {
                                             setFormData({ ...formData, staff_member_id: value });
@@ -409,6 +506,7 @@ export default function AssetAssignmentList() {
                                     <Label htmlFor="notes">Notes</Label>
                                     <Textarea
                                         id="notes"
+                                        disabled={dialogMode === 'view'}
                                         value={formData.notes}
                                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                                         placeholder="Additional comments..."
@@ -417,12 +515,20 @@ export default function AssetAssignmentList() {
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                                    Cancel
-                                </Button>
-                                <Button type="submit" className="bg-solarized-blue hover:bg-solarized-blue/90" disabled={isSubmitting}>
-                                    {isSubmitting ? 'Assigning...' : 'Assign'}
-                                </Button>
+                                {dialogMode === 'view' ? (
+                                    <Button type="button" onClick={() => setIsDialogOpen(false)}>
+                                        Close
+                                    </Button>
+                                ) : (
+                                    <>
+                                        <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button type="submit" className="bg-solarized-blue hover:bg-solarized-blue/90" disabled={isSubmitting}>
+                                            {isSubmitting ? 'Saving...' : dialogMode === 'edit' ? 'Update' : 'Assign'}
+                                        </Button>
+                                    </>
+                                )}
                             </DialogFooter>
                         </form>
                     </DialogContent>

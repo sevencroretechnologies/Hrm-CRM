@@ -34,6 +34,7 @@ import {
 } from "../components/ui/dropdown-menu";
 import { showAlert, showLogoutDialog } from "../lib/sweetalert";
 import { authService } from "../services/api";
+import ChangePasswordModal from "../components/ChangePasswordModal";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
@@ -767,6 +768,7 @@ export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
 
   // Fetch user profile data to get profile image
   useEffect(() => {
@@ -975,6 +977,9 @@ export default function AppLayout() {
                   {/* <DropdownMenuItem asChild>
                     <Link to="/settings">Settings</Link>
                   </DropdownMenuItem> */}
+                  <DropdownMenuItem onClick={() => setIsChangePasswordModalOpen(true)}>
+                    Change Password
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleLogout}
@@ -993,6 +998,11 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+      
+      <ChangePasswordModal 
+        isOpen={isChangePasswordModalOpen} 
+        onClose={() => setIsChangePasswordModalOpen(false)} 
+      />
     </div>
   );
 }

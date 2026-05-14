@@ -163,6 +163,11 @@ Route::prefix('auth')->group(function () {
     Route::post('/reset-password', [AccessController::class , 'resetPassword']);
 });
 
+Route::get('/reset-password/{token}', function (string $token) {
+    $email = request()->query('email');
+    return redirect(env('FRONTEND_URL', 'http://localhost:5173') . '/reset-password?token=' . $token . '&email=' . urlencode($email));
+})->name('password.reset');
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -170,6 +175,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('auth')->group(function () {
             Route::post('/sign-out', [AccessController::class , 'signOut']);
             Route::get('/profile', [AccessController::class , 'profile']);
+            Route::post('/change-password', [AccessController::class , 'changePassword']);
         }
         );
         // Users
@@ -274,6 +280,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('auth')->group(function () {
             Route::post('/sign-out', [AccessController::class , 'signOut']);
             Route::get('/profile', [AccessController::class , 'profile']);
+            Route::post('/change-password', [AccessController::class , 'changePassword']);
         }
         );
 
@@ -540,6 +547,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('asset-types', AssetTypeController::class);
         Route::apiResource('assets', AssetController::class);
         Route::post('/assets/{asset}/assign', [AssetController::class , 'assign']);
+        Route::put('/assets/{asset}/assign', [AssetController::class , 'updateAssignment']);
         Route::post('/assets/{asset}/return', [AssetController::class , 'returnAsset']);
         Route::post('/assets/{asset}/maintenance', [AssetController::class , 'setMaintenance']);
         Route::get('/assets-available', [AssetController::class , 'available']);
