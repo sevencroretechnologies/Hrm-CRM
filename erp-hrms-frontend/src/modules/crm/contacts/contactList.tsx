@@ -22,6 +22,7 @@ export default function ContactList() {
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [appliedSearch, setAppliedSearch] = useState("");
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(15);
     const [totalRows, setTotalRows] = useState(0);
@@ -36,7 +37,7 @@ export default function ContactList() {
                 page: currentPage,
                 per_page: perPage
             };
-            if (search) params.search = search;
+            if (appliedSearch) params.search = appliedSearch;
 
             const response = await contactApi.list(params);
             // contactApi.list returns r.data.data which is PaginatedResponse<Contact>
@@ -51,7 +52,7 @@ export default function ContactList() {
         } finally {
             setIsLoading(false);
         }
-    }, [search, perPage]);
+    }, [appliedSearch, perPage]);
 
     useEffect(() => {
         fetchContacts(page);
@@ -59,8 +60,14 @@ export default function ContactList() {
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setAppliedSearch(search.trim());
         setPage(1);
-        fetchContacts(1);
+    };
+
+    const handleClearSearch = () => {
+        setSearch("");
+        setAppliedSearch("");
+        setPage(1);
     };
 
     const handlePageChange = (newPage: number) => setPage(newPage);
@@ -199,7 +206,7 @@ export default function ContactList() {
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold">Customer</h1>
-                    <p className="text-muted-foreground">Manage your CRM contacts</p>
+                    <p className="text-muted-foreground">Manage your CRM Customers</p>
                 </div>
                 <Link to="/crm/contacts/create">
                     <Button className="bg-solarized-blue hover:bg-solarized-blue/90">
@@ -209,19 +216,31 @@ export default function ContactList() {
             </div>
 
             <Card>
-                <CardHeader>
-                    <form onSubmit={handleSearchSubmit} className="flex gap-4">
+                <CardHeader className="pb-3">
+                    <form onSubmit={handleSearchSubmit} className="flex gap-2">
                         <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-middle-y h-4 w-4 text-muted-foreground" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                                className="pl-10"
+                                className="pl-9 h-10"
                                 placeholder="Search contacts..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
                         </div>
-                        <Button type="submit" variant="outline">Search</Button>
+                        <Button type="submit" variant="outline" className="h-10 shrink-0">
+                            <Search className="mr-2 h-4 w-4" /> Search
+                        </Button>
+                        {appliedSearch && (
+                            <Button type="button" variant="ghost" onClick={handleClearSearch} className="h-10 shrink-0">
+                                ✕
+                            </Button>
+                        )}
                     </form>
+                    {appliedSearch && (
+                        <p className="text-sm text-muted-foreground mt-2 font-normal text-base">
+                            Results for: <span className="font-medium text-foreground">"{appliedSearch}"</span>
+                        </p>
+                    )}
                 </CardHeader>
                 <CardContent>
                     {!isLoading && contacts.length === 0 ? (

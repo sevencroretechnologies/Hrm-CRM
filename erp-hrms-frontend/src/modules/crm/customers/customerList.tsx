@@ -23,6 +23,7 @@ export default function CustomerList() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [search, setSearch] = useState('');
+    const [appliedSearch, setAppliedSearch] = useState('');
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
@@ -34,7 +35,7 @@ export default function CustomerList() {
         setIsLoading(true);
         try {
             const params: Record<string, any> = { page: currentPage, per_page: perPage };
-            if (search) params.search = search;
+            if (appliedSearch) params.search = appliedSearch;
 
             const response = await customerApi.list(params) as any;
             const data = response.data || response;
@@ -50,19 +51,22 @@ export default function CustomerList() {
         } finally {
             setIsLoading(false);
         }
-    }, [perPage, search]);
+    }, [perPage, appliedSearch]);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            fetchCustomers(page);
-        }, 300);
-        return () => clearTimeout(timer);
+        fetchCustomers(page);
     }, [page, fetchCustomers]);
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setAppliedSearch(search.trim());
         setPage(1);
-        fetchCustomers(1);
+    };
+
+    const handleClearSearch = () => {
+        setSearch('');
+        setAppliedSearch('');
+        setPage(1);
     };
 
     const handlePageChange = (newPage: number) => setPage(newPage);
@@ -186,19 +190,31 @@ export default function CustomerList() {
             </div>
 
             <Card>
-                <CardHeader>
-                    <form onSubmit={handleSearchSubmit} className="flex gap-4">
+                <CardHeader className="pb-3">
+                    <form onSubmit={handleSearchSubmit} className="flex gap-2">
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search customers..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="pl-10"
+                                className="pl-9 h-10"
                             />
                         </div>
-                        <Button type="submit" variant="outline">Search</Button>
+                        <Button type="submit" variant="outline" className="h-10 shrink-0">
+                            <Search className="mr-2 h-4 w-4" /> Search
+                        </Button>
+                        {appliedSearch && (
+                            <Button type="button" variant="ghost" onClick={handleClearSearch} className="h-10 shrink-0">
+                                ✕
+                            </Button>
+                        )}
                     </form>
+                    {appliedSearch && (
+                        <p className="text-sm text-muted-foreground mt-2 font-normal text-base">
+                            Results for: <span className="font-medium text-foreground">"{appliedSearch}"</span>
+                        </p>
+                    )}
                 </CardHeader>
                 <CardContent>
                     <DataTable
