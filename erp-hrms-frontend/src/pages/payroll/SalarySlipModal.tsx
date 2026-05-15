@@ -55,6 +55,7 @@ export default function SalarySlipModal({ slip, isOpen, onClose }: SalarySlipMod
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
+      maximumFractionDigits: 0,
     }).format(num || 0);
   };
 
@@ -120,59 +121,60 @@ export default function SalarySlipModal({ slip, isOpen, onClose }: SalarySlipMod
         {/* Content - Scrollable Area */}
         <ScrollArea className="flex-grow overflow-y-auto">
           <div className="p-6">
-            {/* Employee & Period Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-gray-100 rounded-lg">
-                    <User className="h-5 w-5 text-gray-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Employee</h3>
-                    <p className="text-lg font-semibold text-gray-900">{slip.staff_member.full_name}</p>
-                    <p className="text-sm text-gray-600">
-                      {slip.staff_member.job_title?.title || 'No job title'} • {slip.staff_member.staff_code}
-                    </p>
-                  </div>
+            {/* Employee & Period Info - 2 Columns Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 bg-gray-50/50 p-4 rounded-lg border border-gray-100">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-100">
+                  <User className="h-5 w-5 text-gray-600" />
                 </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-gray-100 rounded-lg">
-                    <Calendar className="h-5 w-5 text-gray-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Salary Period</h3>
-                    <p className="text-lg font-semibold text-gray-900">{slip.salary_period}</p>
-                    <p className="text-sm text-gray-600">
-                      Generated: {formatDate(slip.generated_at)}
-                    </p>
-                    {slip.paid_at && (
-                      <p className="text-sm text-green-600">
-                        Paid: {formatDate(slip.paid_at)}
-                      </p>
-                    )}
-                  </div>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Employee</h3>
+                  <p className="text-lg font-semibold text-gray-900">{slip.staff_member.full_name}</p>
+                  <p className="text-xs text-gray-600">
+                    {slip.staff_member.job_title?.title || 'No job title'} • {slip.staff_member.staff_code}
+                  </p>
                 </div>
               </div>
 
-              {/* Bank Details */}
-              {slip.staff_member.bank_account_number && (
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-gray-100 rounded-lg">
-                      <CreditCard className="h-5 w-5 text-gray-600" />
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-100">
+                  <Calendar className="h-5 w-5 text-gray-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Salary Period</h3>
+                  <p className="text-lg font-semibold text-gray-900">{slip.salary_period}</p>
+                  <p className="text-xs text-gray-600">
+                    Generated: {formatDate(slip.generated_at)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bank Details - Sub Section */}
+            {slip.staff_member.bank_account_number && (
+              <div className="mb-8 p-4 bg-blue-50/30 rounded-lg border border-blue-100/50">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-white rounded-lg shadow-sm border border-blue-100">
+                    <CreditCard className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-grow">
+                    <div>
+                      <h3 className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Account Name</h3>
+                      <p className="text-sm font-semibold text-gray-900">{slip.staff_member.bank_account_name}</p>
                     </div>
                     <div>
-                      <h3 className="text-sm font-medium text-gray-500">Bank Details</h3>
-                      <p className="text-sm font-semibold text-gray-900">{slip.staff_member.bank_account_name}</p>
-                      <p className="text-sm text-gray-600">Account: {slip.staff_member.bank_account_number}</p>
-                      <p className="text-sm text-gray-600">Bank: {slip.staff_member.bank_name}</p>
+                      <h3 className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Account Number</h3>
+                      <p className="text-sm font-semibold text-gray-900">{slip.staff_member.bank_account_number}</p>
+                    </div>
+                    <div>
+                      <h3 className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Bank Name</h3>
+                      <p className="text-sm font-semibold text-gray-900">{slip.staff_member.bank_name}</p>
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-
+              </div>
+            )}
+            
             {/* Earnings & Deductions */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               {/* Earnings Section */}
