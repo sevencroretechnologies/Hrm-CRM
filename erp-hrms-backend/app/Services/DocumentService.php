@@ -229,7 +229,7 @@ class DocumentService
                 'region' => $config->region,
                 'bucket' => $config->bucket,
                 'endpoint' => $wasabiEndpoint,
-                'use_path_style_endpoint' => false,
+                'use_path_style_endpoint' => true,
                 'throw' => true,
             ]);
 

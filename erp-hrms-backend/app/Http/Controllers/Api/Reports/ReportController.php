@@ -746,7 +746,6 @@ class ReportController extends Controller
                 'Total Deductions',
                 'Net Payable',
                 'Status',
-                'Payment Date',
             ]);
 
             // CSV Data
@@ -759,7 +758,6 @@ class ReportController extends Controller
                     number_format($slip->total_deductions, 2),
                     number_format($slip->net_payable, 2),
                     $slip->status,
-                    $slip->payment_date ?? 'N/A',
                 ]);
             }
 

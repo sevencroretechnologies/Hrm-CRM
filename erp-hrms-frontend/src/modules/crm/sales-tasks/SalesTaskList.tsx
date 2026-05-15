@@ -277,9 +277,11 @@ export default function SalesTaskList() {
                                 </DropdownMenuItem>
                             </>
                         )}
-                        <DropdownMenuItem onClick={() => handleDelete(row.id)} className="text-red-600 focus:text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                        </DropdownMenuItem>
+                        {canAssign && (
+                            <DropdownMenuItem onClick={() => handleDelete(row.id)} className="text-red-600 focus:text-red-600">
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
             ),
@@ -317,9 +319,11 @@ export default function SalesTaskList() {
                         <Link to="/crm" className="hover:underline">CRM</Link> / Sales Tasks
                     </p>
                 </div>
-                <Button onClick={openAddModal} className="bg-solarized-blue hover:bg-solarized-blue/90">
-                    <Plus className="mr-2 h-4 w-4" /> Add Sales Task
-                </Button>
+                {canAssign && (
+                    <Button onClick={openAddModal} className="bg-solarized-blue hover:bg-solarized-blue/90">
+                        <Plus className="mr-2 h-4 w-4" /> Add Sales Task
+                    </Button>
+                )}
             </div>
 
             <Card>
