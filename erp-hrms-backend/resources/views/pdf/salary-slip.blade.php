@@ -197,14 +197,14 @@
                 <thead>
                     <tr>
                         <th width="70%">Description</th>
-                        <th width="30%" class="text-right">Amount (USD)</th>
+                        <th width="30%" class="text-right">Amount (INR)</th>
                     </tr>
                 </thead>
                 <tbody>
                     <!-- Basic Salary -->
                     <tr>
                         <td>Basic Salary</td>
-                        <td class="text-right">{{ number_format($slip->basic_salary, 2) }}</td>
+                        <td class="text-right">{{ number_format($slip->basic_salary, 0) }}</td>
                     </tr>
 
                     <!-- Benefits -->
@@ -217,7 +217,7 @@
                             @if(is_array($benefit) && isset($benefit['amount']) && floatval($benefit['amount']) > 0)
                             <tr>
                                 <td>{{ $benefit['name'] ?? 'Benefit' }}</td>
-                                <td class="text-right">{{ number_format($benefit['amount'], 2) }}</td>
+                                <td class="text-right">{{ number_format($benefit['amount'], 0) }}</td>
                             </tr>
                             @endif
                         @endforeach
@@ -226,7 +226,7 @@
                     <!-- Total Earnings -->
                     <tr class="total-row">
                         <td><strong>Total Earnings</strong></td>
-                        <td class="text-right"><strong>{{ number_format($slip->total_earnings, 2) }}</strong></td>
+                        <td class="text-right"><strong>{{ number_format($slip->total_earnings, 0) }}</strong></td>
                     </tr>
                 </tbody>
             </table>
@@ -239,7 +239,7 @@
                 <thead>
                     <tr>
                         <th width="70%">Description</th>
-                        <th width="30%" class="text-right">Amount (USD)</th>
+                        <th width="30%" class="text-right">Amount (INR)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -253,7 +253,7 @@
                             @if(is_array($deduction) && isset($deduction['amount']) && floatval($deduction['amount']) > 0)
                             <tr>
                                 <td>{{ $deduction['name'] ?? 'Deduction' }}</td>
-                                <td class="text-right">{{ number_format($deduction['amount'], 2) }}</td>
+                                <td class="text-right">{{ number_format($deduction['amount'], 0) }}</td>
                             </tr>
                             @endif
                         @endforeach
@@ -262,7 +262,7 @@
                     <!-- Total Deductions -->
                     <tr class="total-row">
                         <td><strong>Total Deductions</strong></td>
-                        <td class="text-right"><strong>{{ number_format($slip->total_deductions, 2) }}</strong></td>
+                        <td class="text-right"><strong>{{ number_format($slip->total_deductions, 0) }}</strong></td>
                     </tr>
                 </tbody>
             </table>
@@ -274,7 +274,7 @@
                 <tr class="net-payable">
                     <td width="70%"><strong>NET PAYABLE</strong></td>
                     <td width="30%" class="text-right" style="font-size: 18px;">
-                        <strong>{{ number_format($slip->net_payable, 2) }}</strong>
+                        <strong>{{ number_format($slip->net_payable, 0) }}</strong>
                     </td>
                 </tr>
                 <tr>

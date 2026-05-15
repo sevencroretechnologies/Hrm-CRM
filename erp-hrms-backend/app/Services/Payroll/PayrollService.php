@@ -189,7 +189,30 @@ class PayrollService extends BaseService
             }
         }
 
-        // 3. Calculate LOP
+        // 3. Calculate total marked leaves (both paid and unpaid for summary)
+        $totalMarkedLeaves = \App\Models\TimeOffRequest::where('staff_member_id', $staffMemberId)
+            ->where('approval_status', 'approved')
+            ->where(function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('start_date', [$startDate, $endDate])
+                    ->orWhereBetween('end_date', [$startDate, $endDate]);
+            })
+            ->get();
+        
+        $totalLeaveDays = 0;
+        foreach ($totalMarkedLeaves as $leave) {
+            $start = \Carbon\Carbon::parse($leave->start_date);
+            $end = \Carbon\Carbon::parse($leave->end_date);
+            if ($start->lt($startDate)) $start = $startDate->copy();
+            if ($end->gt($endDate)) $end = $endDate->copy();
+            
+            for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+                if (in_array($date->format('Y-m-d'), $workingDates)) {
+                    $totalLeaveDays++;
+                }
+            }
+        }
+
+        // 4. Calculate LOP
         // Formula: Total Absents + (0.5 * HalfDay) + UnpaidLeaves
         $lopDays = $totalAbsentDays + ($halfDays * 0.5) + $unpaidLeaveDays;
 
@@ -198,7 +221,7 @@ class PayrollService extends BaseService
 
         // Calculate per-day salary based on WORKING DAYS (not calendar days)
         $perDaySalary = $totalWorkingDays > 0 ? ($baseSalary / $totalWorkingDays) : 0;
-        $lopAmount = round($lopDays * $perDaySalary, 2);
+        $lopAmount = ceil($lopDays * $perDaySalary);
 
         // 5. Existing Benefits/Deductions
         $benefits = $this->calculateBenefits($staffMemberId, $month, $year);
@@ -214,9 +237,9 @@ class PayrollService extends BaseService
             $allDeductions['total'] += $lopAmount;
         }
 
-        $totalEarnings = $baseSalary + $benefits['total'];
-        $totalDeductions = $allDeductions['total'];
-        $netSalary = max(0, $totalEarnings - $totalDeductions);
+        $totalEarnings = ceil($baseSalary + $benefits['total']);
+        $totalDeductions = ceil($allDeductions['total']);
+        $netSalary = ceil(max(0, $totalEarnings - $totalDeductions));
 
         return [
             'staff' => [
@@ -231,12 +254,16 @@ class PayrollService extends BaseService
                 'holidays_count' => $holidaysCount,
                 'holiday_dates' => $holidayDates,
                 'present_days' => $presentDays,
+                'total_present_days' => $presentDays,
                 'absent_days' => $totalAbsentDays,
+                'total_absent_days' => $totalAbsentDays,
                 'marked_absent_days' => $absentDays,
                 'no_show_days' => $noShowDays,
                 'half_days' => $halfDays,
+                'total_half_days' => $halfDays,
                 'late_days' => $lateDays,
                 'unpaid_leave_days' => $unpaidLeaveDays,
+                'total_leave_days' => $totalLeaveDays,
                 'lop_days' => $lopDays,
             ],
             'benefits' => $benefits,

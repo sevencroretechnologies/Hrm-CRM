@@ -468,8 +468,8 @@ class AttendanceService extends BaseService
 
         return [
             'status' => $workLog->clock_out ? 'clocked_out' : 'clocked_in',
-            'clock_in' => $workLog->clock_in_full, // Use accessor
-            'clock_out' => $workLog->clock_out_full, // Use accessor
+            'clock_in' => $workLog->clock_in_full,
+            'clock_out' => $workLog->clock_out_full,
             'clock_in_time' => $workLog->clock_in,
             'clock_out_time' => $workLog->clock_out,
             'clock_in_display' => $workLog->clock_in_display,
@@ -480,9 +480,12 @@ class AttendanceService extends BaseService
             'overtime_minutes' => $workLog->overtime_minutes,
             'break_minutes' => $workLog->break_minutes,
             'shift' => $shiftInfo,
+            'timing_source' => $workLog->shift_id ? 'shift' : 'default',
+            'half_day_applied' => $workLog->status === 'half_day',
+            'attendance_status' => $workLog->status,
             'current_time' => Carbon::now($timezone)->format('h:i A'),
             'server_timezone' => $timezone,
-            'log_date_formatted' => $logDate->format('Y-m-d'), // For debugging
+            'log_date_formatted' => $logDate->format('Y-m-d'),
         ];
     }
 

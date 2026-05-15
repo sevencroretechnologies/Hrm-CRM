@@ -47,6 +47,8 @@ interface AttendanceSetting {
   default_clock_in_time: string; // Now stores "HH:MM AM/PM"
   default_clock_out_time: string; // Now stores "HH:MM AM/PM"
   grace_minutes: number;
+  arriving_late_minutes?: number;
+  leaving_early_minutes?: number;
   company_id?: number | null;
   org_id?: number | null;
   created_at: string;
@@ -65,6 +67,8 @@ const AttendanceSettings: React.FC = () => {
   const [outTime, setOutTime] = useState("06:00");
   const [outPeriod, setOutPeriod] = useState("PM");
   const [grace, setGrace] = useState(15);
+  const [lateThreshold, setLateThreshold] = useState(240);
+  const [earlyThreshold, setEarlyThreshold] = useState(120);
 
   const [searchInput, setSearchInput] = useState("");
   const [user, setUser] = useState<any>(null);
@@ -115,6 +119,8 @@ const AttendanceSettings: React.FC = () => {
     setOutTime(clockOut.time);
     setOutPeriod(clockOut.period);
     setGrace(setting.grace_minutes);
+    setLateThreshold(setting.arriving_late_minutes || 240);
+    setEarlyThreshold(setting.leaving_early_minutes || 120);
     
     setIsDialogOpen(true);
   };
@@ -146,6 +152,8 @@ const AttendanceSettings: React.FC = () => {
         default_clock_in_time: `${inTime} ${inPeriod}`,
         default_clock_out_time: `${outTime} ${outPeriod}`,
         grace_minutes: grace,
+        arriving_late_minutes: lateThreshold,
+        leaving_early_minutes: earlyThreshold,
         company_id: user?.company_id,
         org_id: user?.org_id,
       };
@@ -205,6 +213,26 @@ const AttendanceSettings: React.FC = () => {
       )
     },
     {
+      name: "Half-Day Late",
+      selector: (row) => row.arriving_late_minutes || 0,
+      sortable: true,
+      cell: (row) => (
+        <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200">
+          {row.arriving_late_minutes || 0} mins
+        </span>
+      )
+    },
+    {
+      name: "Half-Day Early",
+      selector: (row) => row.leaving_early_minutes || 0,
+      sortable: true,
+      cell: (row) => (
+        <span className="px-2 py-1 rounded-full bg-orange-50 text-orange-700 text-xs font-bold border border-orange-200">
+          {row.leaving_early_minutes || 0} mins
+        </span>
+      )
+    },
+    {
       name: "Actions",
       cell: (row) => (
         <DropdownMenu>
@@ -251,6 +279,8 @@ const AttendanceSettings: React.FC = () => {
                 setOutTime("06:00");
                 setOutPeriod("PM");
                 setGrace(15);
+                setLateThreshold(240);
+                setEarlyThreshold(120);
               }}
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -339,6 +369,35 @@ const AttendanceSettings: React.FC = () => {
                       className="pl-10 border-solarized-base2 focus:border-solarized-blue transition-all"
                       value={grace}
                       onChange={(e) => setGrace(parseInt(e.target.value) || 0)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="late_threshold" className="text-solarized-base01 font-semibold uppercase tracking-wider text-[11px]">
+                      Half-Day Late (Min)
+                    </Label>
+                    <Input
+                      id="late_threshold"
+                      type="number"
+                      className="border-solarized-base2 focus:border-solarized-blue transition-all"
+                      value={lateThreshold}
+                      onChange={(e) => setLateThreshold(parseInt(e.target.value) || 0)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="early_threshold" className="text-solarized-base01 font-semibold uppercase tracking-wider text-[11px]">
+                      Half-Day Early (Min)
+                    </Label>
+                    <Input
+                      id="early_threshold"
+                      type="number"
+                      className="border-solarized-base2 focus:border-solarized-blue transition-all"
+                      value={earlyThreshold}
+                      onChange={(e) => setEarlyThreshold(parseInt(e.target.value) || 0)}
                       required
                     />
                   </div>

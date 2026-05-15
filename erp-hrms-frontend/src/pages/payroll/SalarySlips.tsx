@@ -144,6 +144,7 @@ export default function SalarySlips() {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
+      maximumFractionDigits: 0,
     }).format(num || 0);
   };
 

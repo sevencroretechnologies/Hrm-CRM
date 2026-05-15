@@ -230,6 +230,7 @@ export default function GeneratePayroll() {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
+      maximumFractionDigits: 0,
     }).format(amount || 0);
   };
 
@@ -479,10 +480,28 @@ export default function GeneratePayroll() {
                       <span className="text-xs text-yellow-600 block">Unpaid Leave</span>
                       <span className="text-lg font-semibold text-yellow-700">{previewData.attendance.unpaid_leave_days || 0}</span>
                     </div>
-                    <div className="bg-red-100 p-3 rounded border border-red-300 col-span-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-red-700 font-semibold">Loss of Pay (LOP) Days</span>
-                        <span className="text-lg font-bold text-red-800">{previewData.attendance.lop_days || 0}</span>
+                    <div className="bg-red-100 p-4 rounded border border-red-300 col-span-2">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-red-700 font-bold">Loss of Pay (LOP) Summary</span>
+                        <span className="text-xl font-black text-red-800">{previewData.attendance.lop_days || 0} Days</span>
+                      </div>
+                      <div className="text-[10px] text-red-600 space-y-1 bg-white/50 p-2 rounded">
+                        <div className="flex justify-between">
+                          <span>Absent Days (Marked + No-Show):</span>
+                          <span className="font-medium">{previewData.attendance.absent_days || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Half-Day Conversion ({previewData.attendance.half_days || 0} half-days × 0.5):</span>
+                          <span className="font-medium">{(previewData.attendance.half_days || 0) * 0.5}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Unpaid Leave Days:</span>
+                          <span className="font-medium">{previewData.attendance.unpaid_leave_days || 0}</span>
+                        </div>
+                        <div className="border-t border-red-200 mt-1 pt-1 flex justify-between font-bold">
+                          <span>Total Deduction Days:</span>
+                          <span>{previewData.attendance.lop_days || 0}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
