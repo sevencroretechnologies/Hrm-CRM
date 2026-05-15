@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { staffService, settingsService, contractService, contractTypeService } from '../../services/api';
+import { staffService, settingsService, contractService, contractTypeService, documentService, documentTypeService } from '../../services/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '../../components/ui/select';
 import { Alert, AlertDescription } from '../../components/ui/alert';
-import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, FileText, X, Upload } from 'lucide-react';
 import { showAlert, getErrorMessage } from '../../lib/sweetalert';
 
 interface SelectOption {
@@ -55,6 +55,12 @@ export default function StaffCreate() {
   const [divisions, setDivisions] = useState<SelectOption[]>([]);
   const [jobTitles, setJobTitles] = useState<SelectOption[]>([]);
   const [contractTypes, setContractTypes] = useState<ContractTypeOption[]>([]);
+  
+  // Documents state
+  const [documentTypes, setDocumentTypes] = useState<any[]>([]);
+  const [pendingDocuments, setPendingDocuments] = useState<{ typeId: string; typeName: string; file: File }[]>([]);
+  const [selectedDocType, setSelectedDocType] = useState<string>('');
+  const [selectedDocFile, setSelectedDocFile] = useState<File | null>(null);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -99,22 +105,43 @@ export default function StaffCreate() {
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [locRes, divRes, jobRes, ctRes] = await Promise.all([
+        const [locRes, divRes, jobRes, ctRes, docRes] = await Promise.all([
           settingsService.getOfficeLocations(),
           settingsService.getDivisions(),
           settingsService.getJobTitles(),
           contractTypeService.getAll({ per_page: 100 }),
+          documentTypeService.getAll({ page: 1, per_page: 100 }),
         ]);
         setLocations(locRes.data.data || []);
         setDivisions(divRes.data.data || []);
         setJobTitles(jobRes.data.data || []);
         setContractTypes(ctRes.data.data || []);
+        setDocumentTypes(docRes.data.data || []);
       } catch (error) {
         console.error('Failed to fetch options:', error);
       }
     };
     fetchOptions();
   }, []);
+
+  const handleAddDocument = () => {
+    if (!selectedDocType || !selectedDocFile) return;
+    
+    const docTypeObj = documentTypes.find(t => t.id.toString() === selectedDocType);
+    const typeName = docTypeObj ? docTypeObj.title : 'Document';
+    
+    setPendingDocuments(prev => [...prev, { typeId: selectedDocType, typeName, file: selectedDocFile }]);
+    setSelectedDocType('');
+    setSelectedDocFile(null);
+    
+    // Clear input
+    const fileInput = document.getElementById('doc_file') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+  };
+
+  const handleRemoveDocument = (index: number) => {
+    setPendingDocuments(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleContractChange = (name: string, value: string) => {
     setContractData(prev => {
@@ -344,10 +371,27 @@ export default function StaffCreate() {
       });
 
       const staffRes = await staffService.create(formDataToSend);
+      const newStaffId = staffRes?.data?.data?.id;
+
+      // Upload documents if any
+      if (newStaffId && pendingDocuments.length > 0) {
+        try {
+          await Promise.all(pendingDocuments.map(doc => {
+            const docFormData = new FormData();
+            docFormData.append('file', doc.file);
+            docFormData.append('document_type_id', doc.typeId);
+            docFormData.append('owner_type', 'employee');
+            docFormData.append('owner_id', String(newStaffId));
+            return documentService.upload(Number(newStaffId), docFormData);
+          }));
+        } catch (docErr) {
+          console.error('Failed to upload some documents:', docErr);
+          showAlert('warning', 'Partial Success', 'Staff created, but some documents failed to upload.');
+        }
+      }
 
       // Optionally create an initial contract for the newly created staff member.
       if (contractData.create_contract) {
-        const newStaffId = staffRes?.data?.data?.id;
         if (newStaffId) {
           try {
             await contractService.createContract({
@@ -975,6 +1019,73 @@ export default function StaffCreate() {
           </Card>
             );
           })()}
+
+          {/* DOCUMENTS */}
+          <Card className="border-0 shadow-md">
+            <CardHeader>
+              <CardTitle>Documents</CardTitle>
+              <CardDescription>Upload necessary documents for this employee</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-12 items-end">
+                <div className="sm:col-span-4 space-y-2">
+                  <Label htmlFor="doc_type">Document Type</Label>
+                  <Select value={selectedDocType} onValueChange={setSelectedDocType}>
+                    <SelectTrigger id="doc_type">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {documentTypes.map(t => (
+                        <SelectItem key={t.id} value={String(t.id)}>{t.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="sm:col-span-6 space-y-2">
+                  <Label htmlFor="doc_file">File</Label>
+                  <Input 
+                    id="doc_file" 
+                    type="file" 
+                    onChange={e => setSelectedDocFile(e.target.files?.[0] || null)} 
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Button 
+                    type="button" 
+                    className="w-full" 
+                    onClick={handleAddDocument}
+                    disabled={!selectedDocType || !selectedDocFile}
+                  >
+                    <Upload className="mr-2 h-4 w-4" /> Add
+                  </Button>
+                </div>
+              </div>
+
+              {pendingDocuments.length > 0 && (
+                <div className="mt-4 rounded-md border p-4 space-y-3">
+                  <h4 className="text-sm font-medium">Pending Documents</h4>
+                  {pendingDocuments.map((doc, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-gray-50 p-2 rounded-md">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-4 w-4 text-solarized-blue" />
+                        <span className="text-sm font-medium">{doc.typeName}</span>
+                        <span className="text-xs text-gray-500">({doc.file.name})</span>
+                      </div>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-500 hover:text-red-700 h-8 w-8 p-0" 
+                        onClick={() => handleRemoveDocument(idx)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="flex justify-end gap-4">
             <Button type="button" variant="outline" onClick={() => navigate(-1)}>

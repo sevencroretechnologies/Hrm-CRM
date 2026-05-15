@@ -60,10 +60,30 @@ class StaffMember extends Model
     public static function generateStaffCode(): string
     {
         $prefix = 'STF';
-        $lastStaff = static::withTrashed()->orderBy('id', 'desc')->first();
-        $nextId = $lastStaff ? $lastStaff->id + 1 : 1;
 
-        return $prefix . str_pad($nextId, 5, '0', STR_PAD_LEFT);
+        // Must use withoutGlobalScopes() so we check ALL records across all orgs/tenants.
+        // The unique constraint on staff_code is table-wide, so we need a globally unique code.
+        $last = static::withoutGlobalScopes()
+            ->withTrashed()
+            ->where('staff_code', 'like', $prefix . '%')
+            ->orderByRaw('CAST(SUBSTRING(staff_code, ' . (strlen($prefix) + 1) . ') AS UNSIGNED) DESC')
+            ->value('staff_code');
+
+        $nextNumber = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
+
+        // Safety loop: keep incrementing until we find a completely unused code
+        do {
+            $code = $prefix . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+            $exists = static::withoutGlobalScopes()
+                ->withTrashed()
+                ->where('staff_code', $code)
+                ->exists();
+            if ($exists) {
+                $nextNumber++;
+            }
+        } while ($exists);
+
+        return $code;
     }
 
     /**

@@ -45,6 +45,8 @@ export const authService = {
   resetPassword: (data: { token: string; email: string; password: string; password_confirmation: string }) =>
     api.post('/auth/reset-password', data),
   getProfile: () => api.get('/auth/profile'),
+  changePassword: (data: { current_password: string; new_password: string; new_password_confirmation: string }) =>
+    api.post('/auth/change-password', data),
 };
 
 
@@ -715,6 +717,7 @@ export const assetService = {
   getAvailable: () => api.get('/assets-available'),
   getByEmployee: (staffMemberId: number) => api.get(`/assets/employee/${staffMemberId}`),
   assignAsset: (assetId: number, data: Record<string, unknown>) => api.post(`/assets/${assetId}/assign`, data),
+  updateAssignment: (assetId: number, data: Record<string, unknown>) => api.put(`/assets/${assetId}/assign`, data),
   returnAsset: (assetId: number) => api.post(`/assets/${assetId}/return`),
   setMaintenance: (assetId: number, data: Record<string, unknown>) => api.post(`/assets/${assetId}/maintenance`, data),
 };

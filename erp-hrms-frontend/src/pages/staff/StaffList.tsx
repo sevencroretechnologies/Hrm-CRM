@@ -63,6 +63,7 @@ export default function StaffList() {
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [search, setSearch] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
@@ -80,7 +81,7 @@ export default function StaffList() {
         const params: Record<string, unknown> = {
           page: currentPage,
           per_page: perPage,
-          search,
+          search: activeSearch,
         };
 
         if (sortField) {
@@ -108,7 +109,7 @@ export default function StaffList() {
         setIsLoading(false);
       }
     },
-    [perPage, search, sortField, sortDirection]
+    [perPage, activeSearch, sortField, sortDirection]
   );
 
   useEffect(() => {
@@ -118,6 +119,7 @@ export default function StaffList() {
   // ================= SEARCH =================
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setActiveSearch(search);
     setPage(1);
   };
 

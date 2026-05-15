@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { staffService, settingsService } from '../../services/api';
-import { showAlert, getErrorMessage } from '../../lib/sweetalert';
+import { staffService, settingsService, documentService, documentTypeService } from '../../services/api';
+import { showAlert, showConfirmDialog, getErrorMessage } from '../../lib/sweetalert';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -16,7 +16,7 @@ import {
 } from '../../components/ui/select';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Skeleton } from '../../components/ui/skeleton';
-import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, FileText, Upload, Trash2, Eye } from 'lucide-react';
 
 interface SelectOption {
   id: number;
@@ -25,6 +25,24 @@ interface SelectOption {
 
 interface FieldErrors {
   [key: string]: string | undefined;
+}
+
+const API_BASE_URL = 'http://127.0.0.1:8000';
+
+interface DocumentItem {
+  id: number;
+  document_name: string;
+  original_name?: string;
+  created_at: string;
+  type?: {
+    id: number;
+    title: string;
+  };
+}
+
+interface DocumentType {
+  id: number;
+  title: string;
 }
 
 export default function StaffEdit() {
@@ -37,6 +55,11 @@ export default function StaffEdit() {
   const [locations, setLocations] = useState<SelectOption[]>([]);
   const [divisions, setDivisions] = useState<SelectOption[]>([]);
   const [jobTitles, setJobTitles] = useState<SelectOption[]>([]);
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [selectedType, setSelectedType] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -71,18 +94,26 @@ export default function StaffEdit() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [staffRes, locRes, divRes, jobRes] = await Promise.all([
+        const [staffRes, locRes, divRes, jobRes, docTypesRes, docsRes] = await Promise.all([
           staffService.getById(Number(id)),
           settingsService.getOfficeLocations(),
           settingsService.getDivisions(),
           settingsService.getJobTitles(),
+          documentTypeService.getAll({ page: 1, per_page: 100 }),
+          documentService.getAll({ owner_type: 'employee', owner_id: Number(id), per_page: 100 })
         ]);
 
         const staff = staffRes.data.data;
+        const getImageUrl = (path: string) => {
+          if (!path) return '';
+          if (path.startsWith('http')) return path;
+          return `${API_BASE_URL}${path}`;
+        };
+
         setFormData({
           full_name: staff.full_name || '',
           profile_image: null,
-          profile_image_preview: staff.profile_image || '',
+          profile_image_preview: getImageUrl(staff.profile_image),
           email: staff.user?.email || '',
           personal_email: staff.personal_email || '',
           mobile_number: staff.mobile_number || '',
@@ -111,6 +142,8 @@ export default function StaffEdit() {
         setLocations(locRes.data.data || []);
         setDivisions(divRes.data.data || []);
         setJobTitles(jobRes.data.data || []);
+        setDocumentTypes(docTypesRes.data.data || []);
+        setDocuments(docsRes.data.data || []);
       } catch (error) {
         console.error('Failed to fetch data:', error);
         setError('Failed to load staff data');
@@ -272,6 +305,71 @@ export default function StaffEdit() {
       setIsSaving(false);
     }
   };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile || !selectedType) return;
+    setIsUploadingFile(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('document_type_id', selectedType);
+      formData.append('owner_type', 'employee');
+      formData.append('owner_id', String(id));
+
+      await documentService.upload(Number(id), formData);
+      showAlert('success', 'Success!', 'Document uploaded successfully', 2000);
+
+      // Refresh documents
+      const response = await documentService.getAll({
+        owner_type: 'employee',
+        owner_id: Number(id),
+        per_page: 100
+      });
+      setDocuments(response.data.data || []);
+
+      setSelectedFile(null);
+      setSelectedType('');
+      const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+    } catch (error: unknown) {
+      console.error('Failed to upload document:', error);
+      showAlert('error', 'Error', getErrorMessage(error, 'Failed to upload document'));
+    } finally {
+      setIsUploadingFile(false);
+    }
+  };
+
+  const handleFileDelete = async (docId: number) => {
+    const result = await showConfirmDialog(
+      'Are you sure?',
+      'You want to delete this document?'
+    );
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await documentService.delete(docId);
+      showAlert('success', 'Deleted!', 'Document deleted successfully', 2000);
+      setDocuments(documents.filter(f => f.id !== docId));
+    } catch (error: unknown) {
+      console.error('Failed to delete document:', error);
+      showAlert('error', 'Error', getErrorMessage(error, 'Failed to delete document'));
+    }
+  };
+
+  const handleViewDocument = (docId: number) => {
+    window.open(`http://127.0.0.1:8000/api/documents/${docId}/view`, '_blank');
+  };
+
+  const groupedFiles = documents.reduce<Record<string, DocumentItem[]>>(
+    (acc, file) => {
+      const type = file.type?.title || 'Uncategorized';
+      if (!acc[type]) acc[type] = [];
+      acc[type].push(file);
+      return acc;
+    },
+    {}
+  );
 
   const renderError = (field: string) => {
     return fieldErrors[field] ? (
@@ -706,6 +804,105 @@ export default function StaffEdit() {
                 />
                 {renderError('emergency_contact_relationship')}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md">
+            <CardHeader>
+              <CardTitle>Documents</CardTitle>
+              <CardDescription>Manage staff documents</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="border rounded-lg p-4 space-y-4">
+                <h4 className="font-medium text-solarized-base02">Upload New Document</h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="document-type">Document Type</Label>
+                    <Select value={selectedType} onValueChange={setSelectedType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {documentTypes.map((type) => (
+                          <SelectItem key={type.id} value={String(type.id)}>
+                            {type.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="file-upload">File</Label>
+                    <Input
+                      id="file-upload"
+                      type="file"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleFileUpload}
+                  disabled={!selectedFile || !selectedType || isUploadingFile}
+                  className="bg-solarized-blue hover:bg-solarized-blue/90"
+                >
+                  {isUploadingFile ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Document
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {documents.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="mx-auto h-12 w-12 opacity-30" />
+                  <p className="mt-2 text-solarized-base01 text-sm">No documents uploaded yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-solarized-base02">Uploaded Documents</h4>
+                  <div className="border rounded-lg divide-y">
+                    <div className="grid grid-cols-12 bg-gray-50 px-4 py-2 text-sm font-semibold text-solarized-base01">
+                      <div className="col-span-3">Type</div>
+                      <div className="col-span-9">Files</div>
+                    </div>
+
+                    {Object.entries(groupedFiles).map(([type, docs]) => (
+                      <div key={type} className="grid grid-cols-12 px-4 py-3 gap-4">
+                        <div className="col-span-3">
+                          <span className="text-sm font-semibold text-solarized-blue">{type}</span>
+                          <p className="text-xs text-solarized-base01">{docs.length} file(s)</p>
+                        </div>
+                        <div className="col-span-9 space-y-2">
+                          {docs.map((file) => (
+                            <div key={file.id} className="flex items-center justify-between border rounded-md px-3 py-1.5 bg-white">
+                              <div className="flex items-center gap-2 overflow-hidden">
+                                <FileText className="h-4 w-4 text-solarized-blue flex-shrink-0" />
+                                <span className="text-sm truncate font-medium">{file.document_name || file.original_name}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewDocument(file.id)}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleFileDelete(file.id)}>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
