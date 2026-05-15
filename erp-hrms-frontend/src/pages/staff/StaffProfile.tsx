@@ -370,12 +370,12 @@ export default function StaffProfile() {
           </div>
         </div>
 
-        <Link to={`/staff/${id}/edit`}>
+        {/* <Link to={`/staff/${id}/edit`}>
           <Button type="submit" className='bg-solarized-blue hover:bg-solarized-blue/90'>
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Button>
-        </Link>
+        </Link> */}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -469,54 +469,9 @@ export default function StaffProfile() {
               <Card>
                 <CardHeader>
                   <CardTitle>Documents</CardTitle>
-                  <CardDescription>Upload and manage staff documents</CardDescription>
+                  <CardDescription>View staff documents</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="border rounded-lg p-4 space-y-4">
-                    <h4 className="font-medium">Upload New Document</h4>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="document-type">Document Type</Label>
-                        <Select value={selectedType} onValueChange={setSelectedType}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {documentTypes.map((type) => (
-                              <SelectItem key={type.id} value={String(type.id)}>
-                                {type.title}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="file-upload">File</Label>
-                        <Input
-                          id="file-upload"
-                          type="file"
-                          onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      onClick={handleFileUpload}
-                      disabled={!selectedFile || !selectedType || isUploadingFile}
-                    >
-                      {isUploadingFile ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Upload Document
-                        </>
-                      )}
-                    </Button>
-                  </div>
-
                   {files.length === 0 ? (
                     <div className="text-center py-8">
                       <FileText className="mx-auto h-12 w-12 opacity-50" />
@@ -526,16 +481,8 @@ export default function StaffProfile() {
                     <div className="space-y-2">
                       <div className="space-y-1">
                         <h4 className="font-medium">Uploaded Documents</h4>
-
-                        {/* {uploadedDocumentTypes.length > 0 && (
-                          <p className="text-sm font-semibold text-solarized-blue">
-                            Document Type: {uploadedDocumentTypes.join(', ')}
-                          </p>
-                        )} */}
-
                       </div>
                       <div className="border rounded-lg divide-y">
-
                         {/* HEADER */}
                         <div className="grid grid-cols-12 bg-gray-50 px-4 py-2 text-sm font-semibold text-solarized-base01">
                           <div className="col-span-3">Document Type</div>
@@ -545,7 +492,6 @@ export default function StaffProfile() {
                         {/* BODY */}
                         {Object.entries(groupedFiles).map(([type, docs]) => (
                           <div key={type} className="grid grid-cols-12 px-4 py-3 gap-4">
-
                             {/* LEFT COLUMN – DOCUMENT TYPE */}
                             <div className="col-span-3">
                               <span className="inline-block text-sm font-semibold text-solarized-blue">
@@ -565,7 +511,6 @@ export default function StaffProfile() {
                                 >
                                   <div className="flex items-start gap-3">
                                     <FileText className="h-5 w-5 text-solarized-blue mt-1" />
-
                                     <div>
                                       <p className="font-medium">
                                         {file.document_name || file.original_name}
@@ -587,25 +532,13 @@ export default function StaffProfile() {
                                     >
                                       <Eye className="h-4 w-4" />
                                     </Button>
-
-                                    {/* DELETE */}
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => handleFileDelete(file.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4 text-solarized-red" />
-                                    </Button>
                                   </div>
-
                                 </div>
                               ))}
                             </div>
-
                           </div>
                         ))}
                       </div>
-
                     </div>
                   )}
                 </CardContent>
